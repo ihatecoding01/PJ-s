@@ -1,0 +1,24 @@
+{
+  "thread_messages": [
+    {
+      "sender": "0xeee5555555555555555555555555555555555555",
+      "text": "Hey, I need a clean responsive marketing landing page built in Tailwind CSS. Lump sum payment of 0.8 MATIC upon completion by Nov 10.",
+      "ts": "2026-10-03T14:00:00Z"
+    },
+    {
+      "sender": "0xfff6666666666666666666666666666666666666",
+      "text": "Sounds good! I will deliver the single lump sum package with mobile responsive layout and Lighthouse score > 90.",
+      "ts": "2026-10-03T14:20:00Z"
+    },
+    {
+      "sender": "0xeee5555555555555555555555555555555555555",
+      "text": "Awesome. Repo is https://github.com/marketing/landing-page on branch main.",
+      "ts": "2026-10-03T14:30:00Z"
+    }
+  ],
+  "post_context": "Quick turnaround marketing landing page",
+  "parties": {
+    "client": "0xeee5555555555555555555555555555555555555",
+    "freelancer": "0xfff6666666666666666666666666666666666666"
+  }
+}

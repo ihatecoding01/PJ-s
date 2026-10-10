@@ -1,0 +1,29 @@
+{
+  "thread_messages": [
+    {
+      "sender": "0xaaa1111111111111111111111111111111111111",
+      "text": "Hi Yashdeep! We need a React + FastAPI SaaS dashboard for analytics. Budget is 2.5 MATIC total.",
+      "ts": "2026-10-01T09:00:00Z"
+    },
+    {
+      "sender": "0xbbb2222222222222222222222222222222222222",
+      "text": "Sounds great. Can we split this into two milestones? Milestone 1: backend auth and data ingestion API for 1.0 MATIC due on Nov 1. Milestone 2: frontend dashboard and charts for 1.5 MATIC due on Nov 20.",
+      "ts": "2026-10-01T09:15:00Z"
+    },
+    {
+      "sender": "0xaaa1111111111111111111111111111111111111",
+      "text": "Agreed. For Milestone 1, we must have POST /auth/login and /data/upload endpoints with unit tests passing. Repo is https://github.com/client-saas/analytics-mvp on main branch.",
+      "ts": "2026-10-01T09:30:00Z"
+    },
+    {
+      "sender": "0xbbb2222222222222222222222222222222222222",
+      "text": "Perfect! Standard review window of 5 days and 1% daily late penalty works for me.",
+      "ts": "2026-10-01T09:45:00Z"
+    }
+  ],
+  "post_context": "Job: Full-stack Analytics SaaS Dashboard MVP with FastAPI and React",
+  "parties": {
+    "client": "0xaaa1111111111111111111111111111111111111",
+    "freelancer": "0xbbb2222222222222222222222222222222222222"
+  }
+}

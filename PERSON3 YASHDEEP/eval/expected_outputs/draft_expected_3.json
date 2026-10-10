@@ -1,0 +1,40 @@
+{
+  "terms": {
+    "schemaVersion": "1.0",
+    "title": "Quick Turnaround Marketing Landing Page",
+    "description": "Responsive marketing landing page with Tailwind CSS.",
+    "client": "0xeee5555555555555555555555555555555555555",
+    "freelancer": "0xfff6666666666666666666666666666666666666",
+    "currency": "MATIC",
+    "totalAmount": "0.8",
+    "paymentMode": "LUMP_SUM",
+    "latePenaltyBpsPerDay": 100,
+    "maxLatePenaltyBps": 3000,
+    "reviewWindowDays": 5,
+    "graceDays": 3,
+    "maxRevisions": 2,
+    "github": {
+      "repoUrl": "https://github.com/marketing/landing-page",
+      "branch": "main"
+    },
+    "milestones": [
+      {
+        "index": 0,
+        "title": "Complete Landing Page Delivery",
+        "description": "Full landing page implementation",
+        "amount": "0.8",
+        "deadline": "2026-11-10T00:00:00Z",
+        "requiredProgressBps": 8000,
+        "acceptanceCriteria": [
+          "Landing page is mobile responsive across viewports",
+          "Google Lighthouse performance score >= 90"
+        ]
+      }
+    ],
+    "createdAt": "2026-10-03T14:30:00Z"
+  },
+  "open_questions": [],
+  "warnings": [
+    "Single milestone configured for LUMP_SUM payment mode."
+  ]
+}

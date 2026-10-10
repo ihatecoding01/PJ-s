@@ -1,0 +1,21 @@
+{
+  "total_count": 2,
+  "check_runs": [
+    {
+      "id": 1001,
+      "name": "Unit Tests & Coverage",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-06T18:16:00Z",
+      "completed_at": "2026-10-06T18:18:30Z"
+    },
+    {
+      "id": 1002,
+      "name": "Lint & Typecheck",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-06T18:16:00Z",
+      "completed_at": "2026-10-06T18:17:10Z"
+    }
+  ]
+}

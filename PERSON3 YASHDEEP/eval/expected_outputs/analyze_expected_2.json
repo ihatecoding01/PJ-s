@@ -1,0 +1,32 @@
+{
+  "progress_bps": 850,
+  "confidence": 0.35,
+  "signals": {
+    "commits": 1,
+    "prs_merged": 0,
+    "files_changed": 3,
+    "lines_added": 3500,
+    "tests_status": "none",
+    "release_tag": null,
+    "contributors": [
+      "ghost_user"
+    ]
+  },
+  "criteria_results": [
+    {
+      "criterion": "REST endpoint POST /auth/login exists and has passing unit tests",
+      "met": false,
+      "evidence": "No endpoint implementation found in repo; only package-lock.json modified"
+    },
+    {
+      "criterion": "Data ingestion endpoint POST /data/upload validates payload",
+      "met": false,
+      "evidence": "No upload endpoint present"
+    }
+  ],
+  "summary": "High risk detected: commit history contains minimal work and acceptance criteria are unfulfilled.",
+  "risks": [
+    "No automated test files or CI test suites detected for this milestone.",
+    "Over 90% of lines added are vendored libraries or auto-generated lockfiles."
+  ]
+}

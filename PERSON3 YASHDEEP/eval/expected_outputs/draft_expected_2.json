@@ -1,0 +1,64 @@
+{
+  "terms": {
+    "schemaVersion": "1.0",
+    "title": "Smart Contract Escrow Engine with Dispute Resolution",
+    "description": "Solidity escrow contracts with Hardhat tests and oracle integration.",
+    "client": "0xccc3333333333333333333333333333333333333",
+    "freelancer": "0xddd4444444444444444444444444444444444444",
+    "currency": "MATIC",
+    "totalAmount": "3.0",
+    "paymentMode": "MILESTONE",
+    "latePenaltyBpsPerDay": 100,
+    "maxLatePenaltyBps": 3000,
+    "reviewWindowDays": 5,
+    "graceDays": 3,
+    "maxRevisions": 2,
+    "github": {
+      "repoUrl": "https://github.com/fairwork-team/contracts",
+      "branch": "main"
+    },
+    "milestones": [
+      {
+        "index": 0,
+        "title": "FairWork.sol Core Escrow",
+        "description": "Core escrow contracts",
+        "amount": "1.0",
+        "deadline": "2026-11-05T00:00:00Z",
+        "requiredProgressBps": 8000,
+        "acceptanceCriteria": [
+          "Solidity contracts compile with zero warnings",
+          "Hardhat unit tests achieve >= 90% test coverage"
+        ]
+      },
+      {
+        "index": 1,
+        "title": "Oracle & Dispute Voting",
+        "description": "Record progress and arbitrator voting mechanics",
+        "amount": "1.0",
+        "deadline": "2026-11-18T00:00:00Z",
+        "requiredProgressBps": 8000,
+        "acceptanceCriteria": [
+          "Arbitrator voting logic implemented and tested",
+          "Oracle recordProgress function validated"
+        ]
+      },
+      {
+        "index": 2,
+        "title": "Deployment & Testnet Verification",
+        "description": "Polygon Amoy testnet deployment scripts",
+        "amount": "1.0",
+        "deadline": "2026-11-30T00:00:00Z",
+        "requiredProgressBps": 8000,
+        "acceptanceCriteria": [
+          "Deployment script successfully verified on Polygon Amoy"
+        ]
+      }
+    ],
+    "createdAt": "2026-10-02T10:45:00Z"
+  },
+  "open_questions": [],
+  "warnings": [
+    "latePenaltyBpsPerDay was assumed default (100 bps / 1% per day).",
+    "reviewWindowDays was assumed default (5 days)."
+  ]
+}

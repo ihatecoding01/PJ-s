@@ -1,0 +1,27 @@
+{
+  "name": "gaming_dump",
+  "signals": {
+    "commits": 1,
+    "prs_merged": 0,
+    "files_changed": 3,
+    "lines_added": 3500,
+    "tests_status": "none",
+    "release_tag": null,
+    "contributors": ["ghost_user"]
+  },
+  "criteria_results": [
+    {
+      "criterion": "REST endpoint POST /auth/login exists and has passing unit tests",
+      "met": false,
+      "evidence": "No endpoint implementation found in repo; only package-lock.json modified"
+    },
+    {
+      "criterion": "Data ingestion endpoint POST /data/upload validates payload",
+      "met": false,
+      "evidence": "No upload endpoint present"
+    }
+  ],
+  "expected_progress_range": [0, 2000],
+  "expected_confidence_max": 0.55,
+  "expected_risks_count_min": 2
+}

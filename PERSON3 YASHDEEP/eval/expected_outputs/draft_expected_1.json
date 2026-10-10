@@ -1,0 +1,53 @@
+{
+  "terms": {
+    "schemaVersion": "1.0",
+    "title": "Full-stack Analytics SaaS Dashboard MVP with FastAPI and React",
+    "description": "Analytics dashboard MVP with backend auth, data ingestion, and React dashboard.",
+    "client": "0xaaa1111111111111111111111111111111111111",
+    "freelancer": "0xbbb2222222222222222222222222222222222222",
+    "currency": "MATIC",
+    "totalAmount": "2.5",
+    "paymentMode": "MILESTONE",
+    "latePenaltyBpsPerDay": 100,
+    "maxLatePenaltyBps": 3000,
+    "reviewWindowDays": 5,
+    "graceDays": 3,
+    "maxRevisions": 2,
+    "github": {
+      "repoUrl": "https://github.com/client-saas/analytics-mvp",
+      "branch": "main"
+    },
+    "milestones": [
+      {
+        "index": 0,
+        "title": "Backend Auth and Data Ingestion API",
+        "description": "POST /auth/login and /data/upload endpoints with unit tests passing.",
+        "amount": "1.0",
+        "deadline": "2026-11-01T00:00:00Z",
+        "requiredProgressBps": 8000,
+        "acceptanceCriteria": [
+          "REST endpoint POST /auth/login exists and passes tests",
+          "REST endpoint POST /data/upload validates payload and stores records"
+        ]
+      },
+      {
+        "index": 1,
+        "title": "Frontend Dashboard & Visualizations",
+        "description": "React analytics dashboard with chart views.",
+        "amount": "1.5",
+        "deadline": "2026-11-20T00:00:00Z",
+        "requiredProgressBps": 8000,
+        "acceptanceCriteria": [
+          "React dashboard renders interactive charts from API data",
+          "Frontend unit tests pass"
+        ]
+      }
+    ],
+    "createdAt": "2026-10-01T09:45:00Z"
+  },
+  "open_questions": [],
+  "warnings": [
+    "graceDays was assumed default (3 days).",
+    "maxRevisions was assumed default (2 revisions)."
+  ]
+}

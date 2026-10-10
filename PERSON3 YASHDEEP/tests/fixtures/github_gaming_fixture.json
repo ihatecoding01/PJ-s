@@ -1,0 +1,44 @@
+{
+  "repo_info": {
+    "is_fork": true,
+    "default_branch": "main"
+  },
+  "commits": [
+    {
+      "sha": "ffffffffffffffffffffffffffffffffffffffff",
+      "commit": {
+        "author": {
+          "name": "Random Person",
+          "email": "random@nowhere.com",
+          "date": "2026-10-09T23:55:00Z"
+        },
+        "message": "Update dependencies and formatting"
+      },
+      "author": {
+        "login": "randomguy"
+      }
+    }
+  ],
+  "files": [
+    {
+      "filename": "package-lock.json",
+      "status": "modified",
+      "additions": 4500,
+      "deletions": 100,
+      "changes": 4600,
+      "patch": "@@ -1,5 +1,4500 @@\n..."
+    },
+    {
+      "filename": "src/empty.js",
+      "status": "modified",
+      "additions": 80,
+      "deletions": 0,
+      "changes": 80,
+      "patch": "@@ -0,0 +1,80 @@\n+// Just a comment\n+// Another comment line\n+// TODO: implement real code\n"
+    }
+  ],
+  "check_runs": {
+    "total_count": 0,
+    "check_runs": []
+  }
+}

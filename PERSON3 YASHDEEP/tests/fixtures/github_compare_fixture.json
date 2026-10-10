@@ -1,0 +1,29 @@
+{
+  "total_commits": 3,
+  "files": [
+    {
+      "filename": "src/auth/jwt.py",
+      "status": "added",
+      "additions": 140,
+      "deletions": 0,
+      "changes": 140,
+      "patch": "@@ -0,0 +1,140 @@\n+import jwt\n+from datetime import datetime, timezone\n+def verify_token(token: str):\n+    return jwt.decode(token, 'secret', algorithms=['HS256'])\n"
+    },
+    {
+      "filename": "src/routes/escrow.py",
+      "status": "added",
+      "additions": 220,
+      "deletions": 5,
+      "changes": 225,
+      "patch": "@@ -0,0 +1,220 @@\n+from fastapi import APIRouter\n+router = APIRouter()\n+@router.post('/milestone/release')\n+def release_funds(): pass\n"
+    },
+    {
+      "filename": "tests/test_auth.py",
+      "status": "added",
+      "additions": 180,
+      "deletions": 0,
+      "changes": 180,
+      "patch": "@@ -0,0 +1,180 @@\n+def test_jwt_valid():\n+    assert verify_token(valid_token) is not None\n+def test_jwt_invalid():\n+    with pytest.raises(Exception):\n+        verify_token('bad')\n"
+    }
+  ]
+}

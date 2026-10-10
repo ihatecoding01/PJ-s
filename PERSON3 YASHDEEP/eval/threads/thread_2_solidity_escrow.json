@@ -1,0 +1,24 @@
+{
+  "thread_messages": [
+    {
+      "sender": "0xccc3333333333333333333333333333333333333",
+      "text": "Looking for a Solidity dev to build our FairWork escrow contracts with Hardhat tests and oracle integration. Total budget is 3.0 MATIC.",
+      "ts": "2026-10-02T10:00:00Z"
+    },
+    {
+      "sender": "0xddd4444444444444444444444444444444444444",
+      "text": "I can do this in 3 milestones. M1: FairWork.sol core escrow for 1.0 MATIC by Nov 5. M2: Oracle progress recording and arbitrator voting for 1.0 MATIC by Nov 18. M3: Deployment scripts and testnet verification for 1.0 MATIC by Nov 30.",
+      "ts": "2026-10-02T10:30:00Z"
+    },
+    {
+      "sender": "0xccc3333333333333333333333333333333333333",
+      "text": "Sounds fair. We need 90% test coverage on M1 and M2. GitHub is https://github.com/fairwork-team/contracts on main.",
+      "ts": "2026-10-02T10:45:00Z"
+    }
+  ],
+  "post_context": "Smart Contract Escrow Engine with Dispute Resolution",
+  "parties": {
+    "client": "0xccc3333333333333333333333333333333333333",
+    "freelancer": "0xddd4444444444444444444444444444444444444"
+  }
+}
