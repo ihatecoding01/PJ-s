@@ -27,3 +27,15 @@ coverage.json
 # OS files
 .DS_Store
 Thumbs.db
+
+# Databases & local state
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.pytest_cache/
