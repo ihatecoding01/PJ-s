@@ -6,10 +6,10 @@ import Card from '../components/common/Card.jsx';
 import Button from '../components/common/Button.jsx';
 import AddressBadge from '../components/common/AddressBadge.jsx';
 import Badge from '../components/common/Badge.jsx';
-import { User, Github, Save, ExternalLink, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { User, Github, Save, ExternalLink, ShieldCheck, CheckCircle2, Wallet } from 'lucide-react';
 
 export default function ProfilePage({ targetAddress = null }) {
-  const { address, refreshUser } = useWallet();
+  const { address, isConnected, connectWallet, refreshUser } = useWallet();
   const toast = useToast();
 
   const isMyProfile = !targetAddress || (address && targetAddress.toLowerCase() === address.toLowerCase());
@@ -24,6 +24,10 @@ export default function ProfilePage({ targetAddress = null }) {
 
   useEffect(() => {
     async function loadProfile() {
+      if (isMyProfile && !isConnected) {
+        setIsLoading(false);
+        return;
+      }
       try {
         setIsLoading(true);
         const data = isMyProfile ? await getMe() : await getUser(targetAddress);
@@ -41,7 +45,7 @@ export default function ProfilePage({ targetAddress = null }) {
       }
     }
     loadProfile();
-  }, [targetAddress, isMyProfile]);
+  }, [targetAddress, isMyProfile, isConnected]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -68,6 +72,27 @@ export default function ProfilePage({ targetAddress = null }) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center text-slate-400">
         Loading profile...
+      </div>
+    );
+  }
+
+  if (isMyProfile && !isConnected) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-5">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center text-teal-400 shadow-glow-teal">
+          <User className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-slate-100">Connect Your Wallet to View Profile</h2>
+          <p className="text-sm text-slate-400 max-w-md mx-auto">
+            Connect via MetaMask or select an instant demo persona to manage your Web3 identity, skills, and GitHub credentials.
+          </p>
+        </div>
+        <div className="pt-2">
+          <Button variant="primary" size="lg" onClick={connectWallet} icon={Wallet}>
+            Connect Wallet
+          </Button>
+        </div>
       </div>
     );
   }

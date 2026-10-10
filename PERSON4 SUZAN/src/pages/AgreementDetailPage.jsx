@@ -78,14 +78,18 @@ export default function AgreementDetailPage({ agreementId, onBack }) {
         setDisputeData(dData);
       }
     } catch (err) {
-      toast.error('Failed to load agreement details');
+      console.warn('Could not load agreement details:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (agreementId) loadAllAgreementData();
+    if (agreementId) {
+      loadAllAgreementData();
+    } else {
+      setIsLoading(false);
+    }
   }, [agreementId]);
 
   if (isLoading) {
@@ -98,8 +102,21 @@ export default function AgreementDetailPage({ agreementId, onBack }) {
 
   if (!agreement) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-16 text-center text-slate-400">
-        Agreement not found.
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-5">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center text-teal-400">
+          <FileCheck2 className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-slate-100">No Agreement Selected</h2>
+          <p className="text-sm text-slate-400 max-w-md mx-auto">
+            Select an agreement from your agreements list to view milestones, escrow funding, and AI verification details.
+          </p>
+        </div>
+        <div className="pt-2">
+          <Button variant="secondary" size="md" onClick={onBack}>
+            Back to My Agreements
+          </Button>
+        </div>
       </div>
     );
   }

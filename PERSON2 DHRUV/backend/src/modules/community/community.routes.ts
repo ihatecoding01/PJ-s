@@ -4,22 +4,19 @@ import { authenticate } from '../../middleware/auth';
 
 const router = Router();
 
-// Protected routes
-router.use(authenticate);
-
-// Posts
-router.post('/posts', CommunityController.createPost);
+// Public routes: anyone can browse community posts and proposals
 router.get('/posts', CommunityController.listPosts);
 router.get('/posts/:id', CommunityController.getPostById);
-
-// Proposals
-router.post('/posts/:id/proposals', CommunityController.submitProposal);
 router.get('/posts/:id/proposals', CommunityController.getProposalsForPost);
 
-// Threads & Messages
-router.post('/threads', CommunityController.createThread);
-router.get('/threads', CommunityController.listThreads);
-router.get('/threads/:id', CommunityController.getThreadById);
-router.post('/threads/:id/messages', CommunityController.sendMessage);
+// Protected routes: require wallet authentication
+router.post('/posts', authenticate, CommunityController.createPost);
+router.post('/posts/:id/proposals', authenticate, CommunityController.submitProposal);
+
+// Threads & Messages (require authentication)
+router.post('/threads', authenticate, CommunityController.createThread);
+router.get('/threads', authenticate, CommunityController.listThreads);
+router.get('/threads/:id', authenticate, CommunityController.getThreadById);
+router.post('/threads/:id/messages', authenticate, CommunityController.sendMessage);
 
 export default router;

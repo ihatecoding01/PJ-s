@@ -36,6 +36,10 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const fetchAgreementData = async () => {
+    if (!agreementId) {
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
       const data = await getAgreement(agreementId);
@@ -43,14 +47,18 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
       setTerms(JSON.parse(JSON.stringify(data.terms)));
       setHasUnsavedChanges(false);
     } catch (err) {
-      toast.error('Could not load agreement draft');
+      console.warn('Could not load draft:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (agreementId) fetchAgreementData();
+    if (agreementId) {
+      fetchAgreementData();
+    } else {
+      setIsLoading(false);
+    }
   }, [agreementId]);
 
   if (isLoading) {
@@ -63,8 +71,16 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
 
   if (!agreement || !terms) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-12 text-center text-slate-400">
-        Agreement not found.
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-5">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center text-teal-400">
+          <FileText className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-slate-100">No Draft Selected</h2>
+          <p className="text-sm text-slate-400 max-w-md mx-auto">
+            You can generate a draft agreement from any AI chat consultation or view pending drafts in your agreements list.
+          </p>
+        </div>
       </div>
     );
   }

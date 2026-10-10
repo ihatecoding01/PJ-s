@@ -14,11 +14,12 @@ import {
   Coins,
   Clock,
   AlertCircle,
-  Plus
+  Plus,
+  Wallet
 } from 'lucide-react';
 
 export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavigateToCommunity }) {
-  const { address } = useWallet();
+  const { address, isConnected, connectWallet } = useWallet();
   const toast = useToast();
 
   const [agreements, setAgreements] = useState([]);
@@ -27,6 +28,11 @@ export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavig
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchAgreementsList = async () => {
+    if (!isConnected) {
+      setAgreements([]);
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
       const data = await getAgreements();
@@ -39,8 +45,12 @@ export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavig
   };
 
   useEffect(() => {
-    fetchAgreementsList();
-  }, []);
+    if (isConnected) {
+      fetchAgreementsList();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isConnected]);
 
   // Filter agreements
   const filtered = agreements.filter(ag => {
@@ -83,6 +93,27 @@ export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavig
     }
     return 'No immediate action required';
   };
+
+  if (!isConnected) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-5">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center text-teal-400 shadow-glow-teal">
+          <FileCheck className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-slate-100">Connect Your Wallet to View Agreements</h2>
+          <p className="text-sm text-slate-400 max-w-md mx-auto">
+            Connect via MetaMask or select an instant demo persona to view and manage your milestone escrow agreements.
+          </p>
+        </div>
+        <div className="pt-2">
+          <Button variant="primary" size="lg" onClick={connectWallet} icon={Wallet}>
+            Connect Wallet
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">

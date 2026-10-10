@@ -17,8 +17,8 @@ import AdminPage from './pages/AdminPage.jsx';
 
 function MainApp() {
   const [activePage, setActivePage] = useState('landing');
-  const [selectedAgreementId, setSelectedAgreementId] = useState('ag-1');
-  const [selectedDraftId, setSelectedDraftId] = useState('ag-2');
+  const [selectedAgreementId, setSelectedAgreementId] = useState(null);
+  const [selectedDraftId, setSelectedDraftId] = useState(null);
   const [activeChatThreadId, setActiveChatThreadId] = useState(null);
 
   const handleOpenAgreement = (id) => {
