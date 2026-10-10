@@ -3,7 +3,7 @@ import { Copy, Check, ExternalLink } from 'lucide-react';
 import { shortenAddress } from '../../lib/formatters.js';
 
 export default function AddressBadge({
-  address,
+  address: rawAddress,
   label,
   chars = 4,
   showExplorer = true,
@@ -11,6 +11,10 @@ export default function AddressBadge({
 }) {
   const [copied, setCopied] = useState(false);
   const explorerUrl = import.meta.env.VITE_EXPLORER_URL || 'https://amoy.polygonscan.com';
+
+  const address = typeof rawAddress === 'object' && rawAddress !== null
+    ? (rawAddress.walletAddress || '')
+    : (rawAddress || '');
 
   const handleCopy = (e) => {
     e.stopPropagation();

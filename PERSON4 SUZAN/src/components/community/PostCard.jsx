@@ -12,13 +12,18 @@ import { useToast } from '../../context/ToastContext.jsx';
 export default function PostCard({ post, onSelectPost, onStartChat }) {
   const { address } = useWallet();
   const toast = useToast();
-  const isAuthor = address && post.author && address.toLowerCase() === post.author.toLowerCase();
+
+  const authorAddress = typeof post.author === 'object' && post.author !== null
+    ? (post.author.walletAddress || '')
+    : (post.author || '');
+
+  const isAuthor = address && authorAddress && address.toLowerCase() === authorAddress.toLowerCase();
 
   const handleStartChat = async (e) => {
     e.stopPropagation();
     try {
       const thread = await createThread({
-        otherAddress: post.author,
+        otherAddress: authorAddress,
         postId: post.id
       });
       toast.success('Chat thread opened with post author');
@@ -38,7 +43,7 @@ export default function PostCard({ post, onSelectPost, onStartChat }) {
               {formatRelativeTime(post.createdAt)}
             </span>
           </div>
-          <AddressBadge address={post.author} chars={3} showExplorer={false} />
+          <AddressBadge address={authorAddress} chars={3} showExplorer={false} />
         </div>
 
         <div>
