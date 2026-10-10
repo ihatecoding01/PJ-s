@@ -83,6 +83,35 @@ class LLMService:
                 text_parts = [b.get("text", "") for b in content_blocks if b.get("type") == "text"]
                 return "".join(text_parts)
 
+        elif self.provider in ("gemini", "google") or (self.api_key and (self.api_key.startswith("AIza") or self.api_key.startswith("AQ."))):
+            # Google Gemini via OpenAI-compatible endpoint
+            url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+            model_name = self.model if (self.model and "gpt" not in self.model) else "gemini-2.5-flash"
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": model_name,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "response_format": {"type": "json_object"},
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ]
+            }
+            async with httpx.AsyncClient(timeout=45.0) as client:
+                resp = await client.post(url, json=payload, headers=headers)
+                if resp.status_code != 200:
+                    logger.error(f"Gemini API error: status {resp.status_code}")
+                    raise RuntimeError(f"Gemini API returned status {resp.status_code}: {resp.text}")
+                data = resp.json()
+                choices = data.get("choices", [])
+                if not choices:
+                    raise RuntimeError("Gemini returned empty choices")
+                return choices[0].get("message", {}).get("content", "")
+
         else:
             # Default to OpenAI
             url = "https://api.openai.com/v1/chat/completions"

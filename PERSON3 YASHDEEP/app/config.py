@@ -14,7 +14,7 @@ class Settings:
     MOCK: bool = os.getenv("MOCK", "false").lower() in ("true", "1", "yes", "t")
 
     # LLM Configuration
-    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "openai").lower()  # "anthropic" | "openai"
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "openai").lower()  # "anthropic" | "openai" | "gemini"
     LLM_API_KEY: Optional[str] = os.getenv("LLM_API_KEY")
     LLM_MODEL: Optional[str] = os.getenv("LLM_MODEL")  # Optional override
 
