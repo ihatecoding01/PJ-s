@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Wallet } from 'ethers';
 import { getProvider, switchNetwork as switchChainNetwork, fetchContractConfig } from '../chain/contract.js';
 import { getNonce, verifySignature } from '../api/auth.js';
 import { getMe } from '../api/users.js';
@@ -16,6 +17,7 @@ export function WalletProvider({ children }) {
   const [user, setUser] = useState(null);
   const [jwt, setJwt] = useState(localStorage.getItem('fairwork_jwt'));
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const isMock = import.meta.env.VITE_USE_MOCK === 'true';
 
   // Load configuration on mount
@@ -128,12 +130,12 @@ export function WalletProvider({ children }) {
     }
   };
 
-  const connectWallet = async () => {
+  const connectWallet = () => {
+    setIsConnectModalOpen(true);
+  };
+
+  const connectMetaMask = async () => {
     if (!window.ethereum) {
-      if (isMock) {
-        toast.info('MetaMask not detected: using FairWork Mock Mode.');
-        return handleLogin(DEMO_ACCOUNTS.CLIENT.address);
-      }
       toast.error('MetaMask extension not found in browser');
       return;
     }
@@ -143,9 +145,50 @@ export function WalletProvider({ children }) {
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       if (accounts && accounts[0]) {
         await handleLogin(accounts[0]);
+        setIsConnectModalOpen(false);
       }
     } catch (err) {
       toast.error(err.message || 'Could not connect wallet');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const connectWithDemoAccount = async (accountKey) => {
+    const acc = DEMO_ACCOUNTS[accountKey];
+    if (!acc) return;
+    try {
+      setIsConnecting(true);
+      if (acc.privateKey) {
+        // Authenticate with real backend using cryptographic SIWE
+        const demoWallet = new Wallet(acc.privateKey);
+        const addr = demoWallet.address.toLowerCase();
+        const { nonce } = await getNonce(addr);
+        const messageToSign = `FairWork login: ${nonce}`;
+        const signature = await demoWallet.signMessage(messageToSign);
+        const { token, user: loggedUser } = await verifySignature(addr, signature);
+
+        localStorage.setItem('fairwork_jwt', token);
+        localStorage.setItem('fairwork_user_address', addr);
+        setJwt(token);
+        setAddress(addr);
+        setUser(loggedUser);
+        setIsConnectModalOpen(false);
+        toast.success(`Connected as ${loggedUser.name || acc.name} (${acc.role})`);
+      } else {
+        const addr = acc.address.toLowerCase();
+        localStorage.setItem('fairwork_user_address', addr);
+        const fakeToken = `mock-token-${addr}`;
+        localStorage.setItem('fairwork_jwt', fakeToken);
+        setAddress(addr);
+        setUser(acc);
+        setJwt(fakeToken);
+        setIsConnectModalOpen(false);
+        toast.success(`Switched active persona to ${acc.name} (${acc.role})`);
+      }
+    } catch (err) {
+      console.error('Demo login error:', err);
+      toast.error(err.message || 'Demo login failed');
     } finally {
       setIsConnecting(false);
     }
@@ -170,16 +213,7 @@ export function WalletProvider({ children }) {
   };
 
   const switchDemoAccount = async (accountKey) => {
-    const acc = DEMO_ACCOUNTS[accountKey];
-    if (!acc) return;
-    const addr = acc.address.toLowerCase();
-    localStorage.setItem('fairwork_user_address', addr);
-    const fakeToken = `mock-token-${addr}`;
-    localStorage.setItem('fairwork_jwt', fakeToken);
-    setAddress(addr);
-    setUser(acc);
-    setJwt(fakeToken);
-    toast.success(`Switched active persona to ${acc.name} (${acc.role})`);
+    await connectWithDemoAccount(accountKey);
   };
 
   const refreshUser = async () => {
@@ -206,7 +240,12 @@ export function WalletProvider({ children }) {
         isConnecting,
         isWrongNetwork,
         isMock,
+        isConnectModalOpen,
+        openConnectModal: () => setIsConnectModalOpen(true),
+        closeConnectModal: () => setIsConnectModalOpen(false),
         connectWallet,
+        connectMetaMask,
+        connectWithDemoAccount,
         disconnectWallet: handleDisconnect,
         switchNetwork: handleSwitchNetwork,
         switchDemoAccount,

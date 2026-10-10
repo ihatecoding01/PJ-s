@@ -1,6 +1,7 @@
-import { BrowserProvider, Contract } from 'ethers';
+import { BrowserProvider, JsonRpcProvider, Wallet, Contract } from 'ethers';
 import abiJson from './abi.json';
 import { getConfig } from '../api/config.js';
+import { DEMO_ACCOUNTS } from '../mock/mockStore.js';
 
 export const FAIRWORK_ABI = abiJson;
 
@@ -45,7 +46,7 @@ export async function fetchContractConfig() {
 }
 
 /**
- * Get ethers BrowserProvider from window.ethereum
+ * Get ethers BrowserProvider from window.ethereum or null
  */
 export function getProvider() {
   if (typeof window === 'undefined' || !window.ethereum) {
@@ -55,25 +56,54 @@ export function getProvider() {
 }
 
 /**
- * Get contract instance connected with current signer
+ * Get fallback JsonRpcProvider for local Hardhat node
+ */
+export function getFallbackProvider() {
+  return new JsonRpcProvider('http://127.0.0.1:8545');
+}
+
+/**
+ * Get contract instance connected with current signer (MetaMask or Demo account)
  */
 export async function getContractWithSigner() {
-  const provider = getProvider();
-  if (!provider) throw new Error('MetaMask or Web3 wallet is not installed');
-  const signer = await provider.getSigner();
   const cfg = await fetchContractConfig();
-  return new Contract(cfg.contractAddress, cfg.abi || FAIRWORK_ABI, signer);
+  const provider = getProvider();
+
+  if (provider && window.ethereum?.selectedAddress) {
+    try {
+      const signer = await provider.getSigner();
+      return new Contract(cfg.contractAddress, cfg.abi || FAIRWORK_ABI, signer);
+    } catch {
+      // Fall through to demo signer if MetaMask signing not available
+    }
+  }
+
+  // Fallback: Check if currently authenticated with a demo account
+  const savedAddr = (localStorage.getItem('fairwork_user_address') || '').toLowerCase();
+  const demoAccount = Object.values(DEMO_ACCOUNTS).find(
+    acc => acc.address.toLowerCase() === savedAddr && acc.privateKey
+  );
+
+  if (demoAccount) {
+    const jsonRpcProvider = getFallbackProvider();
+    const demoSigner = new Wallet(demoAccount.privateKey, jsonRpcProvider);
+    return new Contract(cfg.contractAddress, cfg.abi || FAIRWORK_ABI, demoSigner);
+  }
+
+  if (provider) {
+    const signer = await provider.getSigner();
+    return new Contract(cfg.contractAddress, cfg.abi || FAIRWORK_ABI, signer);
+  }
+
+  throw new Error('MetaMask or Web3 wallet is not installed. Please use a demo account or install MetaMask.');
 }
 
 /**
  * Get read-only contract instance
  */
 export async function getReadOnlyContract() {
-  const provider = getProvider();
   const cfg = await fetchContractConfig();
-  if (!provider) {
-    return null;
-  }
+  const provider = getProvider() || getFallbackProvider();
   return new Contract(cfg.contractAddress, cfg.abi || FAIRWORK_ABI, provider);
 }
 

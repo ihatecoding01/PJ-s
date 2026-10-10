@@ -95,17 +95,16 @@ export default function Navbar({ activePage, setActivePage }) {
 
           {/* Wallet & Personas */}
           <div className="flex items-center gap-3">
-            {/* Mock Persona Switcher */}
-            {isMock && (
-              <div className="relative">
-                <button
-                  onClick={() => setPersonaOpen(!personaOpen)}
-                  className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-900/40 transition-colors"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Persona: <strong>{user?.name?.split(' ')[0] || 'Select'}</strong></span>
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
+            {/* Persona Quick Switcher */}
+            <div className="relative">
+              <button
+                onClick={() => setPersonaOpen(!personaOpen)}
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-900/40 transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Persona: <strong>{user?.name?.split(' ')[0] || 'Switch Role'}</strong></span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
 
                 {personaOpen && (
                   <div className="absolute right-0 mt-2 w-64 rounded-xl border border-slate-750 bg-surface-900/95 backdrop-blur-xl p-2 shadow-2xl z-50 animate-fade-in">
@@ -139,7 +138,6 @@ export default function Navbar({ activePage, setActivePage }) {
                   </div>
                 )}
               </div>
-            )}
 
             {/* Network indicator */}
             <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-900 border border-slate-800 text-xs font-mono text-slate-300">

@@ -4,6 +4,7 @@ import { WalletProvider } from './context/WalletContext.jsx';
 import Navbar from './components/common/Navbar.jsx';
 import Footer from './components/common/Footer.jsx';
 import NetworkBanner from './components/common/NetworkBanner.jsx';
+import ConnectWalletModal from './components/common/ConnectWalletModal.jsx';
 
 import LandingPage from './pages/LandingPage.jsx';
 import CommunityPage from './pages/CommunityPage.jsx';
@@ -42,6 +43,7 @@ function MainApp() {
     <div className="flex flex-col min-h-screen">
       <NetworkBanner />
       <Navbar activePage={activePage} setActivePage={setActivePage} />
+      <ConnectWalletModal />
 
       <main className="flex-1">
         {activePage === 'landing' && (
