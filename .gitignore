@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Hardhat & Solidity build outputs
+artifacts/
+cache/
+*/artifacts/
+*/cache/
+typechain/
+typechain-types/
+coverage/
+coverage.json
+
+# Environment variables
+.env
+*.env
+!.env.example
+!shared/.env.example
+
+# OS files
+.DS_Store
+Thumbs.db

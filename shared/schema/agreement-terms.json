@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FairWorkAgreementTerms",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "title",
+    "description",
+    "client",
+    "freelancer",
+    "currency",
+    "totalAmount",
+    "paymentMode",
+    "latePenaltyBpsPerDay",
+    "maxLatePenaltyBps",
+    "reviewWindowDays",
+    "graceDays",
+    "maxRevisions",
+    "github",
+    "milestones",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "default": "1.0"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "client": {
+      "type": "string",
+      "pattern": "^0x[a-fA-F0-9]{40}$"
+    },
+    "freelancer": {
+      "type": "string",
+      "pattern": "^0x[a-fA-F0-9]{40}$"
+    },
+    "currency": {
+      "type": "string",
+      "default": "MATIC"
+    },
+    "totalAmount": {
+      "type": "string",
+      "description": "Decimal string in ether units e.g. 1.5"
+    },
+    "paymentMode": {
+      "type": "string",
+      "enum": ["MILESTONE", "LUMP_SUM"]
+    },
+    "latePenaltyBpsPerDay": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "maxLatePenaltyBps": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "reviewWindowDays": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "graceDays": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "maxRevisions": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "github": {
+      "type": "object",
+      "required": ["repoUrl", "branch"],
+      "properties": {
+        "repoUrl": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        }
+      }
+    },
+    "milestones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "index",
+          "title",
+          "description",
+          "amount",
+          "deadline",
+          "requiredProgressBps",
+          "acceptanceCriteria"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requiredProgressBps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "acceptanceCriteria": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

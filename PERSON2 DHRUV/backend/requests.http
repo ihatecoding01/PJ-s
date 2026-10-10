@@ -1,0 +1,325 @@
+### FairWork REST API HTTP Requests Specification
+### Variables
+@baseUrl = http://localhost:4000
+@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+###############################################################################
+### 1. SYSTEM & CONFIGURATION ENDPOINTS (PUBLIC)
+###############################################################################
+
+### Health Check
+GET {{baseUrl}}/health HTTP/1.1
+
+### Web3 & Contract Configuration (Chain ID, Contract Address, ABI)
+GET {{baseUrl}}/config HTTP/1.1
+
+
+###############################################################################
+### 2. AUTHENTICATION (PUBLIC / RATE LIMITED)
+###############################################################################
+
+### Request Nonce for Wallet Login
+POST {{baseUrl}}/auth/nonce HTTP/1.1
+Content-Type: application/json
+
+{
+  "walletAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+}
+
+### Verify Signature and Receive JWT
+POST {{baseUrl}}/auth/verify HTTP/1.1
+Content-Type: application/json
+
+{
+  "walletAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "signature": "0x401bcff3c690f0580980fa2a9bcba33c5bdf135dbce4847e0996c5e2ec74f2603845b4b1259fbdae1a491ca0f47e305e717882202613d9426f4f10738a9a4b8e1c"
+}
+
+### Get Current Authenticated User
+GET {{baseUrl}}/auth/me HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+
+###############################################################################
+### 3. USER PROFILES (PROTECTED)
+###############################################################################
+
+### Get Current User Profile
+GET {{baseUrl}}/users/profile HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Update User Profile (Role, Skills, GitHub Username)
+PUT {{baseUrl}}/users/profile HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Dhruv",
+  "role": "BOTH",
+  "bio": "Web3 backend engineer & smart contract integration specialist",
+  "skills": "TypeScript, Express, Prisma, ethers.js, Solidity",
+  "githubUsername": "dhruv-fairwork"
+}
+
+### List All Users
+GET {{baseUrl}}/users HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Get User by ID
+GET {{baseUrl}}/users/cmv2azv830004o3uwr0t9q6qq HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+
+###############################################################################
+### 4. COMMUNITY: POSTS, PROPOSALS, THREADS & MESSAGES (PROTECTED)
+###############################################################################
+
+### Create a Job or Service Post
+POST {{baseUrl}}/community/posts HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "type": "JOB",
+  "title": "Decentralized Escrow Backend & AI Integration",
+  "description": "Seeking an experienced engineer to build Express.js backend with mock blockchain & AI integration.",
+  "budget": 2500,
+  "tags": ["Express", "TypeScript", "Escrow", "Prisma"]
+}
+
+### Search and List Posts (with optional type, tag, query filters)
+GET {{baseUrl}}/community/posts?type=JOB&tag=Express HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Get Post Details by ID
+GET {{baseUrl}}/community/posts/cmv2azv830004o3uwr0t9q6qq HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Submit Proposal to Post (Freelancer)
+POST {{baseUrl}}/community/posts/cmv2azv830004o3uwr0t9q6qq/proposals HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "coverLetter": "I have extensive experience with Express.js and ethers.js escrow systems.",
+  "proposedBudget": 2400,
+  "proposedDuration": "14 days"
+}
+
+### List Proposals for Post
+GET {{baseUrl}}/community/posts/cmv2azv830004o3uwr0t9q6qq/proposals HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Create or Retrieve Negotiation Thread
+POST {{baseUrl}}/community/threads HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "recipientId": "cmv2azv830004o3uwr0t9q6qq",
+  "subject": "Proposal Negotiation for Escrow Backend"
+}
+
+### List User's Negotiation Threads
+GET {{baseUrl}}/community/threads HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Get Thread Messages
+GET {{baseUrl}}/community/threads/cmv2azv8e0008o3uwzvxv0nal HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Send Message in Thread
+POST {{baseUrl}}/community/threads/cmv2azv8e0008o3uwzvxv0nal/messages HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "content": "Let us proceed with setting up the milestone agreement."
+}
+
+
+###############################################################################
+### 5. AGREEMENTS & CANONICAL HASHING (PROTECTED)
+###############################################################################
+
+### Draft Agreement via AI from Thread and Post Context
+POST {{baseUrl}}/agreements/draft HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "threadId": "cmv2azv8e0008o3uwzvxv0nal",
+  "freelancerId": "cmv2azv830004o3uwr0t9q6qq",
+  "title": "FairWork Autonomous Escrow Agreement"
+}
+
+### List User Agreements
+GET {{baseUrl}}/agreements HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Get Agreement Details (Terms, Milestones, Events, Disputes)
+GET {{baseUrl}}/agreements/cmv2azv8x000do3uwwk1fnk6z HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Edit Agreement Terms (Resets approvals to DRAFT; immutable once LOCKED)
+PUT {{baseUrl}}/agreements/cmv2azv8x000do3uwwk1fnk6z HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "terms": {
+    "title": "Updated Escrow Agreement",
+    "summary": "Updated deliverables and milestone timelines.",
+    "totalBudget": 2600,
+    "currency": "USDC",
+    "revisionPolicy": "Up to 3 revisions allowed.",
+    "cancellationPolicy": "Escrow arbitration on formal dispute filing.",
+    "milestones": [
+      {
+        "milestoneIndex": 0,
+        "title": "Phase 1: Core Architecture",
+        "description": "Express and Prisma schema.",
+        "amount": 1100,
+        "deadlineDays": 7,
+        "deliverables": ["Models", "Auth"]
+      },
+      {
+        "milestoneIndex": 1,
+        "title": "Phase 2: Final Integration",
+        "description": "Smart contract events and tests.",
+        "amount": 1500,
+        "deadlineDays": 14,
+        "deliverables": ["Tests", "Indexer"]
+      }
+    ]
+  }
+}
+
+### Approve Agreement (Locks terms and computes canonicalHash once both approve)
+POST {{baseUrl}}/agreements/cmv2azv8x000do3uwwk1fnk6z/approve HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Link Agreement to On-Chain Contract (Verifies canonical terms hash on-chain)
+POST {{baseUrl}}/agreements/cmv2azv8x000do3uwwk1fnk6z/link HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "onChainAgreementId": "1",
+  "transactionHash": "0xmock_link_transaction_hash"
+}
+
+
+###############################################################################
+### 6. MILESTONES & ORACLE RECORDING (PROTECTED)
+###############################################################################
+
+### Submit Milestone (AI Repo Analysis + Canonical Report Hash + Oracle Wallet Recording)
+POST {{baseUrl}}/milestones/cmv2azv8x000eo3uwnewm913h/submit HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "repoUrl": "https://github.com/fairwork/smart-escrow-demo",
+  "commitSha": "9f83a45c81d2e0b5f1234567890abcdef1234567",
+  "notes": "Finished deliverable items and passing 100% test suite."
+}
+
+### Review Milestone (Approve or Reject by Client)
+POST {{baseUrl}}/milestones/cmv2azv8x000eo3uwnewm913h/review HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "action": "APPROVE",
+  "feedback": "Code analysis verified and all tests passing."
+}
+
+### Get Milestone by ID
+GET {{baseUrl}}/milestones/cmv2azv8x000eo3uwnewm913h HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+
+###############################################################################
+### 7. DISPUTES & EVIDENCE UPLOAD (PROTECTED)
+###############################################################################
+
+### Raise a Dispute on an Agreement
+POST {{baseUrl}}/disputes HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "agreementId": "cmv2azv8x000do3uwwk1fnk6z",
+  "reason": "Milestone delivery deadline exceeded with incomplete test coverage."
+}
+
+### Get Dispute Details
+GET {{baseUrl}}/disputes/cmv2b918m000fo3uw0j93b761 HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Upload Evidence File (Multi-part Form Data with safe storage & SHA-256 hash)
+POST {{baseUrl}}/disputes/cmv2b918m000fo3uw0j93b761/evidence HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="description"
+
+Log file containing Git commit timestamps and CI report
+------WebKitFormBoundary
+Content-Disposition: form-data; name="file"; filename="audit_log.txt"
+Content-Type: text/plain
+
+[CI Report] 12 failed tests out of 45 test runs.
+------WebKitFormBoundary--
+
+### Request AI Dispute Summary & Oracle Recommendation
+POST {{baseUrl}}/disputes/cmv2b918m000fo3uw0j93b761/ai-summary HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Resolve Dispute
+POST {{baseUrl}}/disputes/cmv2b918m000fo3uw0j93b761/resolve HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "resolution": "Parties agreed to 70/30 escrow release following AI arbitration.",
+  "clientRefund": 300,
+  "freelancerPayout": 700
+}
+
+
+###############################################################################
+### 8. EVENT INDEXER & AGREEMENT TIMELINE (PROTECTED)
+###############################################################################
+
+### Backfill & Index On-Chain Events for Agreement
+POST {{baseUrl}}/events/index/cmv2azv8x000do3uwwk1fnk6z HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Get Chronological Timeline for Agreement
+GET {{baseUrl}}/events/timeline/cmv2azv8x000do3uwwk1fnk6z HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+
+###############################################################################
+### 9. PAYMENTS VIEW (PROTECTED)
+###############################################################################
+
+### Get Combined Payment Summary & Event Stream
+GET {{baseUrl}}/payments/agreement/cmv2azv8x000do3uwwk1fnk6z HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+
+###############################################################################
+### 10. DEADLINES & ALERTS (PROTECTED)
+###############################################################################
+
+### List Active Alerts (Filter by resolved=false)
+GET {{baseUrl}}/alerts?resolved=false HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+### Resolve Alert
+POST {{baseUrl}}/alerts/cmv2b998p000lo3uw8b012398/resolve HTTP/1.1
+Authorization: Bearer {{authToken}}
