@@ -1,0 +1,256 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String      @id @default(cuid())
+  walletAddress  String      @unique
+  nonce          String
+  role           String      @default("BOTH") // CLIENT, FREELANCER, BOTH
+  name           String?
+  bio            String?
+  skills         String?     // Comma-separated or JSON list
+  githubUsername String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  posts          Post[]      @relation("UserPosts")
+  proposals      Proposal[]  @relation("FreelancerProposals")
+  clientThreads  Thread[]    @relation("ClientThreads")
+  freelancerThreads Thread[] @relation("FreelancerThreads")
+  sentMessages   Message[]   @relation("UserMessages")
+  clientAgreements Agreement[] @relation("ClientAgreements")
+  freelancerAgreements Agreement[] @relation("FreelancerAgreements")
+  evidences      Evidence[]  @relation("UserEvidences")
+
+  @@index([walletAddress])
+}
+
+model Post {
+  id          String      @id @default(cuid())
+  authorId    String
+  type        String      // JOB, SERVICE
+  title       String
+  description String
+  budget      Float
+  tags        String?     // JSON array string
+  status      String      @default("OPEN") // OPEN, IN_PROGRESS, CLOSED
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  author      User        @relation("UserPosts", fields: [authorId], references: [id])
+  proposals   Proposal[]
+  threads     Thread[]
+
+  @@index([authorId])
+  @@index([type])
+  @@index([status])
+}
+
+model Proposal {
+  id              String   @id @default(cuid())
+  postId          String
+  freelancerId    String
+  coverLetter     String
+  proposedBudget  Float
+  proposedDuration String
+  status          String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  post            Post     @relation(fields: [postId], references: [id])
+  freelancer      User     @relation("FreelancerProposals", fields: [freelancerId], references: [id])
+
+  @@index([postId])
+  @@index([freelancerId])
+}
+
+model Thread {
+  id           String     @id @default(cuid())
+  postId       String?
+  clientId     String
+  freelancerId String
+  subject      String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  post         Post?      @relation(fields: [postId], references: [id])
+  client       User       @relation("ClientThreads", fields: [clientId], references: [id])
+  freelancer   User       @relation("FreelancerThreads", fields: [freelancerId], references: [id])
+  messages     Message[]
+  agreements   Agreement[]
+
+  @@index([clientId])
+  @@index([freelancerId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  threadId  String
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  thread    Thread   @relation(fields: [threadId], references: [id])
+  sender    User     @relation("UserMessages", fields: [senderId], references: [id])
+
+  @@index([threadId])
+  @@index([senderId])
+}
+
+model Agreement {
+  id                   String       @id @default(cuid())
+  threadId             String?
+  clientId             String
+  freelancerId         String
+  title                String
+  termsJson            String       // JSON string of structured terms
+  canonicalHash        String?      // Keccak256 hash of canonical terms
+  status               String       @default("DRAFT") // DRAFT, CLIENT_APPROVED, FREELANCER_APPROVED, LOCKED, ONCHAIN_LINKED, COMPLETED, DISPUTED
+  clientApprovedAt     DateTime?
+  freelancerApprovedAt DateTime?
+  lockedAt             DateTime?
+  onChainAgreementId   String?      @unique
+  onChainTxHash        String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  thread               Thread?      @relation(fields: [threadId], references: [id])
+  client               User         @relation("ClientAgreements", fields: [clientId], references: [id])
+  freelancer           User         @relation("FreelancerAgreements", fields: [freelancerId], references: [id])
+  milestones           Milestone[]
+  evidences            Evidence[]
+  chainEvents          ChainEvent[]
+  alerts               Alert[]
+  disputes             Dispute[]
+
+  @@index([clientId])
+  @@index([freelancerId])
+  @@index([status])
+  @@index([onChainAgreementId])
+}
+
+model Milestone {
+  id                  String           @id @default(cuid())
+  agreementId         String
+  milestoneIndex      Int
+  title               String
+  description         String
+  amount              Float
+  deadline            DateTime
+  reviewWindowSeconds Int              @default(259200) // 3 days review window in seconds
+  status              String           @default("PENDING") // PENDING, SUBMITTED, IN_REVIEW, APPROVED, REJECTED, DISPUTED
+  submissionRepoUrl   String?
+  submissionCommitSha String?
+  submissionNotes     String?
+  submittedAt         DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  agreement           Agreement        @relation(fields: [agreementId], references: [id])
+  progressReports     ProgressReport[]
+  alerts              Alert[]
+
+  @@index([agreementId])
+  @@index([status])
+  @@index([deadline])
+}
+
+model ProgressReport {
+  id                  String     @id @default(cuid())
+  milestoneId         String?
+  repoUrl             String
+  commitSha           String?
+  aiSummary           String
+  testsPassing        Boolean    @default(true)
+  qualityScore        Int        @default(90)
+  canonicalReportHash String
+  oracleTxHash        String?
+  createdAt           DateTime   @default(now())
+
+  milestone           Milestone? @relation(fields: [milestoneId], references: [id])
+
+  @@index([milestoneId])
+}
+
+model Dispute {
+  id                   String     @id @default(cuid())
+  agreementId          String
+  raisedById           String
+  reason               String
+  status               String     @default("OPEN") // OPEN, RESOLVED, ESCALATED
+  aiSummary            String?
+  oracleRecommendation String?
+  resolution           String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  agreement            Agreement  @relation(fields: [agreementId], references: [id])
+  evidences            Evidence[]
+
+  @@index([agreementId])
+}
+
+model Evidence {
+  id          String    @id @default(cuid())
+  disputeId   String?
+  agreementId String
+  uploadedById String
+  filename    String
+  originalName String
+  mimeType    String
+  sizeBytes   Int
+  storagePath String
+  contentHash String    // SHA-256 hash of file content
+  description String?
+  createdAt   DateTime  @default(now())
+
+  agreement   Agreement @relation(fields: [agreementId], references: [id])
+  uploadedBy  User      @relation("UserEvidences", fields: [uploadedById], references: [id])
+  dispute     Dispute?  @relation(fields: [disputeId], references: [id])
+
+  @@index([agreementId])
+  @@index([disputeId])
+}
+
+model ChainEvent {
+  id              String     @id @default(cuid())
+  agreementId     String?
+  eventName       String
+  transactionHash String
+  blockNumber     Int
+  logIndex        Int
+  argsJson        String
+  timestamp       DateTime
+  createdAt       DateTime   @default(now())
+
+  agreement       Agreement? @relation(fields: [agreementId], references: [id])
+
+  @@index([agreementId])
+  @@index([eventName])
+  @@index([transactionHash])
+}
+
+model Alert {
+  id          String     @id @default(cuid())
+  agreementId String?
+  milestoneId String?
+  type        String     // DEADLINE_APPROACHING, REVIEW_WINDOW_EXPIRING, DEADLINE_BREACHED
+  severity    String     // INFO, WARNING, CRITICAL
+  message     String
+  resolved    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  agreement   Agreement? @relation(fields: [agreementId], references: [id])
+  milestone   Milestone? @relation(fields: [milestoneId], references: [id])
+
+  @@index([agreementId])
+  @@index([milestoneId])
+  @@index([resolved])
+}
