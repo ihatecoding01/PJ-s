@@ -8,7 +8,8 @@ export class MilestoneController {
   static async submitMilestone(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const data = submitMilestoneSchema.parse(req.body);
-      const result = await MilestoneService.submitMilestone(req.params.id, req.user!.id, data);
+      const milestoneIdx = req.params.idx !== undefined ? Number(req.params.idx) : undefined;
+      const result = await MilestoneService.submitMilestone(req.params.id, req.user!.id, data, milestoneIdx);
       return sendSuccess(res, result, 200, 'Milestone submitted and verified by Oracle');
     } catch (error) {
       next(error);

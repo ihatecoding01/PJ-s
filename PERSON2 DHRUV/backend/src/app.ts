@@ -32,19 +32,27 @@ export function createApp() {
   app.use(express.json({ limit: '5mb' }));
   app.use(express.urlencoded({ extended: true }));
 
+  // Shared API router supporting both /api prefix and root paths
+  const apiRouter = express.Router();
+
   // Unprotected / Public routes
-  app.use('/', systemRoutes); // /health and /config
-  app.use('/auth', authRoutes); // /auth/nonce, /auth/verify, /auth/me (me handles its own auth check)
+  apiRouter.use('/', systemRoutes); // /health and /config
+  apiRouter.use('/auth', authRoutes); // /auth/nonce, /auth/verify, /auth/me
 
   // Protected business routes
-  app.use('/users', userRoutes);
-  app.use('/community', communityRoutes);
-  app.use('/agreements', agreementRoutes);
-  app.use('/milestones', milestoneRoutes);
-  app.use('/disputes', disputeRoutes);
-  app.use('/events', eventRoutes);
-  app.use('/payments', paymentRoutes);
-  app.use('/alerts', alertRoutes);
+  apiRouter.use('/users', userRoutes);
+  apiRouter.use('/community', communityRoutes);
+  apiRouter.use('/', communityRoutes); // alias for /posts and /threads
+  apiRouter.use('/agreements', agreementRoutes);
+  apiRouter.use('/milestones', milestoneRoutes);
+  apiRouter.use('/disputes', disputeRoutes);
+  apiRouter.use('/events', eventRoutes);
+  apiRouter.use('/payments', paymentRoutes);
+  apiRouter.use('/alerts', alertRoutes);
+
+  // Mount at both /api and root /
+  app.use('/api', apiRouter);
+  app.use('/', apiRouter);
 
   // 404 handler
   app.use((_req, res) => {

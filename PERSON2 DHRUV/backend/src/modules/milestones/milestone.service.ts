@@ -9,19 +9,30 @@ export class MilestoneService {
   /**
    * Submits a milestone:
    * 1. Analyzes the repository via AI.
-   * 2. Calculates canonical report hash.
+   * 2. Calculates canonical report hash and submission hash.
    * 3. Records progress via oracle wallet on chain (without impersonating freelancer).
    * 4. Persists ProgressReport and updates milestone state.
    */
   static async submitMilestone(
-    milestoneId: string,
+    milestoneIdOrAgreementId: string,
     freelancerId: string,
-    data: z.infer<typeof submitMilestoneSchema>
+    data: z.infer<typeof submitMilestoneSchema>,
+    milestoneIndex?: number
   ) {
-    const milestone = await prisma.milestone.findUnique({
-      where: { id: milestoneId },
+    let milestone = await prisma.milestone.findUnique({
+      where: { id: milestoneIdOrAgreementId },
       include: { agreement: true },
     });
+
+    if (!milestone && milestoneIndex !== undefined) {
+      milestone = await prisma.milestone.findFirst({
+        where: {
+          agreementId: milestoneIdOrAgreementId,
+          milestoneIndex: Number(milestoneIndex),
+        },
+        include: { agreement: true },
+      });
+    }
 
     if (!milestone) {
       throw new Error('Milestone not found');
@@ -35,22 +46,47 @@ export class MilestoneService {
       throw new Error('Milestone has already been approved');
     }
 
+    // Determine target repository URL from input or agreement terms
+    let repoUrl = data.repoUrl;
+    let acceptanceCriteria: string[] = [];
+    if (!repoUrl) {
+      try {
+        const terms = JSON.parse(milestone.agreement.termsJson);
+        repoUrl = terms?.github?.repoUrl;
+        const currentM = (terms?.milestones || []).find((m: any) => (m.index ?? m.milestoneIndex) === milestone!.milestoneIndex);
+        if (currentM?.acceptanceCriteria) {
+          acceptanceCriteria = currentM.acceptanceCriteria;
+        }
+      } catch {}
+    }
+    if (!repoUrl) {
+      repoUrl = 'https://github.com/org/repo';
+    }
+
     // 1. Analyze repo through AI service
     const aiAnalysis = await AiAdapter.analyzeMilestone({
-      repoUrl: data.repoUrl,
+      repoUrl,
       commitSha: data.commitSha,
       milestoneTitle: milestone.title,
       milestoneDescription: milestone.description,
+      acceptanceCriteria,
     });
 
-    // 2. Compute canonical report hash
+    // 2. Compute canonical report hash and submission hash
     const canonicalReportHash = computeCanonicalHash({
-      repoUrl: data.repoUrl,
+      repoUrl,
       commitSha: data.commitSha || 'HEAD',
       milestoneIndex: milestone.milestoneIndex,
       testsPassing: aiAnalysis.testsPassing,
       qualityScore: aiAnalysis.qualityScore,
       summary: aiAnalysis.summary,
+    });
+
+    const submissionHash = computeCanonicalHash({
+      repoUrl,
+      commitSha: data.commitSha || 'HEAD',
+      notes: data.notes || '',
+      prUrl: data.prUrl || '',
     });
 
     // 3. Record progress on-chain via ORACLE wallet (never impersonating freelancer wallet)
@@ -68,7 +104,7 @@ export class MilestoneService {
     const report = await prisma.progressReport.create({
       data: {
         milestoneId: milestone.id,
-        repoUrl: data.repoUrl,
+        repoUrl,
         commitSha: data.commitSha,
         aiSummary: aiAnalysis.summary,
         testsPassing: aiAnalysis.testsPassing,
@@ -80,10 +116,10 @@ export class MilestoneService {
 
     // 5. Update milestone status
     const updatedMilestone = await prisma.milestone.update({
-      where: { id: milestoneId },
+      where: { id: milestone.id },
       data: {
         status: 'SUBMITTED',
-        submissionRepoUrl: data.repoUrl,
+        submissionRepoUrl: repoUrl,
         submissionCommitSha: data.commitSha,
         submissionNotes: data.notes,
         submittedAt: new Date(),
@@ -98,6 +134,8 @@ export class MilestoneService {
       milestone: updatedMilestone,
       latestReport: report,
       oracleTxHash: oracleTx.transactionHash,
+      submissionHash,
+      canonicalReportHash,
     };
   }
 
@@ -138,18 +176,22 @@ export class MilestoneService {
       include: {
         progressReports: { orderBy: { createdAt: 'desc' } },
         agreement: {
-          include: {
-            client: { select: { id: true, walletAddress: true, name: true } },
-            freelancer: { select: { id: true, walletAddress: true, name: true } },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            clientId: true,
+            freelancerId: true,
+            onChainAgreementId: true,
           },
         },
-        alerts: true,
       },
     });
 
     if (!milestone) {
       throw new Error('Milestone not found');
     }
+
     return milestone;
   }
 }

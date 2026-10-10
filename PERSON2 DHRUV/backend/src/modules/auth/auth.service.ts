@@ -33,16 +33,23 @@ export class AuthService {
       throw new Error('User not found. Please request a nonce first.');
     }
 
-    const message = `Sign in to FairWork: ${user.nonce}`;
-    let recoveredAddress: string;
+    const expectedMessages = [
+      `FairWork login: ${user.nonce}`,
+      `Sign in to FairWork: ${user.nonce}`,
+    ];
+    let recoveredAddress: string | null = null;
 
-    try {
-      recoveredAddress = ethers.verifyMessage(message, signature);
-    } catch (err: any) {
-      throw new Error(`Signature verification failed: ${err.message}`);
+    for (const msg of expectedMessages) {
+      try {
+        const recovered = ethers.verifyMessage(msg, signature);
+        if (recovered.toLowerCase() === walletAddress.toLowerCase()) {
+          recoveredAddress = recovered;
+          break;
+        }
+      } catch {}
     }
 
-    if (recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+    if (!recoveredAddress) {
       throw new Error('Cryptographic signature does not match wallet address.');
     }
 

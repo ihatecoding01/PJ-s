@@ -13,6 +13,7 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('7d'),
   AI_MOCK: z.preprocess((val) => val === 'true' || val === true, z.boolean()).default(true),
   AI_SERVICE_URL: z.string().default('http://localhost:8000'),
+  AI_INTERNAL_KEY: z.string().default(''),
   CHAIN_MOCK: z.preprocess((val) => val === 'true' || val === true, z.boolean()).default(true),
   RPC_URL: z.string().default('http://127.0.0.1:8545'),
   CHAIN_ID: z.coerce.number().default(31337),

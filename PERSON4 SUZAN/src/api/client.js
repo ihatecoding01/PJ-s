@@ -47,6 +47,9 @@ export async function apiFetch(endpoint, options = {}) {
       throw new ApiError(response.status, code, message);
     }
 
+    if (data && typeof data === 'object' && 'data' in data && data.success === true) {
+      return data.data;
+    }
     return data;
   } catch (err) {
     if (err instanceof ApiError) throw err;

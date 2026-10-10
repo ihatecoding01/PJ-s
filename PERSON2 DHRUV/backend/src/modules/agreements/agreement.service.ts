@@ -1,3 +1,4 @@
+import { ethers } from 'ethers';
 import { prisma } from '../../lib/prisma';
 import { AiAdapter, AgreementTerms } from '../../adapters/aiAdapter';
 import { ChainAdapter } from '../../adapters/chainAdapter';
@@ -46,7 +47,41 @@ export class AgreementService {
     }
 
     const clientId = creatorId;
-    const freelancerId = params.freelancerId;
+    let freelancerId = params.freelancerId;
+
+    if (freelancerId) {
+      const existingUser = await prisma.user.findUnique({ where: { id: freelancerId } });
+      if (!existingUser) {
+        let addrFormatted = freelancerId;
+        if (freelancerId.startsWith('0x')) {
+          try {
+            addrFormatted = ethers.getAddress(freelancerId.toLowerCase());
+          } catch {}
+        }
+        const userByAddress = await prisma.user.findFirst({
+          where: { walletAddress: addrFormatted }
+        });
+        if (userByAddress) {
+          freelancerId = userByAddress.id;
+        } else if (freelancerId.startsWith('0x')) {
+          const newUser = await prisma.user.create({
+            data: {
+              walletAddress: addrFormatted,
+              nonce: Math.random().toString(36).substring(2),
+              role: 'FREELANCER'
+            }
+          });
+          freelancerId = newUser.id;
+        }
+      }
+    }
+
+    if (!freelancerId) {
+      const err: any = new Error('Freelancer ID or wallet address is required');
+      err.statusCode = 400;
+      err.code = 'INVALID_FREELANCER';
+      throw err;
+    }
 
     // Call AI service adapter
     const rawTerms = await AiAdapter.draftAgreement({
@@ -218,7 +253,10 @@ export class AgreementService {
     });
 
     if (!agreement) {
-      throw new Error('Agreement not found');
+      const err: any = new Error('Agreement not found');
+      err.statusCode = 404;
+      err.code = 'NOT_FOUND';
+      throw err;
     }
 
     const isClient = agreement.clientId === userId;
@@ -288,7 +326,10 @@ export class AgreementService {
     });
 
     if (!agreement) {
-      throw new Error('Agreement not found');
+      const err: any = new Error('Agreement not found');
+      err.statusCode = 404;
+      err.code = 'NOT_FOUND';
+      throw err;
     }
 
     if (agreement.clientId !== userId && agreement.freelancerId !== userId) {
@@ -296,13 +337,19 @@ export class AgreementService {
     }
 
     if (agreement.status !== 'LOCKED' && agreement.status !== 'ONCHAIN_LINKED') {
-      throw new Error(
+      const err: any = new Error(
         'Agreement must be in LOCKED status with mutual approvals before linking on-chain'
       );
+      err.statusCode = 400;
+      err.code = 'INVALID_STATUS';
+      throw err;
     }
 
     if (!agreement.canonicalHash) {
-      throw new Error('Missing canonical terms hash on agreement');
+      const err: any = new Error('Missing canonical terms hash on agreement');
+      err.statusCode = 400;
+      err.code = 'MISSING_CANONICAL_HASH';
+      throw err;
     }
 
     // Verify on-chain terms hash
@@ -312,9 +359,12 @@ export class AgreementService {
     );
 
     if (!valid) {
-      throw new Error(
+      const err: any = new Error(
         `On-chain terms hash mismatch! On-chain: ${onChainTermsHash}, Local canonicalHash: ${agreement.canonicalHash}`
       );
+      err.statusCode = 400;
+      err.code = 'TERMS_HASH_MISMATCH';
+      throw err;
     }
 
     // Update agreement with on-chain link

@@ -19,7 +19,10 @@ async function main() {
   console.log("--------------------------------------------------");
 
   // Check if contract is already deployed on localhost, or deploy a fresh one
-  const deploymentsDir = path.resolve(__dirname, "../../shared/deployments");
+  const sharedDir = fs.existsSync(path.resolve(__dirname, "../../../shared"))
+    ? path.resolve(__dirname, "../../../shared")
+    : path.resolve(__dirname, "../../shared");
+  const deploymentsDir = path.join(sharedDir, "deployments");
   const localDeployFile = path.join(deploymentsDir, "localhost.json");
   let contractAddress;
 
@@ -41,7 +44,6 @@ async function main() {
     console.log(`Deployed fresh FairWork contract at: ${contractAddress}`);
 
     // Export deployment and ABI
-    const sharedDir = path.resolve(__dirname, "../../shared");
     const abiDir = path.join(sharedDir, "abi");
     if (!fs.existsSync(deploymentsDir)) fs.mkdirSync(deploymentsDir, { recursive: true });
     if (!fs.existsSync(abiDir)) fs.mkdirSync(abiDir, { recursive: true });

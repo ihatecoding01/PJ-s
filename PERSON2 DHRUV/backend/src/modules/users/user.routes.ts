@@ -9,6 +9,8 @@ router.use(authenticate);
 
 router.get('/profile', UserController.getProfile);
 router.put('/profile', UserController.updateProfile);
+router.get('/me', UserController.getProfile);
+router.put('/me', UserController.updateProfile);
 router.get('/', UserController.listUsers);
 router.get('/:id', UserController.getUserById);
 

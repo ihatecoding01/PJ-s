@@ -23,7 +23,7 @@ export function calculateLatePenalty({
   const submitted = Number(submittedSec) || 0;
 
   const secondsLate = Math.max(0, submitted - deadline);
-  const daysLate = secondsLate > 0 ? Math.ceil(secondsLate / 86400) : 0;
+  const daysLate = secondsLate > 0 ? Math.floor(secondsLate / 86400) : 0;
 
   const penaltyBps = Math.min(daysLate * Number(latePenaltyBpsPerDay), Number(maxLatePenaltyBps));
   const penaltyAmount = (amount * penaltyBps) / 10000;

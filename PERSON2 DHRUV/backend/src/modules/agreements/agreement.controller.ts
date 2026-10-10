@@ -5,10 +5,17 @@ import { sendSuccess } from '../../utils/response';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { z } from 'zod';
 
-const linkAgreementSchema = z.object({
-  onChainAgreementId: z.string().min(1, 'On-chain agreement ID is required'),
-  transactionHash: z.string().optional(),
-});
+const linkAgreementSchema = z
+  .object({
+    onChainAgreementId: z.union([z.string(), z.number()]).optional(),
+    onchainId: z.union([z.string(), z.number()]).optional(),
+    transactionHash: z.string().optional(),
+    txHash: z.string().optional(),
+  })
+  .transform((data) => ({
+    onChainAgreementId: String(data.onChainAgreementId ?? data.onchainId ?? ''),
+    transactionHash: data.transactionHash || data.txHash,
+  }));
 
 export class AgreementController {
   static async draftAgreement(req: AuthenticatedRequest, res: Response, next: NextFunction) {

@@ -6,6 +6,7 @@ import { authenticate } from '../../middleware/auth';
 const router = Router();
 
 router.post('/nonce', authRateLimiter, AuthController.requestNonce);
+router.get('/nonce', authRateLimiter, AuthController.requestNonce);
 router.post('/verify', authRateLimiter, AuthController.verifySignature);
 router.get('/me', authenticate, AuthController.getMe);
 

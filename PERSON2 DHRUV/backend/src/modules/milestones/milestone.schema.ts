@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 export const submitMilestoneSchema = z.object({
-  repoUrl: z.string().trim().url('Valid GitHub or repository URL is required'),
+  repoUrl: z.string().trim().optional(),
+  prUrl: z.string().trim().optional(),
   commitSha: z.string().trim().max(64).optional(),
   notes: z.string().trim().max(2000).optional(),
 });

@@ -7,9 +7,10 @@ import { AuthenticatedRequest } from '../../middleware/auth';
 export class AuthController {
   static async requestNonce(req: Request, res: Response, next: NextFunction) {
     try {
-      const { walletAddress } = nonceRequestSchema.parse(req.body);
+      const payload = Object.keys(req.body || {}).length ? req.body : req.query;
+      const { walletAddress } = nonceRequestSchema.parse(payload);
       const nonce = await AuthService.getOrCreateNonce(walletAddress);
-      return sendSuccess(res, { nonce, message: `Sign in to FairWork: ${nonce}` });
+      return sendSuccess(res, { nonce, message: `FairWork login: ${nonce}` });
     } catch (error) {
       next(error);
     }

@@ -1,3 +1,4 @@
+import { ethers } from 'ethers';
 import { prisma } from '../../lib/prisma';
 import { z } from 'zod';
 import {
@@ -135,6 +136,28 @@ export class CommunityService {
   ) {
     let clientId = currentUserId;
     let freelancerId = data.recipientId;
+
+    if (freelancerId.startsWith('0x')) {
+      let checksummed = freelancerId;
+      try {
+        checksummed = ethers.getAddress(freelancerId.toLowerCase());
+      } catch {}
+      const u = await prisma.user.findFirst({
+        where: { walletAddress: checksummed },
+      });
+      if (u) {
+        freelancerId = u.id;
+      } else {
+        const newUser = await prisma.user.create({
+          data: {
+            walletAddress: checksummed,
+            nonce: Math.random().toString(36).substring(2),
+            role: 'BOTH',
+          },
+        });
+        freelancerId = newUser.id;
+      }
+    }
 
     // Check if a thread already exists between these two users (and optionally for this post)
     const existing = await prisma.thread.findFirst({

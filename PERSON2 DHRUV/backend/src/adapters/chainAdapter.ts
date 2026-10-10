@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { ethers } from 'ethers';
 import { env } from '../config/env';
 import fairWorkAbi from '../contracts/FairWorkABI.json';
@@ -8,6 +10,11 @@ export interface PaymentSummaryResult {
   totalReleased: number;
   totalRefunded: number;
   currency: string;
+  locked?: number;
+  released?: number;
+  disputed?: number;
+  refunded?: number;
+  feesPaid?: number;
 }
 
 export interface ChainEventItem {
@@ -17,6 +24,16 @@ export interface ChainEventItem {
   logIndex: number;
   argsJson: string;
   timestamp: Date;
+}
+
+function getEffectiveAbi() {
+  const sharedAbiPath = path.resolve(__dirname, '../../../../shared/abi/FairWork.json');
+  if (fs.existsSync(sharedAbiPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(sharedAbiPath, 'utf8'));
+    } catch {}
+  }
+  return fairWorkAbi;
 }
 
 export class ChainAdapter {
@@ -39,15 +56,12 @@ export class ChainAdapter {
 
   /**
    * Verifies that the on-chain agreement's termsHash matches the local canonicalHash.
-   * If CHAIN_MOCK=true, returns true or validates against mock registry.
    */
   static async verifyTermsHash(
     onChainAgreementId: string,
     expectedCanonicalHash: string
   ): Promise<{ valid: boolean; onChainTermsHash: string }> {
     if (env.CHAIN_MOCK) {
-      // In mock mode, deterministic verification:
-      // We accept the canonical hash as verified on mock chain.
       return {
         valid: true,
         onChainTermsHash: expectedCanonicalHash,
@@ -55,8 +69,8 @@ export class ChainAdapter {
     }
 
     try {
-      const contract = new ethers.Contract(env.CONTRACT_ADDRESS, fairWorkAbi, this.getProvider());
-      const onChainData = await contract.getAgreement(onChainAgreementId);
+      const contract = new ethers.Contract(env.CONTRACT_ADDRESS, getEffectiveAbi(), this.getProvider());
+      const onChainData = await contract.getAgreement(BigInt(onChainAgreementId));
       const onChainTermsHash: string = onChainData.termsHash;
 
       return {
@@ -74,10 +88,10 @@ export class ChainAdapter {
 
   /**
    * Records verified milestone progress on-chain using the dedicated ORACLE wallet.
-   * Never impersonates the freelancer wallet.
+   * Parameter order: (id, idx, aiProgressBps, aiReportHash)
    */
   static async recordProgressThroughOracle(params: {
-    agreementId: string;
+    agreementId: string | number;
     milestoneIndex: number;
     canonicalReportHash: string;
     qualityScore: number;
@@ -92,13 +106,14 @@ export class ChainAdapter {
 
     try {
       const wallet = this.getOracleWallet();
-      const contract = new ethers.Contract(env.CONTRACT_ADDRESS, fairWorkAbi, wallet);
+      const contract = new ethers.Contract(env.CONTRACT_ADDRESS, getEffectiveAbi(), wallet);
 
+      const progressBps = params.qualityScore <= 100 ? params.qualityScore * 100 : params.qualityScore;
       const tx = await contract.recordProgress(
-        params.agreementId,
-        params.milestoneIndex,
-        params.canonicalReportHash,
-        params.qualityScore
+        BigInt(params.agreementId),
+        Number(params.milestoneIndex),
+        progressBps,
+        params.canonicalReportHash
       );
 
       const receipt = await tx.wait();
@@ -113,26 +128,81 @@ export class ChainAdapter {
   }
 
   /**
+   * Records advisory AI dispute recommendation on-chain using the dedicated ORACLE wallet.
+   */
+  static async recordAiRecommendationThroughOracle(params: {
+    agreementId: string | number;
+    milestoneIndex: number;
+    freelancerShareBps: number;
+    reportHash: string;
+  }): Promise<{ transactionHash: string; blockNumber: number }> {
+    if (env.CHAIN_MOCK) {
+      return {
+        transactionHash: `0xmock_ai_rec_${Date.now()}`,
+        blockNumber: 1234568,
+      };
+    }
+
+    try {
+      const wallet = this.getOracleWallet();
+      const contract = new ethers.Contract(env.CONTRACT_ADDRESS, getEffectiveAbi(), wallet);
+
+      const tx = await contract.recordAiRecommendation(
+        BigInt(params.agreementId),
+        Number(params.milestoneIndex),
+        Number(params.freelancerShareBps),
+        params.reportHash
+      );
+
+      const receipt = await tx.wait();
+      return {
+        transactionHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+      };
+    } catch (error: any) {
+      console.error(`[ChainAdapter] Oracle recordAiRecommendation error: ${error.message}`);
+      throw new Error(`Failed to record AI recommendation on chain: ${error.message}`);
+    }
+  }
+
+  /**
    * Fetches on-chain payment summary view.
    */
-  static async getPaymentSummary(onChainAgreementId: string): Promise<PaymentSummaryResult> {
+  static async getPaymentSummary(onChainAgreementId: string | number): Promise<PaymentSummaryResult> {
     if (env.CHAIN_MOCK) {
       return {
         totalDeposited: 1000,
         totalReleased: 400,
         totalRefunded: 0,
-        currency: 'USDC',
+        currency: 'MATIC',
+        locked: 600,
+        released: 400,
+        disputed: 0,
+        refunded: 0,
+        feesPaid: 4,
       };
     }
 
     try {
-      const contract = new ethers.Contract(env.CONTRACT_ADDRESS, fairWorkAbi, this.getProvider());
-      const summary = await contract.getPaymentSummary(onChainAgreementId);
+      const contract = new ethers.Contract(env.CONTRACT_ADDRESS, getEffectiveAbi(), this.getProvider());
+      const summary = await contract.getPaymentSummary(BigInt(onChainAgreementId));
+      const locked = Number(ethers.formatEther(summary.locked));
+      const released = Number(ethers.formatEther(summary.released));
+      const disputed = Number(ethers.formatEther(summary.disputed));
+      const refunded = Number(ethers.formatEther(summary.refunded));
+      const feesPaid = Number(ethers.formatEther(summary.feesPaid));
+      const totalDeposited = locked + released + disputed + refunded + feesPaid;
+
       return {
-        totalDeposited: Number(ethers.formatUnits(summary.totalDeposited, 6)),
-        totalReleased: Number(ethers.formatUnits(summary.totalReleased, 6)),
-        totalRefunded: Number(ethers.formatUnits(summary.totalRefunded, 6)),
-        currency: summary.paymentToken || 'USDC',
+        totalDeposited,
+        totalReleased: released,
+        totalRefunded: refunded,
+        currency: 'MATIC',
+        locked,
+        released,
+        disputed,
+        refunded,
+        feesPaid,
       };
     } catch (error: any) {
       console.warn(`[ChainAdapter] getPaymentSummary fallback: ${error.message}`);
@@ -140,7 +210,7 @@ export class ChainAdapter {
         totalDeposited: 0,
         totalReleased: 0,
         totalRefunded: 0,
-        currency: 'USDC',
+        currency: 'MATIC',
       };
     }
   }
@@ -153,7 +223,7 @@ export class ChainAdapter {
       chainId: env.CHAIN_ID,
       contractAddress: env.CONTRACT_ADDRESS,
       oracleAddress: new ethers.Wallet(env.ORACLE_PRIVATE_KEY).address,
-      abi: fairWorkAbi,
+      abi: getEffectiveAbi(),
       deployment: deploymentConfig,
       chainMock: env.CHAIN_MOCK,
       aiMock: env.AI_MOCK,
@@ -176,7 +246,7 @@ export class ChainAdapter {
           timestamp: new Date(now.getTime() - 86400000 * 2),
         },
         {
-          eventName: 'FundsDeposited',
+          eventName: 'AgreementFunded',
           transactionHash: `0xmock_event_deposit_${agreementId.substring(0, 8)}`,
           blockNumber: 105,
           logIndex: 1,
@@ -186,19 +256,46 @@ export class ChainAdapter {
       ];
     }
 
-    // In real RPC mode, query filters from contract
     try {
-      const contract = new ethers.Contract(env.CONTRACT_ADDRESS, fairWorkAbi, this.getProvider());
-      const filter = contract.filters.AgreementCreated(agreementId);
-      const events = await contract.queryFilter(filter, 0, 'latest');
-      return events.map((ev, idx) => ({
-        eventName: 'AgreementCreated',
-        transactionHash: ev.transactionHash,
-        blockNumber: ev.blockNumber,
-        logIndex: idx,
-        argsJson: JSON.stringify(ev),
-        timestamp: new Date(),
-      }));
+      const contract = new ethers.Contract(env.CONTRACT_ADDRESS, getEffectiveAbi(), this.getProvider());
+      const logs = await contract.queryFilter('*', 0, 'latest');
+      const results: ChainEventItem[] = [];
+
+      for (const log of logs) {
+        try {
+          const parsed = contract.interface.parseLog({
+            topics: log.topics as string[],
+            data: log.data,
+          });
+          if (!parsed) continue;
+
+          // Check if event belongs to agreementId
+          const eventAgId = parsed.args[0] !== undefined ? String(parsed.args[0]) : null;
+          if (agreementId && eventAgId && eventAgId !== String(agreementId)) {
+            continue;
+          }
+
+          const argsObj: Record<string, any> = {};
+          parsed.fragment.inputs.forEach((input, index) => {
+            const val = parsed.args[index];
+            argsObj[input.name || `arg${index}`] = typeof val === 'bigint' ? val.toString() : val;
+          });
+
+          const block = await log.getBlock();
+          results.push({
+            eventName: parsed.name,
+            transactionHash: log.transactionHash,
+            blockNumber: log.blockNumber,
+            logIndex: log.index,
+            argsJson: JSON.stringify(argsObj),
+            timestamp: block ? new Date(block.timestamp * 1000) : new Date(),
+          });
+        } catch {
+          // Skip unparseable logs
+        }
+      }
+
+      return results;
     } catch (err: any) {
       console.warn(`[ChainAdapter] Event backfill warning: ${err.message}`);
       return [];

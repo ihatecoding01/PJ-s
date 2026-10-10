@@ -22,7 +22,9 @@ async function main() {
   console.log(`>>> FairWork deployed successfully at: ${contractAddress}`);
 
   // Setup paths for shared folder
-  const sharedDir = path.resolve(__dirname, "../../shared");
+  const sharedDir = fs.existsSync(path.resolve(__dirname, "../../../shared"))
+    ? path.resolve(__dirname, "../../../shared")
+    : path.resolve(__dirname, "../../shared");
   const abiDir = path.join(sharedDir, "abi");
   const deploymentsDir = path.join(sharedDir, "deployments");
 
