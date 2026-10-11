@@ -15,17 +15,38 @@ import {
   AlertCircle,
   Plus,
   Wallet,
-  ChevronRight
+  ChevronRight,
+  Shield,
+  Briefcase,
+  CheckCircle2,
+  DollarSign,
+  TrendingUp,
+  UserCheck,
+  Send
 } from 'lucide-react';
 
 export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavigateToCommunity }) {
-  const { address, isConnected, openConnectModal } = useWallet();
+  const { address, isConnected, openConnectModal, user } = useWallet();
   const toast = useToast();
+
+  const isClientRole = (user?.role || '').toUpperCase() === 'CLIENT';
+  const isFreelancerRole = (user?.role || '').toUpperCase() === 'FREELANCER';
 
   const [agreements, setAgreements] = useState([]);
   const [roleFilter, setRoleFilter] = useState('ALL'); // 'ALL' | 'CLIENT' | 'FREELANCER'
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Automatically adapt role filter when persona changes
+  useEffect(() => {
+    if (isClientRole) {
+      setRoleFilter('CLIENT');
+    } else if (isFreelancerRole) {
+      setRoleFilter('FREELANCER');
+    } else {
+      setRoleFilter('ALL');
+    }
+  }, [user?.role, address]);
 
   const fetchAgreementsList = async () => {
     if (!isConnected) {
@@ -69,6 +90,28 @@ export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavig
 
     return true;
   });
+
+  // Calculate high-level role metrics
+  const myAgreements = agreements.filter(ag => {
+    if (isClientRole) {
+      return address && ag.terms?.client && address.toLowerCase() === ag.terms.client.toLowerCase();
+    }
+    if (isFreelancerRole) {
+      return address && ag.terms?.freelancer && address.toLowerCase() === ag.terms.freelancer.toLowerCase();
+    }
+    return true;
+  });
+
+  const totalValue = myAgreements.reduce((sum, ag) => sum + parseFloat(ag.terms?.totalAmount || '0'), 0);
+  const activeCount = myAgreements.filter(ag => ag.status === 'Active').length;
+  const completedCount = myAgreements.filter(ag => ag.status === 'Completed').length;
+  const pendingActionCount = myAgreements.filter(ag => {
+    if (ag.status === 'Draft') return true;
+    if (isClientRole && ag.status === 'AwaitingFunding') return true;
+    if (isClientRole && ag.status === 'Active' && ag.milestones?.some(m => m.status === 'Submitted')) return true;
+    if (isFreelancerRole && ag.status === 'Active' && ag.milestones?.some(m => m.status === 'Pending')) return true;
+    return false;
+  }).length;
 
   // Determine next required action callout
   const getNextAction = (ag) => {
@@ -126,11 +169,20 @@ export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavig
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-heading font-bold text-ink tracking-tight">
-            My Agreements
-          </h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl md:text-3xl font-heading font-bold text-ink tracking-tight">
+              {isClientRole ? 'Commissioned Agreements' : isFreelancerRole ? 'My Contracts & Active Gigs' : 'My Agreements'}
+            </h1>
+            <span className="text-xs font-heading font-bold px-2 py-0.5 rounded-full bg-forest text-ivory">
+              {isClientRole ? 'Client View' : isFreelancerRole ? 'Freelancer View' : 'All Roles'}
+            </span>
+          </div>
           <p className="text-sm text-ink/60 mt-1">
-            Track escrow states, next required actions, milestone reviews, and on-chain funding.
+            {isClientRole
+              ? 'Manage funded milestone escrows, review incoming contractor submissions, and approve releases.'
+              : isFreelancerRole
+              ? 'Track contracted deliverables, in-progress milestones, AI proof verification, and incoming payouts.'
+              : 'Track escrow states, next required actions, milestone reviews, and on-chain funding.'}
           </p>
         </div>
 
@@ -139,8 +191,51 @@ export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavig
           onClick={onNavigateToCommunity}
           icon={Plus}
         >
-          Explore Projects
+          {isClientRole ? 'Hire Talent' : 'Find Gigs'}
         </Button>
+      </div>
+
+      {/* Role Summary Stats Strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="p-4 bg-white border border-gray">
+          <span className="text-[11px] font-heading font-bold uppercase tracking-wider text-ink/50 block">
+            {isClientRole ? 'Total Escrow Budget' : 'Total Contract Value'}
+          </span>
+          <div className="mt-1 flex items-baseline gap-1">
+            <span className="text-xl font-heading font-bold text-ink">{totalValue.toFixed(2)}</span>
+            <span className="text-xs font-mono text-ink/60">MATIC</span>
+          </div>
+        </Card>
+
+        <Card className="p-4 bg-white border border-gray">
+          <span className="text-[11px] font-heading font-bold uppercase tracking-wider text-ink/50 block">
+            {isClientRole ? 'Active Escrows' : 'Active Gigs'}
+          </span>
+          <div className="mt-1 flex items-baseline gap-1">
+            <span className="text-xl font-heading font-bold text-forest">{activeCount}</span>
+            <span className="text-xs text-ink/50">agreements</span>
+          </div>
+        </Card>
+
+        <Card className="p-4 bg-white border border-gray">
+          <span className="text-[11px] font-heading font-bold uppercase tracking-wider text-ink/50 block">
+            {isClientRole ? 'Reviews Required' : 'Action Required'}
+          </span>
+          <div className="mt-1 flex items-baseline gap-1">
+            <span className="text-xl font-heading font-bold text-coral">{pendingActionCount}</span>
+            <span className="text-xs text-ink/50">pending</span>
+          </div>
+        </Card>
+
+        <Card className="p-4 bg-white border border-gray">
+          <span className="text-[11px] font-heading font-bold uppercase tracking-wider text-ink/50 block">
+            Completed Projects
+          </span>
+          <div className="mt-1 flex items-baseline gap-1">
+            <span className="text-xl font-heading font-bold text-ink">{completedCount}</span>
+            <span className="text-xs text-ink/50">settled</span>
+          </div>
+        </Card>
       </div>
 
       {/* Filters Bar */}
@@ -148,7 +243,7 @@ export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavig
         {/* Role Filters */}
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-heading font-semibold uppercase tracking-wider text-ink/60 mr-1">
-            My Role:
+            View Role:
           </span>
           {[
             { id: 'ALL', label: 'All' },
@@ -209,8 +304,14 @@ export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavig
         <EmptyState
           icon={FileCheck}
           title="No agreements found"
-          description="You do not have any agreements matching the active filter criteria."
-          actionLabel="Explore Projects"
+          description={
+            isClientRole
+              ? "You haven't commissioned any agreements matching this filter. Hire talent to get started."
+              : isFreelancerRole
+              ? "You haven't been contracted on any agreements matching this filter. Explore open gigs to get hired."
+              : "You do not have any agreements matching the active filter criteria."
+          }
+          actionLabel={isClientRole ? "Hire Talent" : "Explore Projects"}
           onAction={onNavigateToCommunity}
         />
       ) : (
@@ -219,6 +320,8 @@ export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavig
             const isClient = address && ag.terms?.client && address.toLowerCase() === ag.terms.client.toLowerCase();
             const isFreelancer = address && ag.terms?.freelancer && address.toLowerCase() === ag.terms.freelancer.toLowerCase();
             const nextAction = getNextAction(ag);
+            const counterpartyAddr = isClient ? ag.terms?.freelancer : ag.terms?.client;
+            const counterpartyRole = isClient ? 'Freelancer' : 'Client';
 
             return (
               <Card
@@ -235,14 +338,21 @@ export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavig
                     </Badge>
                   </div>
 
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-2 mb-3">
                     <span className="text-[11px] font-heading font-semibold text-forest bg-sage px-2 py-0.5 rounded-full">
-                      {isClient ? 'Role: Client' : isFreelancer ? 'Role: Freelancer' : 'Counterparty'}
+                      {isClient ? 'My Role: Client' : isFreelancer ? 'My Role: Freelancer' : 'Counterparty'}
                     </span>
                     <span className="text-xs text-ink/50 font-mono">
                       {ag.terms?.milestones?.length || 1} milestones
                     </span>
                   </div>
+
+                  {counterpartyAddr && (
+                    <div className="flex items-center justify-between text-xs text-ink/60 mb-3 pb-2 border-b border-gray/50">
+                      <span>{counterpartyRole}:</span>
+                      <AddressChip address={counterpartyAddr} showExplorer={false} />
+                    </div>
+                  )}
 
                   <div className="p-3 rounded-[10px] bg-ivory border border-gray mb-4">
                     <span className="text-[10px] font-heading font-semibold text-ink/60 uppercase tracking-wider block mb-0.5">

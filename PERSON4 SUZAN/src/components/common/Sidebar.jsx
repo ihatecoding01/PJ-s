@@ -11,7 +11,11 @@ import {
   ShieldAlert,
   User,
   ShieldCheck,
-  X
+  X,
+  Zap,
+  Search,
+  DollarSign,
+  Wallet
 } from 'lucide-react';
 import { useWallet } from '../../context/WalletContext.jsx';
 import AddressChip from '../ui/AddressChip.jsx';
@@ -25,16 +29,32 @@ export default function Sidebar({
 }) {
   const { address, user, isOwner, isConnected, openConnectModal } = useWallet();
 
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'projects', label: 'Projects', icon: Briefcase },
-    { id: 'agreements', label: 'Agreements', icon: FileCheck2 },
-    { id: 'payments', label: 'Payments', icon: CreditCard },
-    { id: 'disputes', label: 'Disputes', icon: Scale },
-    { id: 'messages', label: 'Messages', icon: MessageSquare },
-    { id: 'clients', label: 'Clients', icon: Users },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  ];
+  const role = (user?.role || 'CLIENT').toUpperCase();
+  const isClient = role === 'CLIENT';
+  const isFreelancer = role === 'FREELANCER';
+
+  // Role-specific navigation items
+  const navItems = isFreelancer
+    ? [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'projects', label: 'Find Work', icon: Search },
+        { id: 'agreements', label: 'My Contracts', icon: FileCheck2 },
+        { id: 'payments', label: 'Earnings', icon: DollarSign },
+        { id: 'disputes', label: 'Disputes', icon: Scale },
+        { id: 'messages', label: 'Messages', icon: MessageSquare },
+        { id: 'clients', label: 'My Clients', icon: Users },
+        { id: 'analytics', label: 'Performance', icon: BarChart3 },
+      ]
+    : [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'projects', label: 'Hire Talent', icon: Briefcase },
+        { id: 'agreements', label: 'Agreements', icon: FileCheck2 },
+        { id: 'payments', label: 'Spending', icon: Wallet },
+        { id: 'disputes', label: 'Disputes', icon: Scale },
+        { id: 'messages', label: 'Messages', icon: MessageSquare },
+        { id: 'clients', label: 'Freelancers', icon: Users },
+        { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+      ];
 
   if (isOwner) {
     navItems.push({ id: 'admin', label: 'Admin Council', icon: ShieldAlert });
@@ -79,8 +99,20 @@ export default function Sidebar({
         </div>
       </div>
 
+      {/* Role Badge */}
+      <div className="px-4 py-2.5">
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-xs font-heading font-semibold ${
+          isFreelancer
+            ? 'bg-forest/10 text-forest border border-forest/20'
+            : 'bg-coral/10 text-coral border border-coral/20'
+        }`}>
+          {isFreelancer ? <Zap className="w-3.5 h-3.5" /> : <Briefcase className="w-3.5 h-3.5" />}
+          {isFreelancer ? 'Freelancer Mode' : 'Client Mode'}
+        </div>
+      </div>
+
       {/* Navigation links */}
-      <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+      <nav className="flex-1 px-3 py-2 space-y-1.5 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activePage === item.id ||
@@ -119,7 +151,9 @@ export default function Sidebar({
                   <div className="text-xs font-heading font-semibold text-ink truncate">
                     {user?.name || 'Verified Member'}
                   </div>
-                  <div className="text-[10px] font-sans text-forest font-medium">
+                  <div className={`text-[10px] font-sans font-medium ${
+                    isFreelancer ? 'text-forest' : 'text-coral'
+                  }`}>
                     {user?.role || 'CLIENT'}
                   </div>
                 </div>

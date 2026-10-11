@@ -10,8 +10,15 @@ export const SUPPORTED_NETWORKS = {
     chainId: '0x7a69',
     name: 'Hardhat Local',
     rpcUrls: ['http://127.0.0.1:8545'],
-    nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
     blockExplorerUrls: ['http://localhost:8545']
+  },
+  11155111: {
+    chainId: '0xaa36a7',
+    name: 'Sepolia Testnet',
+    rpcUrls: ['https://rpc.sepolia.org', 'https://ethereum-sepolia-rpc.publicnode.com'],
+    nativeCurrency: { name: 'SepoliaETH', symbol: 'ETH', decimals: 18 },
+    blockExplorerUrls: ['https://sepolia.etherscan.io']
   },
   80002: {
     chainId: '0x13882',

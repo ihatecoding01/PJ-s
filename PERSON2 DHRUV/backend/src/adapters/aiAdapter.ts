@@ -83,59 +83,63 @@ export class AiAdapter {
     return headers;
   }
 
+  private static getMockDraft(input: AgreementDraftInput): AgreementTerms {
+    const budget = input.postContext?.budget || 1000;
+    const m1Budget = Math.round(budget * 0.4);
+    const m2Budget = budget - m1Budget;
+
+    return {
+      title: input.title || input.postContext?.title || 'FairWork Freelance Agreement',
+      summary: `Autonomous agreement generated from post '${input.postContext?.title ?? 'Direct Negotiation'}' and negotiation thread messages.`,
+      description: `Autonomous agreement generated from post '${input.postContext?.title ?? 'Direct Negotiation'}' and negotiation thread messages.`,
+      totalBudget: budget,
+      totalAmount: String(budget),
+      currency: 'MATIC',
+      paymentMode: 'MILESTONE',
+      latePenaltyBpsPerDay: 100,
+      maxLatePenaltyBps: 3000,
+      reviewWindowDays: 5,
+      graceDays: 3,
+      maxRevisions: 2,
+      revisionPolicy: 'Up to 2 revision rounds per milestone within 5 days of submission.',
+      cancellationPolicy: 'Mutual consensus or Escrow arbitration upon formal dispute filing.',
+      github: {
+        repoUrl: 'https://github.com/org/repo',
+        branch: 'main',
+      },
+      milestones: [
+        {
+          milestoneIndex: 0,
+          index: 0,
+          title: 'Phase 1: Architecture & Core Implementation',
+          description: 'Foundation setup, core data models, tests, and API endpoints.',
+          amount: m1Budget,
+          deadlineDays: 7,
+          deliverables: ['API Specification', 'Database Models', 'Initial Core Tests'],
+          acceptanceCriteria: ['API Specification', 'Database Models', 'Initial Core Tests'],
+          requiredProgressBps: 8000,
+        },
+        {
+          milestoneIndex: 1,
+          index: 1,
+          title: 'Phase 2: Final Integration & Delivery',
+          description: 'Full system integration, end-to-end tests, documentation, and deployment.',
+          amount: m2Budget,
+          deadlineDays: 14,
+          deliverables: ['Production Bundle', 'User Documentation', 'E2E Test Suite'],
+          acceptanceCriteria: ['Production Bundle', 'User Documentation', 'E2E Test Suite'],
+          requiredProgressBps: 8000,
+        },
+      ],
+    };
+  }
+
   /**
    * Generates a structured freelance agreement draft.
    */
   static async draftAgreement(input: AgreementDraftInput): Promise<AgreementTerms> {
     if (env.AI_MOCK) {
-      const budget = input.postContext?.budget || 1000;
-      const m1Budget = Math.round(budget * 0.4);
-      const m2Budget = budget - m1Budget;
-
-      return {
-        title: input.title || input.postContext?.title || 'FairWork Freelance Agreement',
-        summary: `Autonomous agreement generated from post '${input.postContext?.title ?? 'Direct Negotiation'}' and negotiation thread messages.`,
-        description: `Autonomous agreement generated from post '${input.postContext?.title ?? 'Direct Negotiation'}' and negotiation thread messages.`,
-        totalBudget: budget,
-        totalAmount: String(budget),
-        currency: 'MATIC',
-        paymentMode: 'MILESTONE',
-        latePenaltyBpsPerDay: 100,
-        maxLatePenaltyBps: 3000,
-        reviewWindowDays: 5,
-        graceDays: 3,
-        maxRevisions: 2,
-        revisionPolicy: 'Up to 2 revision rounds per milestone within 5 days of submission.',
-        cancellationPolicy: 'Mutual consensus or Escrow arbitration upon formal dispute filing.',
-        github: {
-          repoUrl: 'https://github.com/org/repo',
-          branch: 'main',
-        },
-        milestones: [
-          {
-            milestoneIndex: 0,
-            index: 0,
-            title: 'Phase 1: Architecture & Core Implementation',
-            description: 'Foundation setup, core data models, tests, and API endpoints.',
-            amount: m1Budget,
-            deadlineDays: 7,
-            deliverables: ['API Specification', 'Database Models', 'Initial Core Tests'],
-            acceptanceCriteria: ['API Specification', 'Database Models', 'Initial Core Tests'],
-            requiredProgressBps: 8000,
-          },
-          {
-            milestoneIndex: 1,
-            index: 1,
-            title: 'Phase 2: Final Integration & Delivery',
-            description: 'Full system integration, end-to-end tests, documentation, and deployment.',
-            amount: m2Budget,
-            deadlineDays: 14,
-            deliverables: ['Production Bundle', 'User Documentation', 'E2E Test Suite'],
-            acceptanceCriteria: ['Production Bundle', 'User Documentation', 'E2E Test Suite'],
-            requiredProgressBps: 8000,
-          },
-        ],
-      };
+      return this.getMockDraft(input);
     }
 
     try {
@@ -198,7 +202,7 @@ export class AiAdapter {
       };
     } catch (error: any) {
       console.warn(`[AI Service Fallback] Calling mock AI draft due to error: ${error.message}`);
-      return this.draftAgreement({ ...input });
+      return this.getMockDraft(input);
     }
   }
 
@@ -239,6 +243,17 @@ export class AiAdapter {
     }
   }
 
+  private static getMockMilestoneAnalysis(params: any): MilestoneAnalysisResult {
+    return {
+      testsPassing: true,
+      qualityScore: 94,
+      progressBps: 9400,
+      summary: `Deterministic AI Analysis for ${params.repoUrl} at commit ${params.commitSha || 'HEAD'}: Repository satisfies deliverable criteria. All automated unit tests passing, clean commit history.`,
+      verifiedFiles: ['src/core.ts', 'src/services.ts', 'tests/suite.spec.ts'],
+      recommendations: ['Consider increasing coverage on edge cases', 'Add load testing'],
+    };
+  }
+
   /**
    * Analyzes a repository submission for a milestone.
    */
@@ -254,14 +269,7 @@ export class AiAdapter {
     branch?: string;
   }): Promise<MilestoneAnalysisResult> {
     if (env.AI_MOCK) {
-      return {
-        testsPassing: true,
-        qualityScore: 94,
-        progressBps: 9400,
-        summary: `Deterministic AI Analysis for ${params.repoUrl} at commit ${params.commitSha || 'HEAD'}: Repository satisfies deliverable criteria. All automated unit tests passing, clean commit history.`,
-        verifiedFiles: ['src/core.ts', 'src/services.ts', 'tests/suite.spec.ts'],
-        recommendations: ['Consider increasing coverage on edge cases', 'Add load testing'],
-      };
+      return this.getMockMilestoneAnalysis(params);
     }
 
     try {
@@ -319,8 +327,19 @@ export class AiAdapter {
         throw error;
       }
       console.warn(`[AI Service Fallback] Calling mock analysis: ${error.message}`);
-      return this.analyzeMilestone({ ...params });
+      return this.getMockMilestoneAnalysis(params);
     }
+  }
+
+  private static getMockDisputeSummary(params: any): DisputeAnalysisResult {
+    return {
+      summary: `AI Dispute Assessment for '${params.agreementTitle}': Review of reason '${params.disputeReason}' alongside ${params.evidenceList.length} evidence attachments. Evidence confirms partial delivery of Phase 1 deliverables with minor documentation delay.`,
+      recommendation: 'PARTIAL_SETTLEMENT',
+      splitPercentageClient: 30,
+      splitPercentageFreelancer: 70,
+      recommendedFreelancerShareBps: 7000,
+      reasoning: 'Primary core technical specifications were met; partial reduction applies to delayed handover.',
+    };
   }
 
   /**
@@ -335,14 +354,7 @@ export class AiAdapter {
     submission?: any;
   }): Promise<DisputeAnalysisResult> {
     if (env.AI_MOCK) {
-      return {
-        summary: `AI Dispute Assessment for '${params.agreementTitle}': Review of reason '${params.disputeReason}' alongside ${params.evidenceList.length} evidence attachments. Evidence confirms partial delivery of Phase 1 deliverables with minor documentation delay.`,
-        recommendation: 'PARTIAL_SETTLEMENT',
-        splitPercentageClient: 30,
-        splitPercentageFreelancer: 70,
-        recommendedFreelancerShareBps: 7000,
-        reasoning: 'Primary core technical specifications were met; partial reduction applies to delayed handover.',
-      };
+      return this.getMockDisputeSummary(params);
     }
 
     try {
@@ -407,7 +419,7 @@ export class AiAdapter {
       };
     } catch (error: any) {
       console.warn(`[AI Service Fallback] Calling mock dispute summary: ${error.message}`);
-      return this.summarizeDispute({ ...params });
+      return this.getMockDisputeSummary(params);
     }
   }
 }

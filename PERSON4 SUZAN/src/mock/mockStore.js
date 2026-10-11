@@ -46,10 +46,19 @@ export const DEMO_ACCOUNTS = {
     skills: ['Legal Tech', 'DAO Governance'],
     githubUsername: 'dana-justice',
     privateKey: '0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba'
+  },
+  ARBITRATOR_3: {
+    address: '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    name: 'Evan Arbitrator',
+    role: 'ARBITRATOR',
+    bio: 'Smart contract security reviewer and certified mediator.',
+    skills: ['Arbitration', 'Smart Contracts', 'Security'],
+    githubUsername: 'evan-arb',
+    privateKey: '0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e'
   }
 };
 
-const STORAGE_KEY = 'fairwork_mock_store_v3';
+const STORAGE_KEY = 'fairwork_mock_store_v4';
 
 function getInitialState() {
   const aliceAddr = DEMO_ACCOUNTS.CLIENT.address;
@@ -154,6 +163,53 @@ function getInitialState() {
       }
     ],
     createdAt: new Date(Date.now() - 2 * 86400000).toISOString()
+  };
+
+  const agreement3Terms = {
+    schemaVersion: '1.0',
+    title: 'Smart Contract Architecture & Test Suite',
+    description: 'Deliver core escrow smart contracts, reentrancy guards, events, and 100% automated test coverage.',
+    client: aliceAddr,
+    freelancer: bobAddr,
+    currency: 'MATIC',
+    totalAmount: '1.8',
+    paymentMode: 'MILESTONE',
+    latePenaltyBpsPerDay: 100,
+    maxLatePenaltyBps: 2000,
+    reviewWindowDays: 3,
+    graceDays: 2,
+    maxRevisions: 1,
+    github: {
+      repoUrl: 'https://github.com/fairwork-platform/contracts',
+      branch: 'main'
+    },
+    milestones: [
+      {
+        index: 0,
+        title: 'Core Escrow Vault & Multi-Sig Logic',
+        description: 'Complete EVM contract design with reentrancy guards and state tracking.',
+        amount: '0.9',
+        deadline: new Date(Date.now() - 25 * 86400000).toISOString(),
+        requiredProgressBps: 8000,
+        acceptanceCriteria: [
+          'Contracts compile without warnings in solc 0.8.20',
+          'Unit test coverage exceeds 90%'
+        ]
+      },
+      {
+        index: 1,
+        title: 'Deployment Scripts & Testnet Verification',
+        description: 'Hardhat deployment scripts, Polygon Amoy verification, and gas reporting.',
+        amount: '0.9',
+        deadline: new Date(Date.now() - 15 * 86400000).toISOString(),
+        requiredProgressBps: 8500,
+        acceptanceCriteria: [
+          'Contract deployed and verified on testnet explorer',
+          'Integration tests pass with simulated mock callers'
+        ]
+      }
+    ],
+    createdAt: new Date(Date.now() - 30 * 86400000).toISOString()
   };
 
   return {
@@ -405,6 +461,86 @@ function getInitialState() {
           }
         ],
         disputes: {}
+      },
+      {
+        id: 'ag-3',
+        onchainId: 0,
+        txHash: '0x3b6a9c2d5e8f1a4c7d0e3b6a9c2d5e8f1a8f2d6e4b1a7c9d0e2f5b8a1c4d7e0f',
+        status: 'Completed',
+        terms: agreement3Terms,
+        termsHash: canonicalHash(agreement3Terms),
+        clientApproved: true,
+        freelancerApproved: true,
+        createdAt: agreement3Terms.createdAt,
+        openQuestions: [],
+        warnings: [],
+        milestones: [
+          {
+            idx: 0,
+            status: 'Paid',
+            amount: '0.9',
+            paid: '0.891',
+            penalty: '0',
+            fee: '0.009',
+            submission: {
+              commitSha: '1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
+              prUrl: 'https://github.com/fairwork-platform/contracts/pull/1',
+              notes: 'Core contracts delivered and 98% test coverage achieved.'
+            },
+            aiReport: {
+              progress_bps: 9500,
+              confidence: 0.98,
+              signals: {
+                commits: 24,
+                prs_merged: 2,
+                files_changed: 15,
+                lines_added: 890,
+                tests_status: 'PASSED',
+                release_tag: 'v0.1.0-alpha',
+                contributors: 1
+              },
+              criteria_results: [
+                { criterion: 'Contracts compile without warnings in solc 0.8.20', met: true, evidence: 'Compiled with solc 0.8.20 with zero warnings' },
+                { criterion: 'Unit test coverage exceeds 90%', met: true, evidence: 'LCOV coverage report: 98.2% statement coverage' }
+              ],
+              summary: 'Deliverables verified with outstanding test coverage and clean contract design.',
+              risks: []
+            }
+          },
+          {
+            idx: 1,
+            status: 'Paid',
+            amount: '0.9',
+            paid: '0.891',
+            penalty: '0',
+            fee: '0.009',
+            submission: {
+              commitSha: '2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c',
+              prUrl: 'https://github.com/fairwork-platform/contracts/pull/2',
+              notes: 'Polygon Amoy testnet deployment scripts and verification complete.'
+            },
+            aiReport: {
+              progress_bps: 9600,
+              confidence: 0.97,
+              signals: {
+                commits: 12,
+                prs_merged: 1,
+                files_changed: 8,
+                lines_added: 450,
+                tests_status: 'PASSED',
+                release_tag: 'v0.2.0',
+                contributors: 1
+              },
+              criteria_results: [
+                { criterion: 'Contract deployed and verified on testnet explorer', met: true, evidence: 'Verified on Polygon Amoy Explorer' },
+                { criterion: 'Integration tests pass with simulated mock callers', met: true, evidence: '28 integration scenarios executed successfully' }
+              ],
+              summary: 'Testnet deployment scripts and verified contract address documented.',
+              risks: []
+            }
+          }
+        ],
+        disputes: {}
       }
     ],
     timeline: {
@@ -467,12 +603,44 @@ function getInitialState() {
           actorRole: 'Freelancer',
           txHash: '0x4c7d0e3b6a9c2d5e8f1a8f2d6e4b1a7c9d0e2f5b8a1c4d7e0f3b6a9c2d5e8f1a',
           timestamp: new Date(Date.now() - 1 * 86400000).toISOString(),
-          details: 'Milestone 2 submitted for review. AI analysis progress recorded (89%).'
+        }
+      ],
+      'ag-3': [
+        {
+          id: 'tl-301',
+          type: 'AGREEMENT_CREATED',
+          title: 'Agreement Created On-Chain',
+          actor: aliceAddr,
+          actorRole: 'Client',
+          txHash: '0x3b6a9c2d5e8f1a4c7d0e3b6a9c2d5e8f1a8f2d6e4b1a7c9d0e2f5b8a1c4d7e0f',
+          timestamp: new Date(Date.now() - 30 * 86400000).toISOString(),
+          details: 'Created agreement with 2 milestones totaling 1.8 MATIC.'
+        },
+        {
+          id: 'tl-302',
+          type: 'MILESTONE_PAID',
+          title: 'Milestone 1 Approved & Paid (0.9 MATIC)',
+          actor: aliceAddr,
+          actorRole: 'Client',
+          txHash: '0x1a4c7d0e3b6a9c2d5e8f1a8f2d6e4b1a7c9d0e2f5b8a1c4d7e0f3b6a9c2d5e8f',
+          timestamp: new Date(Date.now() - 24 * 86400000).toISOString(),
+          details: '0.9 MATIC released to freelancer upon verified deliverable.'
+        },
+        {
+          id: 'tl-303',
+          type: 'MILESTONE_PAID',
+          title: 'Milestone 2 Approved & Paid (0.9 MATIC)',
+          actor: aliceAddr,
+          actorRole: 'Client',
+          txHash: '0x2d5e8f1a4c7d0e3b6a9c2d5e8f1a8f2d6e4b1a7c9d0e2f5b8a1c4d7e0f3b6a9c',
+          timestamp: new Date(Date.now() - 14 * 86400000).toISOString(),
+          details: 'Final milestone completed. Agreement marked completed.'
         }
       ]
     },
     amendments: {
-      'ag-1': []
+      'ag-1': [],
+      'ag-3': []
     }
   };
 }

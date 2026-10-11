@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Mail, FileCheck2, ExternalLink, MessageSquare, ArrowUpRight } from 'lucide-react';
+import { Users, Mail, FileCheck2, ExternalLink, MessageSquare, ArrowUpRight, Star, Briefcase, Zap } from 'lucide-react';
 import { useWallet } from '../context/WalletContext.jsx';
 import { apiFetch } from '../api/client.js';
 import { Card, Button, Badge, AmountDisplay, EmptyState, AddressChip } from '../components/ui/index.js';
 
 export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
-  const { address } = useWallet();
+  const { address, user } = useWallet();
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState([]);
+
+  const role = (user?.role || 'CLIENT').toUpperCase();
+  const isClient = role === 'CLIENT';
+  const isFreelancer = role === 'FREELANCER';
 
   useEffect(() => {
     let isMounted = true;
@@ -33,11 +37,17 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
             const otherAddr = clientAddr === myAddr ? freelancerAddr : clientAddr;
             if (!otherAddr) return;
 
+            // Determine other party's role
+            const otherRole = otherAddr === clientAddr ? 'CLIENT' : 'FREELANCER';
+
             const existing = counterpartiesMap.get(otherAddr) || {
               address: otherAddr,
-              name: agr.counterpartyName || (otherAddr === clientAddr ? 'Client' : 'Freelancer'),
+              name: agr.counterpartyName || (otherRole === 'CLIENT' ? 'Client' : 'Freelancer'),
+              role: otherRole,
               agreementsCount: 0,
               totalValueMatic: 0,
+              completedCount: 0,
+              activeCount: 0,
               agreements: [],
               lastActive: agr.createdAt || Date.now(),
             };
@@ -45,6 +55,11 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
             existing.agreementsCount += 1;
             existing.totalValueMatic += parseFloat(agr.terms?.totalAmount || '0');
             existing.agreements.push(agr);
+
+            const agrStatus = (agr.status || '').toUpperCase();
+            if (agrStatus === 'COMPLETED') existing.completedCount++;
+            if (agrStatus === 'ACTIVE') existing.activeCount++;
+
             counterpartiesMap.set(otherAddr, existing);
           });
         }
@@ -59,8 +74,11 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
               const existing = counterpartiesMap.get(addr) || {
                 address: addr,
                 name: otherUser.name || 'Community Member',
+                role: 'UNKNOWN',
                 agreementsCount: 0,
                 totalValueMatic: 0,
+                completedCount: 0,
+                activeCount: 0,
                 agreements: [],
                 lastActive: t.updatedAt || Date.now(),
               };
@@ -74,15 +92,31 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
 
         // Fallback realistic demo clients if map is empty
         if (counterpartiesMap.size === 0) {
-          counterpartiesMap.set('0x70997970c51812dc3a010c7d01b50e0d17dc79c8', {
-            address: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
-            name: 'Alice Client',
-            role: 'CLIENT',
-            agreementsCount: 1,
-            totalValueMatic: 2.5,
-            agreements: [],
-            lastActive: Date.now() - 86400000,
-          });
+          if (isFreelancer) {
+            counterpartiesMap.set('0x70997970c51812dc3a010c7d01b50e0d17dc79c8', {
+              address: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+              name: 'Alice Client',
+              role: 'CLIENT',
+              agreementsCount: 2,
+              totalValueMatic: 4.3,
+              completedCount: 1,
+              activeCount: 1,
+              agreements: [],
+              lastActive: Date.now() - 86400000,
+            });
+          } else {
+            counterpartiesMap.set('0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc', {
+              address: '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc',
+              name: 'Bob Freelancer',
+              role: 'FREELANCER',
+              agreementsCount: 2,
+              totalValueMatic: 4.3,
+              completedCount: 1,
+              activeCount: 1,
+              agreements: [],
+              lastActive: Date.now() - 86400000,
+            });
+          }
         }
 
         if (isMounted) {
@@ -99,15 +133,20 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
     return () => { isMounted = false; };
   }, [address]);
 
+  const pageTitle = isFreelancer ? 'My Clients' : 'My Freelancers';
+  const pageDescription = isFreelancer
+    ? 'Clients you\'ve worked with, including shared project volumes and collaboration history.'
+    : 'Freelancers you\'ve hired, their delivery track records, and shared escrow volume.';
+
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8 space-y-8 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-heading font-bold text-ink tracking-tight">
-            Counterparty Directory
+            {pageTitle}
           </h1>
           <p className="text-sm text-ink/60 mt-1">
-            Aggregated counterparties, shared escrow volume, and mutual agreements derived from your activity.
+            {pageDescription}
           </p>
         </div>
       </div>
@@ -115,8 +154,10 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
       {clients.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No counterparties found"
-          description="Counterparties appear here as you initiate negotiation threads or enter into milestone agreements."
+          title={isFreelancer ? "No clients yet" : "No freelancers yet"}
+          description={isFreelancer
+            ? "Your clients will appear here as you take on gigs and enter milestone agreements."
+            : "Freelancers you've hired will appear here as you create projects and fund escrows."}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -125,31 +166,58 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
               <div>
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-forest text-ivory flex items-center justify-center font-heading font-bold text-sm">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-heading font-bold text-sm ${
+                      c.role === 'CLIENT'
+                        ? 'bg-coral/20 text-coral'
+                        : 'bg-forest text-ivory'
+                    }`}>
                       {c.name ? c.name.charAt(0) : 'C'}
                     </div>
                     <div>
                       <h3 className="font-heading font-bold text-sm text-ink truncate">
                         {c.name}
                       </h3>
-                      <div className="mt-0.5">
+                      <div className="flex items-center gap-1.5 mt-0.5">
                         <AddressChip address={c.address} showExplorer={false} />
                       </div>
                     </div>
                   </div>
+                  <Badge status={c.role === 'CLIENT' ? 'info' : 'success'} size="sm">
+                    {c.role === 'CLIENT' ? 'Client' : 'Freelancer'}
+                  </Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 py-3 border-y border-gray my-3 text-xs">
+                <div className="grid grid-cols-3 gap-2 py-3 border-y border-gray my-3 text-xs">
                   <div>
-                    <span className="text-ink/60 block">Agreements</span>
+                    <span className="text-ink/60 block">Projects</span>
                     <span className="font-heading font-bold text-sm text-ink tabular-nums">
                       {c.agreementsCount}
                     </span>
                   </div>
                   <div>
-                    <span className="text-ink/60 block">Total Volume</span>
+                    <span className="text-ink/60 block">Volume</span>
                     <AmountDisplay amount={c.totalValueMatic} size="sm" />
                   </div>
+                  <div>
+                    <span className="text-ink/60 block">Completed</span>
+                    <span className="font-heading font-bold text-sm text-forest tabular-nums">
+                      {c.completedCount}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Status indicators */}
+                <div className="flex items-center gap-2 text-xs mb-2">
+                  {c.activeCount > 0 && (
+                    <span className="flex items-center gap-1 text-forest font-medium">
+                      <Zap className="w-3 h-3" /> {c.activeCount} active
+                    </span>
+                  )}
+                  {c.completedCount > 0 && (
+                    <span className="flex items-center gap-1 text-ink/60 font-medium">
+                      <Star className="w-3 h-3" /> {c.completedCount} completed
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -161,7 +229,7 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
                   onClick={() => onNavigateToChat ? onNavigateToChat() : null}
                   icon={MessageSquare}
                 >
-                  Send Message
+                  Message
                 </Button>
                 {c.agreements.length > 0 && (
                   <Button

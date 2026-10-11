@@ -185,6 +185,34 @@ export default function TopBar({
             )}
           </div>
 
+          {/* Quick Demo Persona Switcher */}
+          {isMock && (
+            <div className="flex items-center bg-white border border-gray rounded-full p-0.5 shadow-xs">
+              <button
+                onClick={() => switchDemoAccount('CLIENT')}
+                className={`px-2.5 sm:px-3 py-1 rounded-full text-xs font-heading font-semibold transition-all ${
+                  (user?.role || '').toUpperCase() === 'CLIENT'
+                    ? 'bg-forest text-ivory shadow-xs'
+                    : 'text-ink/60 hover:text-ink hover:bg-sage/40'
+                }`}
+                title="Switch to Alice (Client)"
+              >
+                Client
+              </button>
+              <button
+                onClick={() => switchDemoAccount('FREELANCER')}
+                className={`px-2.5 sm:px-3 py-1 rounded-full text-xs font-heading font-semibold transition-all ${
+                  (user?.role || '').toUpperCase() === 'FREELANCER'
+                    ? 'bg-forest text-ivory shadow-xs'
+                    : 'text-ink/60 hover:text-ink hover:bg-sage/40'
+                }`}
+                title="Switch to Bob (Freelancer)"
+              >
+                Freelancer
+              </button>
+            </div>
+          )}
+
           {/* Prominent coral "+ New Project" button */}
           <Button
             variant="primary"
