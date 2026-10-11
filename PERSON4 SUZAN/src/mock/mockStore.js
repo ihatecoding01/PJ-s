@@ -3,53 +3,53 @@ import { canonicalHash } from '../lib/canonicalHash.js';
 // Pre-configured demo accounts
 export const DEMO_ACCOUNTS = {
   CLIENT: {
-    address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    address: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
     name: 'Alice Client',
     role: 'CLIENT',
     bio: 'Web3 DAO founder looking for top engineering talent.',
     skills: ['Product Management', 'Tokenomics', 'Web3 Strategy'],
     githubUsername: 'alice-crypto',
-    privateKey: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
+    privateKey: '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d'
   },
   FREELANCER: {
-    address: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    address: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
     name: 'Bob Freelancer',
     role: 'FREELANCER',
     bio: 'Senior Full Stack Engineer specializing in TypeScript, React, and Solidity.',
     skills: ['TypeScript', 'Express', 'React', 'Solidity', 'ethers.js'],
     githubUsername: 'bob-builder',
-    privateKey: '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d'
+    privateKey: '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a'
+  },
+  DEPLOYER: {
+    address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    name: 'Deployer / Admin',
+    role: 'ADMIN',
+    bio: 'Contract deployer and platform admin.',
+    skills: ['Solidity', 'Architecture'],
+    githubUsername: 'deployer-admin',
+    privateKey: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
   },
   ARBITRATOR_1: {
-    address: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
-    name: 'Charlie Auditor',
+    address: '0x15d34aaf54267db7d7c367839aaf71a00a2c6a65',
+    name: 'Charlie Arbitrator',
     role: 'ARBITRATOR',
     bio: 'Security researcher and smart contract audit specialist.',
     skills: ['Auditing', 'Arbitration', 'Solidity Security'],
     githubUsername: 'charlie-sec',
-    privateKey: '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a'
+    privateKey: '0x47e179ec34004871170f8138c2c25237190f5182ff6dbd192c84140c0107727b'
   },
   ARBITRATOR_2: {
-    address: '0x15d34aaf54267db7d7c367839aaf71a00a2c6a65',
+    address: '0x9965507d1a55bcc2695c58ba16fb37d819b0a4df',
     name: 'Dana Justice',
     role: 'ARBITRATOR',
     bio: 'Decentralized dispute resolution specialist and DAO contributor.',
     skills: ['Legal Tech', 'DAO Governance'],
     githubUsername: 'dana-justice',
-    privateKey: '0x47e179ec34004871170f8138c2c25237190f5182ff6dbd192c84140c0107727b'
-  },
-  ARBITRATOR_3: {
-    address: '0x9965507d1a55bcc2695c58ba16fb37d819b0a4df',
-    name: 'Evan Sentinel',
-    role: 'ARBITRATOR',
-    bio: 'Senior Web3 architect and FairWork platform council arbitrator.',
-    skills: ['Systems Design', 'Solidity'],
-    githubUsername: 'evan-sentinel',
     privateKey: '0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba'
   }
 };
 
-const STORAGE_KEY = 'fairwork_mock_store_v1';
+const STORAGE_KEY = 'fairwork_mock_store_v3';
 
 function getInitialState() {
   const aliceAddr = DEMO_ACCOUNTS.CLIENT.address;
