@@ -120,7 +120,7 @@ export default function DashboardPage({
   const completedCount = agreements.filter(a => (a.status || '').toUpperCase() === 'COMPLETED').length;
   const disputedCount = agreements.filter(a => (a.status || '').toUpperCase() === 'DISPUTED').length;
   const draftCount = agreements.filter(a => (a.status || '').toUpperCase() === 'DRAFT').length;
-  const pendingPaymentsMatic = paymentStats.locked || 2.5;
+  const pendingPaymentsEth = paymentStats.locked || 2.5;
 
   // Derive upcoming milestones from agreements
   const upcomingMilestones = [];
@@ -297,18 +297,18 @@ export default function DashboardPage({
                 <div
                   style={{ width: `${Math.max(15, (paymentStats.locked / (paymentStats.locked + paymentStats.released || 1)) * 100)}%` }}
                   className="bg-forest rounded-[6px] transition-all"
-                  title={`Locked in Escrow: ${paymentStats.locked} MATIC`}
+                  title={`Locked in Escrow: ${paymentStats.locked} ETH`}
                 />
                 <div
                   style={{ width: `${Math.max(10, (paymentStats.released / (paymentStats.locked + paymentStats.released || 1)) * 100)}%` }}
                   className="bg-sage-light rounded-[6px] border border-forest/20 transition-all"
-                  title={`Released to Freelancers: ${paymentStats.released} MATIC`}
+                  title={`Released to Freelancers: ${paymentStats.released} ETH`}
                 />
                 {paymentStats.disputed > 0 && (
                   <div
                     style={{ width: '10%' }}
                     className="bg-coral rounded-[6px] transition-all"
-                    title={`Disputed: ${paymentStats.disputed} MATIC`}
+                    title={`Disputed: ${paymentStats.disputed} ETH`}
                   />
                 )}
               </div>
@@ -584,22 +584,22 @@ export default function DashboardPage({
             <div className="h-6 w-full bg-gray/60 rounded-[8px] flex overflow-hidden p-0.5 gap-0.5">
               {totalEarned > 0 && (
                 <div
-                  style={{ width: `${Math.max(15, (totalEarned / (totalEarned + totalPending + pendingPaymentsMatic || 1)) * 100)}%` }}
+                  style={{ width: `${Math.max(15, (totalEarned / (totalEarned + totalPending + pendingPaymentsEth || 1)) * 100)}%` }}
                   className="bg-forest rounded-[6px] transition-all"
-                  title={`Earned: ${totalEarned.toFixed(3)} MATIC`}
+                  title={`Earned: ${totalEarned.toFixed(3)} ETH`}
                 />
               )}
               {totalPending > 0 && (
                 <div
-                  style={{ width: `${Math.max(10, (totalPending / (totalEarned + totalPending + pendingPaymentsMatic || 1)) * 100)}%` }}
+                  style={{ width: `${Math.max(10, (totalPending / (totalEarned + totalPending + pendingPaymentsEth || 1)) * 100)}%` }}
                   className="bg-amber-400 rounded-[6px] transition-all"
-                  title={`Pending Review: ${totalPending} MATIC`}
+                  title={`Pending Review: ${totalPending} ETH`}
                 />
               )}
               <div
-                style={{ width: `${Math.max(10, (pendingPaymentsMatic / (totalEarned + totalPending + pendingPaymentsMatic || 1)) * 100)}%` }}
+                style={{ width: `${Math.max(10, (pendingPaymentsEth / (totalEarned + totalPending + pendingPaymentsEth || 1)) * 100)}%` }}
                 className="bg-sage-light rounded-[6px] border border-forest/20 transition-all"
-                title={`In Escrow (to be earned): ${pendingPaymentsMatic} MATIC`}
+                title={`In Escrow (to be earned): ${pendingPaymentsEth} ETH`}
               />
             </div>
 
@@ -630,7 +630,7 @@ export default function DashboardPage({
                   <span className="text-xs font-medium text-ink/70">In Escrow</span>
                 </div>
                 <div className="text-base font-heading font-bold text-ink">
-                  <AmountDisplay amount={pendingPaymentsMatic} size="sm" />
+                  <AmountDisplay amount={pendingPaymentsEth} size="sm" />
                 </div>
               </div>
 

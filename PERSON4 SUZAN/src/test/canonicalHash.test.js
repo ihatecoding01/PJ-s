@@ -104,7 +104,7 @@ describe('canonicalHash utility against shared test vectors', () => {
       description: 'Audit core escrow contracts',
       client: '0x1111111111111111111111111111111111111111',
       freelancer: '0x2222222222222222222222222222222222222222',
-      currency: 'MATIC',
+      currency: 'ETH',
       totalAmount: '1.5',
       paymentMode: 'MILESTONE',
       latePenaltyBpsPerDay: 100,

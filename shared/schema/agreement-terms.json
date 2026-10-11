@@ -41,7 +41,7 @@
     },
     "currency": {
       "type": "string",
-      "default": "MATIC"
+      "default": "ETH"
     },
     "totalAmount": {
       "type": "string",

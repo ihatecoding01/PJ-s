@@ -29,7 +29,7 @@ export default function PaymentSummaryCards({ payments }) {
           Escrow Fund Balances & Settlement Tracking
         </h4>
         <span className="text-xs font-mono text-ink/60">
-          Protocol Fees Paid: <strong className="text-forest">{feesPaid.toFixed(4)} MATIC</strong>
+          Protocol Fees Paid: <strong className="text-forest">{feesPaid.toFixed(4)} ETH</strong>
         </span>
       </div>
 
@@ -40,28 +40,28 @@ export default function PaymentSummaryCards({ payments }) {
             <div
               className="bg-forest h-full transition-all duration-300"
               style={{ width: `${releasedPct}%` }}
-              title={`Released: ${released} MATIC (${releasedPct}%)`}
+              title={`Released: ${released} ETH (${releasedPct}%)`}
             />
           )}
           {locked > 0 && (
             <div
               className="bg-sage-light h-full transition-all duration-300"
               style={{ width: `${lockedPct}%` }}
-              title={`Locked: ${locked} MATIC (${lockedPct}%)`}
+              title={`Locked: ${locked} ETH (${lockedPct}%)`}
             />
           )}
           {disputed > 0 && (
             <div
               className="bg-coral h-full transition-all duration-300"
               style={{ width: `${disputedPct}%` }}
-              title={`Disputed: ${disputed} MATIC (${disputedPct}%)`}
+              title={`Disputed: ${disputed} ETH (${disputedPct}%)`}
             />
           )}
           {refunded > 0 && (
             <div
               className="bg-gray h-full transition-all duration-300"
               style={{ width: `${refundedPct}%` }}
-              title={`Refunded: ${refunded} MATIC (${refundedPct}%)`}
+              title={`Refunded: ${refunded} ETH (${refundedPct}%)`}
             />
           )}
         </div>

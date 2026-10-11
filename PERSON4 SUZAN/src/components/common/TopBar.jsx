@@ -171,12 +171,12 @@ export default function TopBar({
 
                   <div className="pt-2 mt-2 border-t border-gray/60">
                     <a
-                      href="https://faucet.polygon.technology/"
+                      href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia"
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center justify-between p-2 rounded-[6px] text-xs font-medium text-forest hover:bg-sage/40 transition-colors"
                     >
-                      <span>Get Amoy Testnet MATIC (Faucet)</span>
+                      <span>Get Sepolia Testnet ETH (Faucet)</span>
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                   </div>

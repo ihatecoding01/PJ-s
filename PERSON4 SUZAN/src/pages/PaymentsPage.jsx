@@ -192,25 +192,25 @@ export default function PaymentsPage({ onOpenAgreement }) {
             <div
               style={{ width: `${Math.max(15, (totalLocked / (totalFunded || 1)) * 100)}%` }}
               className="bg-forest rounded-[5px]"
-              title={`Locked: ${totalLocked} MATIC`}
+              title={`Locked: ${totalLocked} ETH`}
             />
             <div
               style={{ width: `${Math.max(10, (totalReleased / (totalFunded || 1)) * 100)}%` }}
               className="bg-sage-light rounded-[5px] border border-forest/30"
-              title={`Released: ${totalReleased} MATIC`}
+              title={`Released: ${totalReleased} ETH`}
             />
             {totalDisputed > 0 && (
               <div
                 style={{ width: `${(totalDisputed / totalFunded) * 100}%` }}
                 className="bg-coral rounded-[5px]"
-                title={`Disputed: ${totalDisputed} MATIC`}
+                title={`Disputed: ${totalDisputed} ETH`}
               />
             )}
             {totalRefunded > 0 && (
               <div
                 style={{ width: `${(totalRefunded / totalFunded) * 100}%` }}
                 className="bg-gray rounded-[5px]"
-                title={`Refunded: ${totalRefunded} MATIC`}
+                title={`Refunded: ${totalRefunded} ETH`}
               />
             )}
           </div>
@@ -262,11 +262,11 @@ export default function PaymentsPage({ onOpenAgreement }) {
                       </td>
                       <td className="py-3.5 px-3 text-ink/70">
                         {m.penalty > 0 ? (
-                          <span className="text-coral font-medium">-{m.penalty} MATIC</span>
-                        ) : '0 MATIC'}
+                          <span className="text-coral font-medium">-{m.penalty} ETH</span>
+                        ) : '0 ETH'}
                       </td>
                       <td className="py-3.5 px-3 text-ink/60 font-mono">
-                        {m.fee.toFixed(4)} MATIC
+                        {m.fee.toFixed(4)} ETH
                       </td>
                       <td className="py-3.5 px-3">
                         <Badge status={m.status} size="sm">{m.status}</Badge>
@@ -367,21 +367,21 @@ export default function PaymentsPage({ onOpenAgreement }) {
             <div
               style={{ width: `${Math.max(10, (freelancerEarned / (totalFunded || 1)) * 100)}%` }}
               className="bg-forest rounded-[5px]"
-              title={`Earned: ${freelancerEarned.toFixed(3)} MATIC`}
+              title={`Earned: ${freelancerEarned.toFixed(3)} ETH`}
             />
           )}
           {freelancerPending > 0 && (
             <div
               style={{ width: `${Math.max(8, (freelancerPending / (totalFunded || 1)) * 100)}%` }}
               className="bg-amber-400 rounded-[5px]"
-              title={`Pending: ${freelancerPending} MATIC`}
+              title={`Pending: ${freelancerPending} ETH`}
             />
           )}
           {freelancerUpcoming > 0 && (
             <div
               style={{ width: `${Math.max(8, (freelancerUpcoming / (totalFunded || 1)) * 100)}%` }}
               className="bg-sage-light rounded-[5px] border border-forest/20"
-              title={`Upcoming: ${freelancerUpcoming} MATIC`}
+              title={`Upcoming: ${freelancerUpcoming} ETH`}
             />
           )}
         </div>
@@ -448,11 +448,11 @@ export default function PaymentsPage({ onOpenAgreement }) {
                     </td>
                     <td className="py-3.5 px-3 text-ink/70">
                       {m.penalty > 0 ? (
-                        <span className="text-coral font-medium">-{m.penalty} MATIC</span>
-                      ) : '0 MATIC'}
+                        <span className="text-coral font-medium">-{m.penalty} ETH</span>
+                      ) : '0 ETH'}
                     </td>
                     <td className="py-3.5 px-3 text-ink/60 font-mono">
-                      {m.fee > 0 ? `${m.fee.toFixed(4)} MATIC` : '—'}
+                      {m.fee > 0 ? `${m.fee.toFixed(4)} ETH` : '—'}
                     </td>
                     <td className="py-3.5 px-3">
                       <Badge status={m.status} size="sm">{m.status}</Badge>

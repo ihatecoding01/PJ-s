@@ -112,7 +112,7 @@ export default function ChainWizard({ agreement, onAgreementUpdated }) {
 
       await txFundAgreement(agreement.onchainId, totalWei, {
         onPending: (hash) => {
-          toastId = toast.pendingTx(hash, `Funding escrow with ${terms.totalAmount} MATIC...`);
+          toastId = toast.pendingTx(hash, `Funding escrow with ${terms.totalAmount} ETH...`);
         },
         onSuccess: (rec) => {
           if (toastId) toast.confirmedTx(toastId, rec.hash, 'Escrow funds successfully locked in contract!');
@@ -122,7 +122,7 @@ export default function ChainWizard({ agreement, onAgreementUpdated }) {
         }
       });
 
-      toast.success(`Escrow active! Locked ${terms.totalAmount} MATIC into smart contract.`);
+      toast.success(`Escrow active! Locked ${terms.totalAmount} ETH into smart contract.`);
       setActiveModalStep(null);
       if (onAgreementUpdated) onAgreementUpdated({ ...agreement, status: 'Active' });
     } catch (err) {
@@ -184,11 +184,11 @@ export default function ChainWizard({ agreement, onAgreementUpdated }) {
     {
       num: 3,
       title: 'Fund Escrow',
-      desc: 'Client deposits total MATIC into the smart contract escrow.',
+      desc: 'Client deposits total ETH into the smart contract escrow.',
       done: isFunded,
       isCurrent: hasOnchainId && isAccepted && !isFunded,
       action: () => setActiveModalStep('FUND'),
-      actionLabel: `Fund ${terms.totalAmount} MATIC`,
+      actionLabel: `Fund ${terms.totalAmount} ETH`,
       eligible: isClient
     }
   ];

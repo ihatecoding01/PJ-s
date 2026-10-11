@@ -21,7 +21,7 @@ export default function PlainLanguageModal({
       icon: ShieldCheck,
       details: [
         `Freelancer Address: ${terms?.freelancer}`,
-        `Total Escrow Budget: ${terms?.totalAmount} MATIC across ${terms?.milestones?.length} milestones`,
+        `Total Escrow Budget: ${terms?.totalAmount} ETH across ${terms?.milestones?.length} milestones`,
         `Review Window: ${terms?.reviewWindowDays} days per milestone submission (silence triggers auto-approval)`,
         `Late Penalty: ${((terms?.latePenaltyBpsPerDay || 100) / 100).toFixed(1)}%/day up to ${((terms?.maxLatePenaltyBps || 3000) / 100).toFixed(0)}% maximum cap`,
         `Terms Immutability: An exact Keccak-256 canonical hash of the terms will be anchored on-chain.`
@@ -42,10 +42,10 @@ export default function PlainLanguageModal({
     FUND: {
       title: 'Confirm Escrow Funding',
       subtitle: 'You are locking funds from your wallet directly into non-custodial milestone escrow.',
-      actionName: `Deposit & Lock ${terms?.totalAmount} MATIC`,
+      actionName: `Deposit & Lock ${terms?.totalAmount} ETH`,
       icon: Lock,
       details: [
-        `Locked Amount: ${terms?.totalAmount} MATIC (100% of agreement budget)`,
+        `Locked Amount: ${terms?.totalAmount} ETH (100% of agreement budget)`,
         `Escrow Custody: Funds are secured non-custodially until milestones are approved or resolved via arbitration.`,
         `Protocol Fee: Standard 100 bps (1%) deducted only upon successful milestone release.`
       ]

@@ -19,7 +19,7 @@ def get_mock_draft_response(req: DraftContractRequest) -> DraftContractResponse:
         "description": "Full-stack development of milestone-based freelance escrow with GitHub integration.",
         "client": client,
         "freelancer": freelancer,
-        "currency": "MATIC",
+        "currency": "ETH",
         "totalAmount": "2.0",
         "paymentMode": "MILESTONE",
         "latePenaltyBpsPerDay": 100,

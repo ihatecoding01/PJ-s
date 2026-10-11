@@ -127,7 +127,7 @@ export default function LandingPage({ setActivePage, onOpenAgreement }) {
             Composed for Modern Tech Teams
           </h2>
           <p className="text-sm text-ink/60 mt-2">
-            Every step is protected by mathematical invariants, verifiable GitHub commits, and Polygon smart contracts.
+            Every step is protected by mathematical invariants, verifiable GitHub commits, and Ethereum Sepolia smart contracts.
           </p>
         </div>
 

@@ -55,7 +55,7 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated, onCrea
         type,
         title: title.trim(),
         description: description.trim(),
-        budget: budget.includes('MATIC') ? budget.trim() : `${budget.trim()} MATIC`,
+        budget: (budget.includes('ETH') || budget.includes('MATIC')) ? budget.replace('MATIC', 'ETH').trim() : `${budget.trim()} ETH`,
         skills,
         // Include type-specific fields
         ...(isJob
@@ -150,7 +150,7 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated, onCrea
                 type="text"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
-                placeholder="e.g. 2.5 – 5.0 MATIC"
+                placeholder="e.g. 0.5 – 1.0 ETH"
                 className={inputMono}
                 required
               />
@@ -231,7 +231,7 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated, onCrea
                 type="text"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
-                placeholder="e.g. 1.5 MATIC"
+                placeholder="e.g. 0.5 ETH"
                 className={inputMono}
                 required
               />

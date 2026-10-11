@@ -11,16 +11,18 @@ export function shortenAddress(address, chars = 4) {
 }
 
 /**
- * Format MATIC amount
+ * Format ETH amount
  */
-export function formatMatic(val) {
-  if (val === undefined || val === null) return '0.00 MATIC';
+export function formatEth(val) {
+  if (val === undefined || val === null) return '0.00 ETH';
   if (typeof val === 'bigint') {
-    return `${parseFloat(formatEther(val)).toFixed(4)} MATIC`;
+    return `${parseFloat(formatEther(val)).toFixed(4)} ETH`;
   }
   const num = parseFloat(val);
-  return isNaN(num) ? '0.00 MATIC' : `${num.toFixed(4).replace(/\.?0+$/, '')} MATIC`;
+  return isNaN(num) ? '0.00 ETH' : `${num.toFixed(4).replace(/\.?0+$/, '')} ETH`;
 }
+
+export const formatMatic = formatEth;
 
 /**
  * Format basis points to percentage (e.g. 8000 -> "80%")

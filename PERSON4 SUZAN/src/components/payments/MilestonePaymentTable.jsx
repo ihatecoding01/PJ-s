@@ -55,10 +55,10 @@ export default function MilestonePaymentTable({ milestones = [] }) {
                     <AmountDisplay amount={m.paid || 0} size="sm" />
                   </td>
                   <td className="py-3 px-3 text-right text-coral font-medium">
-                    {m.penalty ? `-${m.penalty} MATIC` : '0 MATIC'}
+                    {m.penalty ? `-${m.penalty} ETH` : '0 ETH'}
                   </td>
                   <td className="py-3 px-3 text-right text-ink/60 font-mono">
-                    {m.fee ? `${m.fee} MATIC` : '0 MATIC'}
+                    {m.fee ? `${m.fee} ETH` : '0 ETH'}
                   </td>
                 </tr>
               ))

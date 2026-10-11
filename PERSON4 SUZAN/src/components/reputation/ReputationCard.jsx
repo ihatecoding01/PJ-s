@@ -6,8 +6,8 @@ import { Award, ShieldCheck, Zap, Star, CheckCircle, ExternalLink } from 'lucide
 export default function ReputationCard({ address, user, stats = {} }) {
   const completedCount = stats.completedCount || 4;
   const onTimePercentage = stats.onTimePercentage || 100;
-  const totalVolume = stats.totalVolume || '8.5 MATIC';
-  const explorerUrl = import.meta.env.VITE_EXPLORER_URL || 'https://amoy.polygonscan.com';
+  const totalVolume = stats.totalVolume || '8.5 ETH';
+  const explorerUrl = import.meta.env.VITE_EXPLORER_URL || 'https://sepolia.etherscan.io';
   const sbtContractAddress = '0x1A2b3c4D5E6F7890123456789ABCDEF012345678';
 
   const badges = [

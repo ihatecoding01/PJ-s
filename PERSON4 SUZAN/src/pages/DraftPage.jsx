@@ -375,7 +375,7 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
                 Escrow Currency
               </label>
               <div className="flex gap-2">
-                {['MATIC', 'USDC', 'USDT'].map(curr => (
+                {['ETH', 'USDC', 'USDT'].map(curr => (
                   <button
                     key={curr}
                     type="button"
@@ -384,7 +384,7 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
                       setHasUnsavedChanges(true);
                     }}
                     className={`flex-1 py-2 px-2 text-xs font-heading font-semibold rounded-[8px] border transition-all ${
-                      (terms.currency || 'MATIC') === curr
+                      (terms.currency || 'ETH') === curr
                         ? 'bg-forest text-ivory border-forest shadow-sm'
                         : 'bg-white border-gray text-ink/70 hover:bg-sage'
                     }`}
@@ -512,7 +512,7 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
         <div className="flex items-center justify-between pb-3 border-b border-gray">
           <div>
             <h3 className="font-heading font-bold text-base text-ink">Milestones & Payment Tranches</h3>
-            <p className="text-xs text-ink/60 mt-0.5">Total agreement amount: {terms.totalAmount} MATIC</p>
+            <p className="text-xs text-ink/60 mt-0.5">Total agreement amount: {terms.totalAmount} {terms.currency || 'ETH'}</p>
           </div>
           <Button
             variant="secondary"
@@ -555,7 +555,7 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-heading font-semibold text-ink/60 block mb-1">Amount (MATIC)</label>
+                  <label className="text-[11px] font-heading font-semibold text-ink/60 block mb-1">Amount ({terms.currency || 'ETH'})</label>
                   <input
                     type="number"
                     step="0.01"

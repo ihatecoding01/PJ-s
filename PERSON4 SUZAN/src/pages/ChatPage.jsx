@@ -249,7 +249,7 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
                   <div className="h-full flex flex-col items-center justify-center text-center p-6 text-ink/50 text-xs">
                     <MessageSquare className="w-8 h-8 text-forest/40 mb-2" />
                     <p>No messages yet in this negotiation thread.</p>
-                    <p className="mt-1">Agree on scope, deliverables, and budget in MATIC.</p>
+                    <p className="mt-1">Agree on scope, deliverables, and budget in ETH.</p>
                   </div>
                 ) : (
                   messages.map((m, idx) => {
@@ -346,7 +346,7 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
               </div>
               <div className="p-3 rounded-card bg-white border border-gray">
                 <span className="text-ink/50 block mb-1">Escrow Currency</span>
-                <span className="font-mono font-semibold text-forest">MATIC (Polygon)</span>
+                <span className="font-mono font-semibold text-forest">ETH (Sepolia)</span>
               </div>
             </div>
 

@@ -94,7 +94,7 @@ export class AiAdapter {
       description: `Autonomous agreement generated from post '${input.postContext?.title ?? 'Direct Negotiation'}' and negotiation thread messages.`,
       totalBudget: budget,
       totalAmount: String(budget),
-      currency: 'MATIC',
+      currency: 'ETH',
       paymentMode: 'MILESTONE',
       latePenaltyBpsPerDay: 100,
       maxLatePenaltyBps: 3000,
@@ -159,7 +159,7 @@ export class AiAdapter {
           thread_messages: threadMessages.length > 0 ? threadMessages : [
             {
               sender: clientAddr,
-              text: `Project setup for ${input.title}. Budget is ${input.postContext?.budget || 1.0} MATIC.`,
+              text: `Project setup for ${input.title}. Budget is ${input.postContext?.budget || 1.0} ETH.`,
               ts: new Date().toISOString(),
             }
           ],
@@ -365,7 +365,7 @@ export class AiAdapter {
       const termsObj = params.terms || {
         title: params.agreementTitle,
         totalAmount: '1.0',
-        currency: 'MATIC',
+        currency: 'ETH',
         milestones: [],
       };
 

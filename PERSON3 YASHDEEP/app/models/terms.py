@@ -20,7 +20,7 @@ class AgreementTerms(BaseModel):
     description: str = Field(default="", description="Agreement overview")
     client: str = Field(..., description="Client wallet address (0x...)")
     freelancer: str = Field(..., description="Freelancer wallet address (0x...)")
-    currency: str = Field(default="MATIC", description="Currency ticker (e.g. MATIC)")
+    currency: str = Field(default="ETH", description="Currency ticker (e.g. ETH)")
     totalAmount: str = Field(..., description="Total payment in ether units, e.g. '1.5'")
     paymentMode: Literal["MILESTONE", "LUMP_SUM"] = Field(..., description="Payment mode: MILESTONE or LUMP_SUM")
     latePenaltyBpsPerDay: int = Field(default=100, ge=0, le=10000, description="Daily late penalty in bps (100 = 1%)")

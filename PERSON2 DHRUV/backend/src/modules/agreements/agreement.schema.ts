@@ -60,7 +60,7 @@ export const agreementTermsSchema = z
     freelancer: z.string().optional(),
     totalBudget: z.number().positive().optional(),
     totalAmount: z.union([z.string(), z.number()]).optional(),
-    currency: z.string().default('MATIC'),
+    currency: z.string().default('ETH'),
     paymentMode: z.enum(['MILESTONE', 'LUMP_SUM']).default('MILESTONE'),
     latePenaltyBpsPerDay: z.number().int().min(0).max(10000).default(100),
     maxLatePenaltyBps: z.number().int().min(0).max(10000).default(3000),

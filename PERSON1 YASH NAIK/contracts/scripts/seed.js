@@ -105,7 +105,7 @@ async function main() {
         description: "Develop milestone-based escrow platform for FairWork",
         client: client.address.toLowerCase(),
         freelancer: freelancer.address.toLowerCase(),
-        currency: "MATIC",
+        currency: "ETH",
         totalAmount: "1.5",
         paymentMode: "MILESTONE",
       })

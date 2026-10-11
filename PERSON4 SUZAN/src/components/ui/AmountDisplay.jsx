@@ -3,7 +3,7 @@ import React from 'react';
 export default function AmountDisplay({
   amount,
   size = 'md',
-  currency = 'MATIC',
+  currency = 'ETH',
   showInr = true,
   className = '',
 }) {
@@ -17,7 +17,7 @@ export default function AmountDisplay({
     xl: 'text-2xl md:text-3xl font-bold font-heading',
   };
 
-  const formattedMatic = numericAmount.toLocaleString('en-US', {
+  const formattedEth = numericAmount.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
   });
@@ -27,7 +27,7 @@ export default function AmountDisplay({
   return (
     <div className={`inline-flex items-baseline gap-1.5 ${className}`}>
       <span className={`${sizeClasses[size] || sizeClasses.md} text-ink tabular-nums`}>
-        {formattedMatic} <span className="text-xs font-heading font-medium text-forest">{currency}</span>
+        {formattedEth} <span className="text-xs font-heading font-medium text-forest">{currency}</span>
       </span>
 
       {showInr && inrAmount && (

@@ -203,7 +203,7 @@ export default function MyAgreementsPage({ onOpenAgreement, onOpenDraft, onNavig
           </span>
           <div className="mt-1 flex items-baseline gap-1">
             <span className="text-xl font-heading font-bold text-ink">{totalValue.toFixed(2)}</span>
-            <span className="text-xs font-mono text-ink/60">MATIC</span>
+            <span className="text-xs font-mono text-ink/60">ETH</span>
           </div>
         </Card>
 

@@ -10,7 +10,7 @@ DEFAULT_VALUES = {
     "reviewWindowDays": 5,
     "graceDays": 3,
     "maxRevisions": 2,
-    "currency": "MATIC",
+    "currency": "ETH",
     "schemaVersion": "1.0",
     "requiredProgressBps": 8000,
 }

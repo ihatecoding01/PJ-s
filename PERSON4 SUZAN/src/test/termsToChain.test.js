@@ -9,7 +9,7 @@ describe('termsToChain converter', () => {
     description: 'React dashboard development',
     client: '0x5eD39B1d5EF7962bb70c7Ac09F9016fE7a00E7E4',
     freelancer: '0x9908CAB15D339845c83775120F3f8373583Cc476',
-    currency: 'MATIC',
+    currency: 'ETH',
     totalAmount: '2.5',
     paymentMode: 'MILESTONE',
     latePenaltyBpsPerDay: 150,

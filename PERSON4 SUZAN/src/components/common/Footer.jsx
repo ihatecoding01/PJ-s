@@ -20,7 +20,7 @@ export default function Footer() {
 
           <div className="flex flex-wrap items-center gap-6 text-xs">
             <span className="text-ink/60 font-mono">
-              Polygon Amoy · MATIC Escrow
+              Ethereum Sepolia · ETH Escrow
             </span>
             <a
               href={explorerUrl}

@@ -65,9 +65,9 @@ export default function AnalyticsPage() {
   let pendingMilestones = 0;
   let evaluatedDeliverables = 0;
   let onTimeDeliverables = 0;
-  let totalPaidMatic = 0;
-  let totalLockedMatic = 0;
-  let totalFeesMatic = 0;
+  let totalPaidEth = 0;
+  let totalLockedEth = 0;
+  let totalFeesEth = 0;
   let aiConfidenceScores = [];
 
   agreements.forEach(agr => {
@@ -93,17 +93,17 @@ export default function AnalyticsPage() {
       if (ms === 'PAID' || ms === 'APPROVED') {
         paidMilestones++;
         evaluatedDeliverables++;
-        totalPaidMatic += parseFloat(m.paid || mAmt || '0');
-        totalFeesMatic += parseFloat(m.fee || '0');
+        totalPaidEth += parseFloat(m.paid || mAmt || '0');
+        totalFeesEth += parseFloat(m.fee || '0');
         if (mPenalty === 0) onTimeDeliverables++;
       } else if (ms === 'SUBMITTED') {
         submittedMilestones++;
         evaluatedDeliverables++;
-        totalLockedMatic += mAmt;
+        totalLockedEth += mAmt;
         if (mPenalty === 0) onTimeDeliverables++;
       } else {
         pendingMilestones++;
-        if (s === 'ACTIVE') totalLockedMatic += mAmt;
+        if (s === 'ACTIVE') totalLockedEth += mAmt;
       }
     });
   });
@@ -194,9 +194,9 @@ export default function AnalyticsPage() {
                 {agreements.length} Contracts
               </Badge>
             </div>
-            <ProgressBar value={totalVolume > 0 ? Math.round((totalPaidMatic / totalVolume) * 100) : 0} className="mt-3" />
+            <ProgressBar value={totalVolume > 0 ? Math.round((totalPaidEth / totalVolume) * 100) : 0} className="mt-3" />
             <p className="text-xs text-ink/60 mt-2 font-medium">
-              {totalPaidMatic.toFixed(2)} MATIC settled • {totalLockedMatic.toFixed(2)} MATIC locked
+              {totalPaidEth.toFixed(2)} ETH settled • {totalLockedEth.toFixed(2)} ETH locked
             </p>
           </Card>
 

@@ -174,7 +174,7 @@ export class ChainAdapter {
         totalDeposited: 1000,
         totalReleased: 400,
         totalRefunded: 0,
-        currency: 'MATIC',
+        currency: 'ETH',
         locked: 600,
         released: 400,
         disputed: 0,
@@ -197,7 +197,7 @@ export class ChainAdapter {
         totalDeposited,
         totalReleased: released,
         totalRefunded: refunded,
-        currency: 'MATIC',
+        currency: 'ETH',
         locked,
         released,
         disputed,
@@ -210,7 +210,7 @@ export class ChainAdapter {
         totalDeposited: 0,
         totalReleased: 0,
         totalRefunded: 0,
-        currency: 'MATIC',
+        currency: 'ETH',
       };
     }
   }

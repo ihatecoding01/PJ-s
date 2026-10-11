@@ -73,21 +73,21 @@ export default function LatePenaltyPreview({
         <div className="p-2.5 rounded-[8px] bg-white border border-gray">
           <span className="text-[10px] text-ink/60 font-heading block">Penalty Refund</span>
           <span className="font-mono font-bold text-coral">
-            {simCalc.penaltyRefund?.toFixed(4)} MATIC
+            {simCalc.penaltyRefund?.toFixed(4)} ETH
           </span>
         </div>
 
         <div className="p-2.5 rounded-[8px] bg-white border border-gray">
           <span className="text-[10px] text-ink/60 font-heading block">Protocol Fee (1%)</span>
           <span className="font-mono font-bold text-ink/70">
-            {simCalc.fee?.toFixed(4)} MATIC
+            {simCalc.fee?.toFixed(4)} ETH
           </span>
         </div>
 
         <div className="p-2.5 rounded-[8px] bg-sage-light border border-forest/20">
           <span className="text-[10px] text-forest font-heading block font-semibold">Net Payout</span>
           <span className="font-mono font-bold text-forest">
-            {simCalc.freelancerAmount?.toFixed(4)} MATIC
+            {simCalc.freelancerAmount?.toFixed(4)} ETH
           </span>
         </div>
       </div>

@@ -46,7 +46,7 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
               name: agr.counterpartyName || (otherRole === 'CLIENT' ? 'Client' : 'Freelancer'),
               role: otherRole,
               agreementsCount: 0,
-              totalValueMatic: 0,
+              totalValueEth: 0,
               completedCount: 0,
               activeCount: 0,
               agreements: [],
@@ -54,7 +54,7 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
             };
 
             existing.agreementsCount += 1;
-            existing.totalValueMatic += parseFloat(agr.terms?.totalAmount || '0');
+            existing.totalValueEth += parseFloat(agr.terms?.totalAmount || '0');
             existing.agreements.push(agr);
 
             const agrStatus = (agr.status || '').toUpperCase();
@@ -77,7 +77,7 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
                 name: otherUser.name || 'Community Member',
                 role: 'UNKNOWN',
                 agreementsCount: 0,
-                totalValueMatic: 0,
+                totalValueEth: 0,
                 completedCount: 0,
                 activeCount: 0,
                 agreements: [],
@@ -100,7 +100,7 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
               name: DEMO_ACCOUNTS.CLIENT.name,
               role: 'CLIENT',
               agreementsCount: 2,
-              totalValueMatic: 4.3,
+              totalValueEth: 4.3,
               completedCount: 1,
               activeCount: 1,
               agreements: [],
@@ -113,7 +113,7 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
               name: DEMO_ACCOUNTS.FREELANCER.name,
               role: 'FREELANCER',
               agreementsCount: 2,
-              totalValueMatic: 4.3,
+              totalValueEth: 4.3,
               completedCount: 1,
               activeCount: 1,
               agreements: [],
@@ -199,7 +199,7 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
                   </div>
                   <div>
                     <span className="text-ink/60 block">Volume</span>
-                    <AmountDisplay amount={c.totalValueMatic} size="sm" />
+                    <AmountDisplay amount={c.totalValueEth} size="sm" />
                   </div>
                   <div>
                     <span className="text-ink/60 block">Completed</span>

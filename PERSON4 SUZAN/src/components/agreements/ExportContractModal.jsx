@@ -186,7 +186,7 @@ export default function ExportContractModal({ isOpen, onClose, agreement }) {
 
           {/* Governing Rules */}
           <div className="text-[11px] text-ink/60 leading-relaxed border-t border-gray pt-4 space-y-1">
-            <p><strong>Arbitration & Enforcement:</strong> Bound to FairWork smart contract on Polygon. Any disputes are automatically arbitrated by a 3-member arbitrator pool with median share calculation.</p>
+            <p><strong>Arbitration & Enforcement:</strong> Bound to FairWork smart contract on Ethereum Sepolia (Chain ID 11155111). Any disputes are automatically arbitrated by a 3-member arbitrator pool with median share calculation.</p>
             <p><strong>Review Window:</strong> {terms.reviewWindowDays || 5} days silence allows freelancer auto-claim. Late penalty rate: {terms.latePenaltyBpsPerDay || 100} bps/day (max {terms.maxLatePenaltyBps || 3000} bps).</p>
           </div>
 

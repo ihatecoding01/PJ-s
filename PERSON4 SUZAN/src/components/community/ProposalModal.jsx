@@ -28,7 +28,7 @@ export default function ProposalModal({ isOpen, onClose, post, onSubmitted, onPr
     try {
       setIsSubmitting(true);
       const proposal = await createProposal(post.id, {
-        price: price.includes('MATIC') ? price.trim() : `${price.trim()} MATIC`,
+        price: (price.includes('ETH') || price.includes('MATIC')) ? price.replace('MATIC', 'ETH').trim() : `${price.trim()} ETH`,
         message: message.trim()
       });
       toast.success('Proposal submitted successfully!');
@@ -56,7 +56,7 @@ export default function ProposalModal({ isOpen, onClose, post, onSubmitted, onPr
             type="text"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            placeholder="e.g. 2.5 MATIC"
+            placeholder="e.g. 0.5 ETH"
             className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 font-mono"
             required
           />
