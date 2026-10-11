@@ -1,4 +1,10 @@
-import { BrowserProvider, JsonRpcProvider, Wallet, Contract } from 'ethers';
+import {
+  BrowserProvider,
+  JsonRpcProvider,
+  Wallet,
+  Contract
+} from 'ethers';
+
 import abiJson from './abi.json';
 import { getConfig } from '../api/config.js';
 import { DEMO_ACCOUNTS } from '../mock/mockStore.js';
@@ -10,42 +16,66 @@ export const SUPPORTED_NETWORKS = {
     chainId: '0x7a69',
     name: 'Hardhat Local',
     rpcUrls: ['http://127.0.0.1:8545'],
-    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+    nativeCurrency: {
+      name: 'ETH',
+      symbol: 'ETH',
+      decimals: 18
+    },
     blockExplorerUrls: ['http://localhost:8545']
   },
+
   11155111: {
     chainId: '0xaa36a7',
     name: 'Sepolia Testnet',
-    rpcUrls: ['https://ethereum-sepolia-rpc.publicnode.com'],
-    nativeCurrency: { name: 'SepoliaETH', symbol: 'ETH', decimals: 18 },
+    rpcUrls: [
+      'https://rpc.sepolia.org',
+      'https://ethereum-sepolia-rpc.publicnode.com'
+    ],
+    nativeCurrency: {
+      name: 'SepoliaETH',
+      symbol: 'ETH',
+      decimals: 18
+    },
     blockExplorerUrls: ['https://sepolia.etherscan.io']
   },
+
   80002: {
     chainId: '0x13882',
     name: 'Polygon Amoy Testnet',
     rpcUrls: ['https://rpc-amoy.polygon.technology'],
-    nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+    nativeCurrency: {
+      name: 'MATIC',
+      symbol: 'MATIC',
+      decimals: 18
+    },
     blockExplorerUrls: ['https://amoy.polygonscan.com']
   }
 };
 
 let cachedConfig = null;
 
+/**
+ * Fetch smart contract configuration from backend.
+ */
 export async function fetchContractConfig() {
-  if (cachedConfig) return cachedConfig;
+  if (cachedConfig) {
+    return cachedConfig;
+  }
 
   try {
     const res = await getConfig();
 
     if (res && res.contractAddress) {
       cachedConfig = res;
-      return res;
+      return cachedConfig;
     }
   } catch (err) {
-    console.warn('Could not fetch remote config, using defaults:', err);
+    console.warn(
+      'Could not fetch remote config, using defaults:',
+      err
+    );
   }
 
-  // Fallback defaults — Sepolia deployed contract
   cachedConfig = {
     chainId: Number(import.meta.env.VITE_CHAIN_ID || 11155111),
     contractAddress:
@@ -58,7 +88,7 @@ export async function fetchContractConfig() {
 }
 
 /**
- * Get ethers BrowserProvider from window.ethereum or null
+ * Get MetaMask BrowserProvider.
  */
 export function getProvider() {
   if (typeof window === 'undefined' || !window.ethereum) {
@@ -68,3 +98,224 @@ export function getProvider() {
   return new BrowserProvider(window.ethereum);
 }
 
+/**
+ * Get fallback JSON-RPC provider.
+ */
+export function getFallbackProvider() {
+  const chainId = Number(
+    import.meta.env.VITE_CHAIN_ID || 11155111
+  );
+
+  if (chainId === 31337) {
+    return new JsonRpcProvider('http://127.0.0.1:8545');
+  }
+
+  const rpcUrl =
+    SUPPORTED_NETWORKS[chainId]?.rpcUrls?.[0] ||
+    'https://ethereum-sepolia-rpc.publicnode.com';
+
+  return new JsonRpcProvider(rpcUrl);
+}
+
+/**
+ * Get contract connected to MetaMask or an authenticated demo account.
+ */
+export async function getContractWithSigner() {
+  const cfg = await fetchContractConfig();
+  const provider = getProvider();
+
+  if (provider && window.ethereum?.selectedAddress) {
+    try {
+      const signer = await provider.getSigner();
+
+      return new Contract(
+        cfg.contractAddress,
+        cfg.abi || FAIRWORK_ABI,
+        signer
+      );
+    } catch (err) {
+      console.warn(
+        'MetaMask signer unavailable:',
+        err
+      );
+    }
+  }
+
+  const savedAddr = (
+    localStorage.getItem('fairwork_user_address') || ''
+  ).toLowerCase();
+
+  const demoAccount = Object.values(DEMO_ACCOUNTS).find(
+    (acc) =>
+      acc.address.toLowerCase() === savedAddr &&
+      acc.privateKey
+  );
+
+  if (demoAccount) {
+    const jsonRpcProvider = getFallbackProvider();
+
+    const demoSigner = new Wallet(
+      demoAccount.privateKey,
+      jsonRpcProvider
+    );
+
+    return new Contract(
+      cfg.contractAddress,
+      cfg.abi || FAIRWORK_ABI,
+      demoSigner
+    );
+  }
+
+  if (provider) {
+    const signer = await provider.getSigner();
+
+    return new Contract(
+      cfg.contractAddress,
+      cfg.abi || FAIRWORK_ABI,
+      signer
+    );
+  }
+
+  throw new Error(
+    'MetaMask or Web3 wallet is not installed. ' +
+    'Please use a demo account or install MetaMask.'
+  );
+}
+
+/**
+ * Get read-only contract instance.
+ */
+export async function getReadOnlyContract() {
+  const cfg = await fetchContractConfig();
+  const provider = getProvider() || getFallbackProvider();
+
+  return new Contract(
+    cfg.contractAddress,
+    cfg.abi || FAIRWORK_ABI,
+    provider
+  );
+}
+
+/**
+ * Switch MetaMask to the specified network.
+ */
+export async function switchNetwork(targetChainId) {
+  if (!window.ethereum) {
+    throw new Error('MetaMask is not installed');
+  }
+
+  const numericChainId = Number(targetChainId);
+  const hexChainId =
+    '0x' + numericChainId.toString(16);
+
+  try {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: hexChainId }]
+    });
+  } catch (switchError) {
+    if (switchError.code === 4902) {
+      const netInfo = SUPPORTED_NETWORKS[numericChainId];
+
+      if (!netInfo) {
+        throw new Error(
+          `Unsupported network: ${numericChainId}`
+        );
+      }
+
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [
+          {
+            chainId: hexChainId,
+            chainName: netInfo.name,
+            rpcUrls: netInfo.rpcUrls,
+            nativeCurrency: netInfo.nativeCurrency,
+            blockExplorerUrls: netInfo.blockExplorerUrls
+          }
+        ]
+      });
+
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: hexChainId }]
+      });
+    } else {
+      throw switchError;
+    }
+  }
+}
+
+/**
+ * Decode smart contract errors.
+ */
+export function decodeRevertReason(error) {
+  if (!error) {
+    return 'Unknown error';
+  }
+
+  if (
+    error.code === 4001 ||
+    error.code === 'ACTION_REJECTED'
+  ) {
+    return 'Transaction rejected by user in wallet.';
+  }
+
+  if (error.reason) {
+    return error.reason;
+  }
+
+  if (error.shortMessage) {
+    return error.shortMessage;
+  }
+
+  if (error.data && typeof error.data === 'string') {
+    return `Reverted with: ${error.data}`;
+  }
+
+  if (error.info?.error?.message) {
+    return error.info.error.message;
+  }
+
+  if (error.message) {
+    return error.message.split('(')[0].trim();
+  }
+
+  return String(error);
+}
+
+/**
+ * Cast arbitrator dispute vote.
+ */
+export async function castVote(
+  agreementId,
+  milestoneIndex,
+  freelancerShareBps
+) {
+  const contract = await getContractWithSigner();
+
+  return await contract.castVote(
+    agreementId,
+    milestoneIndex,
+    freelancerShareBps
+  );
+}
+
+/**
+ * Finalize dispute resolution.
+ */
+export async function finalizeDispute(
+  agreementId,
+  milestoneIndex
+) {
+  const contract = await getContractWithSigner();
+
+  if (typeof contract.resolveDispute === 'function') {
+    return await contract.resolveDispute(
+      agreementId,
+      milestoneIndex
+    );
+  }
+
+  return null;
+}
