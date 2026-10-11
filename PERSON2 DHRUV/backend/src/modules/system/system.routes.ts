@@ -6,6 +6,20 @@ import { sendSuccess } from '../../utils/response';
 const router = Router();
 
 /**
+ * Public root endpoint
+ */
+router.get('/', (_req: Request, res: Response) => {
+  return sendSuccess(res, {
+    name: 'SANKALP / FairWork API Server',
+    status: 'online',
+    version: '1.0.0',
+    health: '/health',
+    config: '/config',
+    endpoints: ['/api/auth', '/api/posts', '/api/agreements', '/api/users', '/api/disputes']
+  });
+});
+
+/**
  * Public health check endpoint
  */
 router.get('/health', (_req: Request, res: Response) => {
