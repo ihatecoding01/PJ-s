@@ -1,4 +1,5 @@
 import { apiFetch } from './client.js';
+import { DEMO_ACCOUNTS } from '../mock/mockStore.js';
 
 /**
  * Get chat threads for authenticated user
@@ -13,7 +14,7 @@ export async function getThreads() {
  * POST /threads { otherAddress, recipientId, subject, postId? }
  */
 export async function createThread({ otherAddress, recipientId, subject, postId }) {
-  const target = otherAddress || recipientId || '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC';
+  const target = otherAddress || recipientId || DEMO_ACCOUNTS.FREELANCER.address;
   return apiFetch('/threads', {
     method: 'POST',
     body: JSON.stringify({

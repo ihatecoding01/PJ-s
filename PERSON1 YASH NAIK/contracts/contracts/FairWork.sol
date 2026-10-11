@@ -5,11 +5,60 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
+// ── Custom Errors (4-byte selectors replace embedded string messages) ────────
+error ErrInvalidFreelancer();
+error ErrClientIsFreelancer();
+error ErrNoMilestones();
+error ErrArrayMismatch();
+error ErrLumpSumSingle();
+error ErrMaxPenaltyExceeded();
+error ErrZeroAmount();
+error ErrBpsExceeded();
+error ErrDeadlinePast();
+error ErrDeadlineOrder();
+error ErrOnlyFreelancer();
+error ErrNotDraft();
+error ErrOnlyClient();
+error ErrNotAwaitingFund();
+error ErrWrongFundAmount();
+error ErrOnlyParties();
+error ErrNotCancellable();
+error ErrNotActive();
+error ErrBadIndex();
+error ErrNotSubmittable();
+error ErrMaxRevisions();
+error ErrOnlyOracle();
+error ErrNotSubmitted();
+error ErrReviewPending();
+error ErrEmptyHash();
+error ErrGracePending();
+error ErrDisputeWindowPending();
+error ErrNotReclaimable();
+error ErrTransferFailed();
+error ErrAlreadyClosed();
+error ErrBadAmendment();
+error ErrAlreadyAccepted();
+error ErrOnlyCounterparty();
+error ErrNotDisputable();
+error ErrNotDisputed();
+error ErrShareExceeded();
+error ErrVotingEnded();
+error ErrNotArbitrator();
+error ErrAlreadyVoted();
+error ErrVotingPending();
+error ErrAlreadyResolved();
+error ErrBadAddress();
+error ErrDuplicateArbitrator();
+error ErrFeeExceeded();
+error ErrWindowShort();
+error ErrTooFewArbitrators();
+
 /**
  * @title FairWork
  * @author Person 1 - Yash Naik (FairWork Monorepo)
  * @notice Milestone-based escrow agreement platform for blockchain freelancers and clients.
- * @dev Integrates off-chain AI analysis with on-chain milestone escrow, penalty deductions,
+ * @dev Optimized for deployment size: custom errors, uint8 resolution method, lean loops.
+ *      Integrates off-chain AI analysis with on-chain milestone escrow, penalty deductions,
  *      dispute resolution with arbitrator voting/AI fallback, and pull-over-push security.
  */
 contract FairWork is ReentrancyGuard, Ownable, Pausable {
@@ -100,7 +149,7 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
         bool hasAiRecommendation;
         bool resolved;
         uint16 finalFreelancerShareBps;
-        string resolutionMethod;
+        uint8 resolutionMethod; // 0=UNRESOLVED, 1=VOTE, 2=AI_FALLBACK, 3=PROGRESS_FALLBACK
     }
 
     struct PaymentSummary {
@@ -118,7 +167,7 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
     uint256 private _agreementCount;
     address public oracle;
     address payable public treasury;
-    uint16 public feeBps; // platform fee in basis points (max 500 = 5%, default 100 = 1%)
+    uint16 public feeBps; // platform fee in basis points (max 500 = 5%)
     uint32 public votingWindow = 3 days; // default dispute voting window
 
     // Arbitrator pool
@@ -258,83 +307,85 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
      * @notice Creates a new agreement draft with milestones.
      * @dev Called by the client. Enforces non-zero amounts, matching array lengths,
      *      increasing deadlines, and single-milestone restriction for LUMP_SUM.
-     * @param freelancer Address of the designated freelancer.
-     * @param termsHash Keccak256 hash of the canonical terms JSON.
-     * @param termsURI IPFS or storage URI pointing to the agreement terms.
-     * @param mode PaymentMode (MILESTONE or LUMP_SUM).
-     * @param latePenaltyBpsPerDay Penalty in basis points deducted per day of delay.
-     * @param maxLatePenaltyBps Cap on late penalty in basis points (max 10000).
-     * @param reviewWindow Time window in seconds for client review.
-     * @param graceWindow Grace period in seconds after milestone deadline before reclaim.
-     * @param maxRevisions Maximum number of revisions allowed for rejected milestones.
-     * @param amounts Array of payment amounts for each milestone in wei.
-     * @param deadlines Array of unix timestamps representing deadlines for each milestone.
-     * @param requiredProgressBps Array of required progress percentages (bps) for milestones.
-     * @param criteriaHashes Array of hashes for milestone acceptance criteria.
-     * @return id Unique identifier of the newly created agreement.
      */
-    function createAgreement(
-        address freelancer,
-        bytes32 termsHash,
-        string calldata termsURI,
-        PaymentMode mode,
-        uint16 latePenaltyBpsPerDay,
-        uint16 maxLatePenaltyBps,
-        uint32 reviewWindow,
-        uint32 graceWindow,
-        uint8 maxRevisions,
-        uint256[] calldata amounts,
-        uint64[] calldata deadlines,
-        uint16[] calldata requiredProgressBps,
-        bytes32[] calldata criteriaHashes
-    ) external whenNotPaused returns (uint256 id) {
-        require(freelancer != address(0), "Invalid freelancer");
-        require(freelancer != msg.sender, "Client cannot be freelancer");
-        require(amounts.length > 0, "No milestones provided");
-        require(
-            amounts.length == deadlines.length &&
-            amounts.length == requiredProgressBps.length &&
-            amounts.length == criteriaHashes.length,
-            "Array length mismatch"
-        );
-        if (mode == PaymentMode.LUMP_SUM) {
-            require(amounts.length == 1, "LUMP_SUM requires exactly 1 milestone");
-        }
-        require(maxLatePenaltyBps <= 10000, "Max late penalty > 10000 bps");
+    struct CreateAgreementParams {
+        address freelancer;
+        bytes32 termsHash;
+        string termsURI;
+        PaymentMode mode;
+        uint16 latePenaltyBpsPerDay;
+        uint16 maxLatePenaltyBps;
+        uint32 reviewWindow;
+        uint32 graceWindow;
+        uint8 maxRevisions;
+        uint256[] amounts;
+        uint64[] deadlines;
+        uint16[] requiredProgressBps;
+        bytes32[] criteriaHashes;
+    }
 
-        uint256 total = 0;
-        for (uint256 i = 0; i < amounts.length; i++) {
-            require(amounts[i] > 0, "Milestone amount must be > 0");
-            require(requiredProgressBps[i] <= 10000, "Progress bps > 10000");
+    function createAgreement(CreateAgreementParams calldata p)
+        external
+        whenNotPaused
+        returns (uint256 id)
+    {
+        if (p.freelancer == address(0)) revert ErrInvalidFreelancer();
+        if (p.freelancer == msg.sender) revert ErrClientIsFreelancer();
+        if (p.amounts.length == 0) revert ErrNoMilestones();
+        if (
+            p.amounts.length != p.deadlines.length ||
+            p.amounts.length != p.requiredProgressBps.length ||
+            p.amounts.length != p.criteriaHashes.length
+        ) revert ErrArrayMismatch();
+        if (p.mode == PaymentMode.LUMP_SUM && p.amounts.length != 1)
+            revert ErrLumpSumSingle();
+        if (p.maxLatePenaltyBps > 10000) revert ErrMaxPenaltyExceeded();
+
+        uint256 total;
+        for (uint256 i; i < p.amounts.length; ) {
+            if (p.amounts[i] == 0) revert ErrZeroAmount();
+            if (p.requiredProgressBps[i] > 10000) revert ErrBpsExceeded();
             if (i == 0) {
-                require(deadlines[i] > block.timestamp, "First deadline must be future");
+                if (p.deadlines[i] <= block.timestamp) revert ErrDeadlinePast();
             } else {
-                require(deadlines[i] > deadlines[i - 1], "Deadlines must be increasing");
+                if (p.deadlines[i] <= p.deadlines[i - 1]) revert ErrDeadlineOrder();
             }
-            total += amounts[i];
+            total += p.amounts[i];
+            unchecked { ++i; }
         }
 
-        _agreementCount++;
-        id = _agreementCount;
+        id = ++_agreementCount;
 
         _agreements[id] = Agreement({
             id: id,
             client: msg.sender,
-            freelancer: freelancer,
-            termsHash: termsHash,
-            termsURI: termsURI,
-            mode: mode,
+            freelancer: p.freelancer,
+            termsHash: p.termsHash,
+            termsURI: p.termsURI,
+            mode: p.mode,
             status: AgreementStatus.Draft,
             totalAmount: total,
-            latePenaltyBpsPerDay: latePenaltyBpsPerDay,
-            maxLatePenaltyBps: maxLatePenaltyBps,
-            reviewWindow: reviewWindow,
-            graceWindow: graceWindow,
-            maxRevisions: maxRevisions,
+            latePenaltyBpsPerDay: p.latePenaltyBpsPerDay,
+            maxLatePenaltyBps: p.maxLatePenaltyBps,
+            reviewWindow: p.reviewWindow,
+            graceWindow: p.graceWindow,
+            maxRevisions: p.maxRevisions,
             createdAt: uint64(block.timestamp)
         });
 
-        for (uint8 i = 0; i < amounts.length; i++) {
+        _pushMilestones(id, p.amounts, p.deadlines, p.requiredProgressBps, p.criteriaHashes);
+
+        emit AgreementCreated(id, msg.sender, p.freelancer, p.termsHash, p.termsURI);
+    }
+
+    function _pushMilestones(
+        uint256 id,
+        uint256[] calldata amounts,
+        uint64[] calldata deadlines,
+        uint16[] calldata requiredProgressBps,
+        bytes32[] calldata criteriaHashes
+    ) internal {
+        for (uint8 i; i < amounts.length; ) {
             _milestones[id].push(
                 Milestone({
                     index: i,
@@ -353,10 +404,8 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
                     paidAmount: 0
                 })
             );
+            unchecked { ++i; }
         }
-
-        emit AgreementCreated(id, msg.sender, freelancer, termsHash, termsURI);
-        return id;
     }
 
     /**
@@ -365,51 +414,40 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
      * @param id The ID of the agreement.
      */
     function acceptAgreement(uint256 id) external whenNotPaused {
-        Agreement storage agreement = _agreements[id];
-        require(msg.sender == agreement.freelancer, "Only freelancer can accept");
-        require(agreement.status == AgreementStatus.Draft, "Agreement not in Draft");
-
-        agreement.status = AgreementStatus.AwaitingFunding;
+        Agreement storage ag = _agreements[id];
+        if (msg.sender != ag.freelancer) revert ErrOnlyFreelancer();
+        if (ag.status != AgreementStatus.Draft) revert ErrNotDraft();
+        ag.status = AgreementStatus.AwaitingFunding;
         emit AgreementAccepted(id);
     }
 
     /**
      * @notice Client funds the agreement, locking native currency into escrow.
      * @dev msg.value must match the exact sum of all milestone amounts.
-     *      Transitions agreement status to Active.
      * @param id The ID of the agreement.
      */
     function fundAgreement(uint256 id) external payable nonReentrant whenNotPaused {
-        Agreement storage agreement = _agreements[id];
-        require(msg.sender == agreement.client, "Only client can fund");
-        require(agreement.status == AgreementStatus.AwaitingFunding, "Agreement not awaiting funding");
-        require(msg.value == agreement.totalAmount, "Must fund exact total amount");
-
-        agreement.status = AgreementStatus.Active;
+        Agreement storage ag = _agreements[id];
+        if (msg.sender != ag.client) revert ErrOnlyClient();
+        if (ag.status != AgreementStatus.AwaitingFunding) revert ErrNotAwaitingFund();
+        if (msg.value != ag.totalAmount) revert ErrWrongFundAmount();
+        ag.status = AgreementStatus.Active;
         _paymentSummaries[id].locked = msg.value;
-
         emit AgreementFunded(id, msg.value);
     }
 
     /**
      * @notice Cancels an agreement before it is funded.
      * @dev Callable by either client or freelancer when Draft or AwaitingFunding.
-     *      No funds are locked, so nothing is refunded.
      * @param id The ID of the agreement.
      */
     function cancelUnfunded(uint256 id) external whenNotPaused {
-        Agreement storage agreement = _agreements[id];
-        require(
-            msg.sender == agreement.client || msg.sender == agreement.freelancer,
-            "Only client or freelancer can cancel"
-        );
-        require(
-            agreement.status == AgreementStatus.Draft ||
-                agreement.status == AgreementStatus.AwaitingFunding,
-            "Agreement already funded or finalized"
-        );
-
-        agreement.status = AgreementStatus.Cancelled;
+        Agreement storage ag = _agreements[id];
+        if (msg.sender != ag.client && msg.sender != ag.freelancer)
+            revert ErrOnlyParties();
+        if (ag.status != AgreementStatus.Draft && ag.status != AgreementStatus.AwaitingFunding)
+            revert ErrNotCancellable();
+        ag.status = AgreementStatus.Cancelled;
         emit AgreementCancelled(id);
     }
 
@@ -419,12 +457,7 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
 
     /**
      * @notice Freelancer submits work for a specific milestone.
-     * @dev Starts the client review window timer. Can be called on Pending or Rejected milestone
-     *      as long as revisionsCount <= maxRevisions.
-     * @param id The ID of the agreement.
-     * @param idx Index of the milestone.
-     * @param submissionHash Keccak256 hash of submission metadata / evidence.
-     * @param commitSha Git commit SHA or PR URL of the submitted work.
+     * @dev Starts the client review window timer.
      */
     function submitMilestone(
         uint256 id,
@@ -432,29 +465,24 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
         bytes32 submissionHash,
         string calldata commitSha
     ) external whenNotPaused {
-        Agreement storage agreement = _agreements[id];
-        require(msg.sender == agreement.freelancer, "Only freelancer can submit");
-        require(agreement.status == AgreementStatus.Active, "Agreement not active");
-        require(idx < _milestones[id].length, "Invalid milestone index");
+        Agreement storage ag = _agreements[id];
+        if (msg.sender != ag.freelancer) revert ErrOnlyFreelancer();
+        if (ag.status != AgreementStatus.Active) revert ErrNotActive();
+        if (idx >= _milestones[id].length) revert ErrBadIndex();
 
-        Milestone storage milestone = _milestones[id][idx];
-        require(
-            milestone.status == MilestoneStatus.Pending ||
-                milestone.status == MilestoneStatus.Rejected,
-            "Milestone not submittable"
-        );
+        Milestone storage m = _milestones[id][idx];
+        if (m.status != MilestoneStatus.Pending && m.status != MilestoneStatus.Rejected)
+            revert ErrNotSubmittable();
 
-        if (milestone.status == MilestoneStatus.Rejected) {
-            require(
-                milestone.revisionsCount <= agreement.maxRevisions,
-                "Max revisions exceeded"
-            );
+        if (m.status == MilestoneStatus.Rejected) {
+            if (m.revisionsCount > ag.maxRevisions)
+                revert ErrMaxRevisions();
         }
 
-        milestone.submissionHash = submissionHash;
-        milestone.commitSha = commitSha;
-        milestone.submissionTime = uint64(block.timestamp);
-        milestone.status = MilestoneStatus.Submitted;
+        m.submissionHash = submissionHash;
+        m.commitSha = commitSha;
+        m.submissionTime = uint64(block.timestamp);
+        m.status = MilestoneStatus.Submitted;
 
         emit MilestoneSubmitted(id, idx, submissionHash, commitSha);
     }
@@ -462,10 +490,6 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
     /**
      * @notice Backend oracle records AI progress evaluation for a submitted milestone.
      * @dev Advisory data used for transparency and dispute fallback.
-     * @param id The ID of the agreement.
-     * @param idx Index of the milestone.
-     * @param aiProgressBps Evaluated progress percentage in basis points (0-10000).
-     * @param aiReportHash Keccak256 hash of the canonical AI analysis report JSON.
      */
     function recordProgress(
         uint256 id,
@@ -473,16 +497,16 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
         uint16 aiProgressBps,
         bytes32 aiReportHash
     ) external whenNotPaused {
-        require(msg.sender == oracle, "Only oracle can record progress");
-        require(_agreements[id].status == AgreementStatus.Active, "Agreement not active");
-        require(idx < _milestones[id].length, "Invalid milestone index");
-        require(aiProgressBps <= 10000, "Progress bps > 10000");
+        if (msg.sender != oracle) revert ErrOnlyOracle();
+        if (_agreements[id].status != AgreementStatus.Active) revert ErrNotActive();
+        if (idx >= _milestones[id].length) revert ErrBadIndex();
+        if (aiProgressBps > 10000) revert ErrBpsExceeded();
 
-        Milestone storage milestone = _milestones[id][idx];
-        require(milestone.status == MilestoneStatus.Submitted, "Milestone not submitted");
+        Milestone storage m = _milestones[id][idx];
+        if (m.status != MilestoneStatus.Submitted) revert ErrNotSubmitted();
 
-        milestone.aiProgressBps = aiProgressBps;
-        milestone.aiReportHash = aiReportHash;
+        m.aiProgressBps = aiProgressBps;
+        m.aiReportHash = aiReportHash;
 
         emit ProgressRecorded(id, idx, aiProgressBps, aiReportHash);
     }
@@ -493,104 +517,81 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
 
     /**
      * @notice Client manually approves a submitted milestone, releasing funds.
-     * @dev Calculates and deducts lateness penalties (refunded to client) and platform fees
-     *      (sent to treasury). Freelancer receives remainder.
-     * @param id The ID of the agreement.
-     * @param idx Index of the milestone.
      */
     function approveMilestone(uint256 id, uint8 idx) external nonReentrant whenNotPaused {
-        Agreement storage agreement = _agreements[id];
-        require(msg.sender == agreement.client, "Only client can approve");
+        if (msg.sender != _agreements[id].client) revert ErrOnlyClient();
         _processPayout(id, idx, false);
     }
 
     /**
-     * @notice Freelancer auto-claims milestone payout if the review window has elapsed with silence.
-     * @dev Applies identical lateness penalty and platform fee calculation.
-     * @param id The ID of the agreement.
-     * @param idx Index of the milestone.
+     * @notice Freelancer auto-claims milestone payout if the review window has elapsed.
      */
     function claimAfterReviewWindow(uint256 id, uint8 idx) external nonReentrant whenNotPaused {
-        Agreement storage agreement = _agreements[id];
-        require(msg.sender == agreement.freelancer, "Only freelancer can claim");
-        Milestone storage milestone = _milestones[id][idx];
-        require(
-            block.timestamp >= uint256(milestone.submissionTime) + agreement.reviewWindow,
-            "Review window has not elapsed"
-        );
+        Agreement storage ag = _agreements[id];
+        if (msg.sender != ag.freelancer) revert ErrOnlyFreelancer();
+        Milestone storage m = _milestones[id][idx];
+        if (block.timestamp < uint256(m.submissionTime) + ag.reviewWindow)
+            revert ErrReviewPending();
         _processPayout(id, idx, true);
     }
 
     /**
      * @notice Client rejects a submitted milestone with a reason hash.
-     * @dev Increments revisions count and starts dispute/remedy timer.
-     * @param id The ID of the agreement.
-     * @param idx Index of the milestone.
-     * @param reasonHash Keccak256 hash of the rejection feedback explanation.
      */
     function rejectMilestone(
         uint256 id,
         uint8 idx,
         bytes32 reasonHash
     ) external whenNotPaused {
-        Agreement storage agreement = _agreements[id];
-        require(msg.sender == agreement.client, "Only client can reject");
-        require(agreement.status == AgreementStatus.Active, "Agreement not active");
-        require(idx < _milestones[id].length, "Invalid milestone index");
-        require(reasonHash != bytes32(0), "Reason hash cannot be empty");
+        Agreement storage ag = _agreements[id];
+        if (msg.sender != ag.client) revert ErrOnlyClient();
+        if (ag.status != AgreementStatus.Active) revert ErrNotActive();
+        if (idx >= _milestones[id].length) revert ErrBadIndex();
+        if (reasonHash == bytes32(0)) revert ErrEmptyHash();
 
-        Milestone storage milestone = _milestones[id][idx];
-        require(milestone.status == MilestoneStatus.Submitted, "Milestone not submitted");
+        Milestone storage m = _milestones[id][idx];
+        if (m.status != MilestoneStatus.Submitted) revert ErrNotSubmitted();
 
-        milestone.status = MilestoneStatus.Rejected;
-        milestone.rejectionTime = uint64(block.timestamp);
-        milestone.revisionsCount++;
+        m.status = MilestoneStatus.Rejected;
+        m.rejectionTime = uint64(block.timestamp);
+        m.revisionsCount++;
 
         emit MilestoneRejected(id, idx, reasonHash);
     }
 
     /**
      * @notice Client reclaims escrowed funds for a missed or unremedied milestone.
-     * @dev Allowed if:
-     *      1) Milestone is Pending and deadline + graceWindow has passed.
-     *      2) Milestone is Rejected and rejectionTime + reviewWindow has passed without resubmission or dispute.
-     * @param id The ID of the agreement.
-     * @param idx Index of the milestone.
      */
     function reclaimMissedMilestone(uint256 id, uint8 idx) external nonReentrant whenNotPaused {
-        Agreement storage agreement = _agreements[id];
-        require(msg.sender == agreement.client, "Only client can reclaim");
-        require(agreement.status == AgreementStatus.Active, "Agreement not active");
-        require(idx < _milestones[id].length, "Invalid milestone index");
+        Agreement storage ag = _agreements[id];
+        if (msg.sender != ag.client) revert ErrOnlyClient();
+        if (ag.status != AgreementStatus.Active) revert ErrNotActive();
+        if (idx >= _milestones[id].length) revert ErrBadIndex();
 
-        Milestone storage milestone = _milestones[id][idx];
+        Milestone storage m = _milestones[id][idx];
 
-        if (milestone.status == MilestoneStatus.Pending) {
-            require(
-                block.timestamp > uint256(milestone.deadline) + agreement.graceWindow,
-                "Grace period not elapsed"
-            );
-        } else if (milestone.status == MilestoneStatus.Rejected) {
-            require(
-                block.timestamp > uint256(milestone.rejectionTime) + agreement.reviewWindow,
-                "Dispute window not elapsed"
-            );
+        if (m.status == MilestoneStatus.Pending) {
+            if (block.timestamp <= uint256(m.deadline) + ag.graceWindow)
+                revert ErrGracePending();
+        } else if (m.status == MilestoneStatus.Rejected) {
+            if (block.timestamp <= uint256(m.rejectionTime) + ag.reviewWindow)
+                revert ErrDisputeWindowPending();
         } else {
-            revert("Milestone not eligible for reclaim");
+            revert ErrNotReclaimable();
         }
 
-        uint256 amountToRefund = milestone.amount;
-        _paymentSummaries[id].locked -= amountToRefund;
-        _paymentSummaries[id].refunded += amountToRefund;
+        uint256 amt = m.amount;
+        _paymentSummaries[id].locked -= amt;
+        _paymentSummaries[id].refunded += amt;
 
-        milestone.status = MilestoneStatus.Refunded;
+        m.status = MilestoneStatus.Refunded;
 
-        emit MilestoneRefunded(id, idx, amountToRefund);
+        emit MilestoneRefunded(id, idx, amt);
 
-        (bool success, ) = payable(agreement.client).call{value: amountToRefund}("");
-        require(success, "Client refund failed");
+        (bool ok, ) = payable(ag.client).call{value: amt}("");
+        if (!ok) revert ErrTransferFailed();
 
-        _checkAgreementCompletion(id);
+        _checkCompletion(id);
     }
 
     // =========================================================================
@@ -599,11 +600,6 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
 
     /**
      * @notice Either party proposes an amendment to extend deadline or change terms.
-     * @param id The ID of the agreement.
-     * @param idx Milestone index to amend.
-     * @param newDeadline Proposed new deadline timestamp (or 0 to keep current).
-     * @param newTermsHash Proposed updated terms hash (or bytes32(0) to keep current).
-     * @param newTermsURI Proposed updated terms URI.
      */
     function proposeAmendment(
         uint256 id,
@@ -612,26 +608,21 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
         bytes32 newTermsHash,
         string calldata newTermsURI
     ) external whenNotPaused {
-        Agreement storage agreement = _agreements[id];
-        require(
-            msg.sender == agreement.client || msg.sender == agreement.freelancer,
-            "Only parties can propose amendments"
-        );
-        require(agreement.status == AgreementStatus.Active, "Agreement not active");
-        require(idx < _milestones[id].length, "Invalid milestone index");
+        Agreement storage ag = _agreements[id];
+        if (msg.sender != ag.client && msg.sender != ag.freelancer)
+            revert ErrOnlyParties();
+        if (ag.status != AgreementStatus.Active) revert ErrNotActive();
+        if (idx >= _milestones[id].length) revert ErrBadIndex();
 
-        Milestone storage milestone = _milestones[id][idx];
-        require(
-            milestone.status != MilestoneStatus.Paid &&
-                milestone.status != MilestoneStatus.Refunded,
-            "Milestone already closed"
-        );
+        Milestone storage m = _milestones[id][idx];
+        if (m.status == MilestoneStatus.Paid || m.status == MilestoneStatus.Refunded)
+            revert ErrAlreadyClosed();
 
-        uint256 amendmentId = _amendments[id].length;
+        uint256 aid = _amendments[id].length;
 
         _amendments[id].push(
             Amendment({
-                amendmentId: amendmentId,
+                amendmentId: aid,
                 milestoneIdx: idx,
                 proposer: msg.sender,
                 newDeadline: newDeadline,
@@ -642,46 +633,36 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
             })
         );
 
-        emit AmendmentProposed(
-            id,
-            idx,
-            amendmentId,
-            msg.sender,
-            newDeadline,
-            newTermsHash,
-            newTermsURI
-        );
+        emit AmendmentProposed(id, idx, aid, msg.sender, newDeadline, newTermsHash, newTermsURI);
     }
 
     /**
      * @notice Counterparty accepts a proposed amendment, updating agreement/milestone state.
-     * @param id The ID of the agreement.
-     * @param amendmentId Index of the proposed amendment.
      */
     function acceptAmendment(uint256 id, uint256 amendmentId) external whenNotPaused {
-        Agreement storage agreement = _agreements[id];
-        require(agreement.status == AgreementStatus.Active, "Agreement not active");
-        require(amendmentId < _amendments[id].length, "Invalid amendment ID");
+        Agreement storage ag = _agreements[id];
+        if (ag.status != AgreementStatus.Active) revert ErrNotActive();
+        if (amendmentId >= _amendments[id].length) revert ErrBadAmendment();
 
-        Amendment storage amendment = _amendments[id][amendmentId];
-        require(!amendment.accepted, "Amendment already accepted");
+        Amendment storage a = _amendments[id][amendmentId];
+        if (a.accepted) revert ErrAlreadyAccepted();
 
-        if (amendment.proposer == agreement.client) {
-            require(msg.sender == agreement.freelancer, "Only freelancer can accept");
+        if (a.proposer == ag.client) {
+            if (msg.sender != ag.freelancer) revert ErrOnlyCounterparty();
         } else {
-            require(msg.sender == agreement.client, "Only client can accept");
+            if (msg.sender != ag.client) revert ErrOnlyCounterparty();
         }
 
-        amendment.accepted = true;
+        a.accepted = true;
 
-        if (amendment.newDeadline > 0) {
-            _milestones[id][amendment.milestoneIdx].deadline = amendment.newDeadline;
+        if (a.newDeadline > 0) {
+            _milestones[id][a.milestoneIdx].deadline = a.newDeadline;
         }
-        if (amendment.newTermsHash != bytes32(0)) {
-            agreement.termsHash = amendment.newTermsHash;
+        if (a.newTermsHash != bytes32(0)) {
+            ag.termsHash = a.newTermsHash;
         }
-        if (bytes(amendment.newTermsURI).length > 0) {
-            agreement.termsURI = amendment.newTermsURI;
+        if (bytes(a.newTermsURI).length > 0) {
+            ag.termsURI = a.newTermsURI;
         }
 
         emit AmendmentAccepted(id, amendmentId);
@@ -696,35 +677,27 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
      * @dev Selects 3 distinct arbitrators pseudo-randomly from the arbitrator pool.
      *      Note: Uses block.prevrandao + block.timestamp as a hackathon simplification;
      *      Chainlink VRF is recommended for production.
-     * @param id The ID of the agreement.
-     * @param idx Index of the milestone.
-     * @param evidenceHash Hash of initial dispute statement/evidence.
      */
     function raiseDispute(
         uint256 id,
         uint8 idx,
         bytes32 evidenceHash
     ) external whenNotPaused {
-        Agreement storage agreement = _agreements[id];
-        require(
-            msg.sender == agreement.client || msg.sender == agreement.freelancer,
-            "Only parties can raise dispute"
-        );
-        require(agreement.status == AgreementStatus.Active, "Agreement not active");
-        require(idx < _milestones[id].length, "Invalid milestone index");
+        Agreement storage ag = _agreements[id];
+        if (msg.sender != ag.client && msg.sender != ag.freelancer)
+            revert ErrOnlyParties();
+        if (ag.status != AgreementStatus.Active) revert ErrNotActive();
+        if (idx >= _milestones[id].length) revert ErrBadIndex();
 
-        Milestone storage milestone = _milestones[id][idx];
-        require(
-            milestone.status == MilestoneStatus.Submitted ||
-                milestone.status == MilestoneStatus.Rejected,
-            "Milestone not in disputable status"
-        );
+        Milestone storage m = _milestones[id][idx];
+        if (m.status != MilestoneStatus.Submitted && m.status != MilestoneStatus.Rejected)
+            revert ErrNotDisputable();
 
-        milestone.status = MilestoneStatus.Disputed;
+        m.status = MilestoneStatus.Disputed;
 
         // Shift funds from locked into disputed
-        _paymentSummaries[id].locked -= milestone.amount;
-        _paymentSummaries[id].disputed += milestone.amount;
+        _paymentSummaries[id].locked -= m.amount;
+        _paymentSummaries[id].disputed += m.amount;
 
         emit DisputeRaised(id, idx, msg.sender, evidenceHash);
 
@@ -734,40 +707,31 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
         }
 
         // Pseudo-random selection of 3 distinct arbitrators excluding client & freelancer
-        address[3] memory selected = _selectArbitrators(
-            id,
-            idx,
-            agreement.client,
-            agreement.freelancer
-        );
+        address[3] memory sel = _selectArbitrators(id, idx, ag.client, ag.freelancer);
 
-        Dispute storage dispute = _disputes[id][idx];
-        dispute.disputeRaisedTime = uint64(block.timestamp);
-        dispute.votingDeadline = uint64(block.timestamp + votingWindow);
-        dispute.selectedArbitrators = selected;
+        Dispute storage d = _disputes[id][idx];
+        d.disputeRaisedTime = uint64(block.timestamp);
+        d.votingDeadline = uint64(block.timestamp + votingWindow);
+        d.selectedArbitrators = sel;
 
-        emit ArbitratorsSelected(id, idx, selected);
+        emit ArbitratorsSelected(id, idx, sel);
     }
 
     /**
      * @notice Parties submit supplementary evidence hashes to an active dispute.
-     * @param id The ID of the agreement.
-     * @param idx Index of the milestone.
-     * @param evidenceHash Hash of additional evidence.
      */
     function submitEvidence(
         uint256 id,
         uint8 idx,
         bytes32 evidenceHash
     ) external whenNotPaused {
-        Agreement storage agreement = _agreements[id];
-        require(
-            msg.sender == agreement.client || msg.sender == agreement.freelancer,
-            "Only parties can submit evidence"
-        );
-        require(idx < _milestones[id].length, "Invalid milestone index");
-        require(_milestones[id][idx].status == MilestoneStatus.Disputed, "Milestone not disputed");
-        require(evidenceHash != bytes32(0), "Evidence hash cannot be empty");
+        Agreement storage ag = _agreements[id];
+        if (msg.sender != ag.client && msg.sender != ag.freelancer)
+            revert ErrOnlyParties();
+        if (idx >= _milestones[id].length) revert ErrBadIndex();
+        if (_milestones[id][idx].status != MilestoneStatus.Disputed)
+            revert ErrNotDisputed();
+        if (evidenceHash == bytes32(0)) revert ErrEmptyHash();
 
         _disputeEvidence[id][idx].push(evidenceHash);
         emit EvidenceSubmitted(id, idx, msg.sender, evidenceHash);
@@ -776,10 +740,6 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
     /**
      * @notice Oracle records advisory AI dispute recommendation.
      * @dev Used as fallback resolution if fewer than 2 arbitrators vote by the voting deadline.
-     * @param id The ID of the agreement.
-     * @param idx Index of the milestone.
-     * @param freelancerShareBps Recommended freelancer payout percentage (0-10000).
-     * @param reportHash Hash of the dispute analysis report.
      */
     function recordAiRecommendation(
         uint256 id,
@@ -787,51 +747,48 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
         uint16 freelancerShareBps,
         bytes32 reportHash
     ) external whenNotPaused {
-        require(msg.sender == oracle, "Only oracle can record recommendation");
-        require(idx < _milestones[id].length, "Invalid milestone index");
-        require(_milestones[id][idx].status == MilestoneStatus.Disputed, "Milestone not disputed");
-        require(freelancerShareBps <= 10000, "Share bps > 10000");
+        if (msg.sender != oracle) revert ErrOnlyOracle();
+        if (idx >= _milestones[id].length) revert ErrBadIndex();
+        if (_milestones[id][idx].status != MilestoneStatus.Disputed)
+            revert ErrNotDisputed();
+        if (freelancerShareBps > 10000) revert ErrShareExceeded();
 
-        Dispute storage dispute = _disputes[id][idx];
-        dispute.aiFreelancerShareBps = freelancerShareBps;
-        dispute.aiReportHash = reportHash;
-        dispute.hasAiRecommendation = true;
+        Dispute storage d = _disputes[id][idx];
+        d.aiFreelancerShareBps = freelancerShareBps;
+        d.aiReportHash = reportHash;
+        d.hasAiRecommendation = true;
 
         emit AiRecommendationRecorded(id, idx, freelancerShareBps, reportHash);
     }
 
     /**
      * @notice Selected arbitrator casts their vote with a proposed freelancer payout percentage.
-     * @param id The ID of the agreement.
-     * @param idx Index of the milestone.
-     * @param freelancerShareBps Arbitrator's proposed freelancer share in basis points (0-10000).
      */
     function castVote(
         uint256 id,
         uint8 idx,
         uint16 freelancerShareBps
     ) external whenNotPaused {
-        require(idx < _milestones[id].length, "Invalid milestone index");
-        require(_milestones[id][idx].status == MilestoneStatus.Disputed, "Milestone not disputed");
-        require(freelancerShareBps <= 10000, "Share bps > 10000");
+        if (idx >= _milestones[id].length) revert ErrBadIndex();
+        if (_milestones[id][idx].status != MilestoneStatus.Disputed)
+            revert ErrNotDisputed();
+        if (freelancerShareBps > 10000) revert ErrShareExceeded();
 
-        Dispute storage dispute = _disputes[id][idx];
-        require(block.timestamp <= dispute.votingDeadline, "Voting window has ended");
+        Dispute storage d = _disputes[id][idx];
+        if (block.timestamp > d.votingDeadline) revert ErrVotingEnded();
 
-        bool isSelected = false;
-        for (uint256 i = 0; i < 3; i++) {
-            if (dispute.selectedArbitrators[i] == msg.sender) {
-                isSelected = true;
-                break;
-            }
+        bool sel;
+        for (uint256 i; i < 3; ) {
+            if (d.selectedArbitrators[i] == msg.sender) { sel = true; break; }
+            unchecked { ++i; }
         }
-        require(isSelected, "Caller not selected arbitrator");
-        require(!_hasVoted[id][idx][msg.sender], "Arbitrator already voted");
+        if (!sel) revert ErrNotArbitrator();
+        if (_hasVoted[id][idx][msg.sender]) revert ErrAlreadyVoted();
 
         _hasVoted[id][idx][msg.sender] = true;
         _arbitratorVotes[id][idx][msg.sender] = freelancerShareBps;
         _disputeCastVotes[id][idx].push(freelancerShareBps);
-        dispute.voteCount++;
+        d.voteCount++;
 
         emit VoteCast(id, idx, msg.sender, freelancerShareBps);
     }
@@ -839,33 +796,28 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
     /**
      * @notice Finalizes a dispute after voting deadline (or once all 3 arbitrators voted).
      * @dev Resolution priority:
-     *      1. If >= 2 votes cast: MEDIAN of cast votes (method: "VOTE").
-     *      2. If < 2 votes and AI recommendation recorded: AI recommendation (method: "AI_FALLBACK").
-     *      3. Otherwise: Milestone aiProgressBps (method: "PROGRESS_FALLBACK").
-     *      Pays freelancer share (minus platform fee), refunds balance to client.
-     * @param id The ID of the agreement.
-     * @param idx Index of the milestone.
+     *      1. If >= 2 votes cast: MEDIAN of cast votes (method: 1 = VOTE).
+     *      2. If < 2 votes and AI recommendation recorded: AI recommendation (method: 2 = AI_FALLBACK).
+     *      3. Otherwise: Milestone aiProgressBps (method: 3 = PROGRESS_FALLBACK).
      */
     function finalizeDispute(uint256 id, uint8 idx) external nonReentrant whenNotPaused {
-        require(idx < _milestones[id].length, "Invalid milestone index");
-        Milestone storage milestone = _milestones[id][idx];
-        require(milestone.status == MilestoneStatus.Disputed, "Milestone not disputed");
+        if (idx >= _milestones[id].length) revert ErrBadIndex();
+        Milestone storage m = _milestones[id][idx];
+        if (m.status != MilestoneStatus.Disputed) revert ErrNotDisputed();
 
-        Dispute storage dispute = _disputes[id][idx];
-        require(
-            block.timestamp > dispute.votingDeadline || dispute.voteCount == 3,
-            "Voting window not finished"
-        );
-        require(!dispute.resolved, "Dispute already resolved");
+        Dispute storage d = _disputes[id][idx];
+        if (block.timestamp <= d.votingDeadline && d.voteCount != 3)
+            revert ErrVotingPending();
+        if (d.resolved) revert ErrAlreadyResolved();
 
-        uint16 freelancerShareBps;
-        string memory method;
+        uint16 share;
+        uint8 method;
 
-        if (dispute.voteCount >= 2) {
-            method = "VOTE";
+        if (d.voteCount >= 2) {
+            method = 1; // VOTE
             uint16[] storage votes = _disputeCastVotes[id][idx];
             if (votes.length == 2) {
-                freelancerShareBps = (votes[0] + votes[1]) / 2;
+                share = (votes[0] + votes[1]) / 2;
             } else {
                 // Median of 3 votes
                 uint16 a = votes[0];
@@ -874,58 +826,57 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
                 if (a > b) { (a, b) = (b, a); }
                 if (b > c) { (b, c) = (c, b); }
                 if (a > b) { (a, b) = (b, a); }
-                freelancerShareBps = b;
+                share = b;
             }
-        } else if (dispute.hasAiRecommendation) {
-            method = "AI_FALLBACK";
-            freelancerShareBps = dispute.aiFreelancerShareBps;
+        } else if (d.hasAiRecommendation) {
+            method = 2; // AI_FALLBACK
+            share = d.aiFreelancerShareBps;
         } else {
-            method = "PROGRESS_FALLBACK";
-            freelancerShareBps = milestone.aiProgressBps;
+            method = 3; // PROGRESS_FALLBACK
+            share = m.aiProgressBps;
         }
 
-        if (freelancerShareBps > 10000) {
-            freelancerShareBps = 10000;
-        }
+        if (share > 10000) share = 10000;
 
-        dispute.resolved = true;
-        dispute.finalFreelancerShareBps = freelancerShareBps;
-        dispute.resolutionMethod = method;
+        d.resolved = true;
+        d.finalFreelancerShareBps = share;
+        d.resolutionMethod = method;
 
-        uint256 totalAmount = milestone.amount;
-        uint256 freelancerGross = (totalAmount * freelancerShareBps) / 10000;
-        uint256 clientPayout = totalAmount - freelancerGross;
-        uint256 fee = (freelancerGross * feeBps) / 10000;
-        uint256 freelancerPayout = freelancerGross - fee;
+        uint256 total = m.amount;
+        uint256 fGross = (total * share) / 10000;
+        uint256 cPay = total - fGross;
+        uint256 fee = (fGross * feeBps) / 10000;
+        uint256 fPay = fGross - fee;
 
         // Accounting update
-        _paymentSummaries[id].disputed -= totalAmount;
-        _paymentSummaries[id].released += freelancerPayout;
-        _paymentSummaries[id].refunded += clientPayout;
+        _paymentSummaries[id].disputed -= total;
+        _paymentSummaries[id].released += fPay;
+        _paymentSummaries[id].refunded += cPay;
         _paymentSummaries[id].feesPaid += fee;
 
-        milestone.paidAmount = freelancerPayout;
-        milestone.status = MilestoneStatus.Paid;
+        m.paidAmount = fPay;
+        m.status = MilestoneStatus.Paid;
 
-        emit DisputeResolved(id, idx, freelancerShareBps, method);
+        string memory methodStr = method == 1 ? "VOTE" : (method == 2 ? "AI_FALLBACK" : "PROGRESS_FALLBACK");
+        emit DisputeResolved(id, idx, share, methodStr);
 
-        Agreement storage agreement = _agreements[id];
+        Agreement storage ag = _agreements[id];
 
         // Safe pull-over-push / CEI transfers
-        if (freelancerPayout > 0) {
-            (bool okF, ) = payable(agreement.freelancer).call{value: freelancerPayout}("");
-            require(okF, "Freelancer payout failed");
+        if (fPay > 0) {
+            (bool ok, ) = payable(ag.freelancer).call{value: fPay}("");
+            if (!ok) revert ErrTransferFailed();
         }
-        if (clientPayout > 0) {
-            (bool okC, ) = payable(agreement.client).call{value: clientPayout}("");
-            require(okC, "Client refund failed");
+        if (cPay > 0) {
+            (bool ok, ) = payable(ag.client).call{value: cPay}("");
+            if (!ok) revert ErrTransferFailed();
         }
         if (fee > 0) {
-            (bool okFee, ) = payable(treasury).call{value: fee}("");
-            require(okFee, "Treasury fee payout failed");
+            (bool ok, ) = payable(treasury).call{value: fee}("");
+            if (!ok) revert ErrTransferFailed();
         }
 
-        _checkAgreementCompletion(id);
+        _checkCompletion(id);
     }
 
     // =========================================================================
@@ -934,30 +885,29 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
 
     /**
      * @notice Adds an address to the arbitrator pool.
-     * @param arbitrator Address of the new arbitrator.
+     * @param arb Address of the new arbitrator.
      */
-    function addArbitrator(address arbitrator) external onlyOwner {
-        require(arbitrator != address(0), "Invalid address");
-        require(!isArbitrator[arbitrator], "Already an arbitrator");
-
-        isArbitrator[arbitrator] = true;
-        arbitratorPool.push(arbitrator);
+    function addArbitrator(address arb) external onlyOwner {
+        if (arb == address(0)) revert ErrBadAddress();
+        if (isArbitrator[arb]) revert ErrDuplicateArbitrator();
+        isArbitrator[arb] = true;
+        arbitratorPool.push(arb);
     }
 
     /**
      * @notice Removes an address from the arbitrator pool.
-     * @param arbitrator Address of the arbitrator to remove.
+     * @param arb Address of the arbitrator to remove.
      */
-    function removeArbitrator(address arbitrator) external onlyOwner {
-        require(isArbitrator[arbitrator], "Not an arbitrator");
-
-        isArbitrator[arbitrator] = false;
-        for (uint256 i = 0; i < arbitratorPool.length; i++) {
-            if (arbitratorPool[i] == arbitrator) {
+    function removeArbitrator(address arb) external onlyOwner {
+        if (!isArbitrator[arb]) revert ErrNotArbitrator();
+        isArbitrator[arb] = false;
+        for (uint256 i; i < arbitratorPool.length; ) {
+            if (arbitratorPool[i] == arb) {
                 arbitratorPool[i] = arbitratorPool[arbitratorPool.length - 1];
                 arbitratorPool.pop();
                 break;
             }
+            unchecked { ++i; }
         }
     }
 
@@ -966,7 +916,7 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
      * @param _oracle New oracle address.
      */
     function setOracle(address _oracle) external onlyOwner {
-        require(_oracle != address(0), "Invalid oracle address");
+        if (_oracle == address(0)) revert ErrBadAddress();
         oracle = _oracle;
     }
 
@@ -975,7 +925,7 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
      * @param _treasury New payable treasury address.
      */
     function setTreasury(address payable _treasury) external onlyOwner {
-        require(_treasury != address(0), "Invalid treasury address");
+        if (_treasury == address(0)) revert ErrBadAddress();
         treasury = _treasury;
     }
 
@@ -984,17 +934,17 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
      * @param _feeBps Fee basis points.
      */
     function setFeeBps(uint16 _feeBps) external onlyOwner {
-        require(_feeBps <= 500, "Fee exceeds 500 bps");
+        if (_feeBps > 500) revert ErrFeeExceeded();
         feeBps = _feeBps;
     }
 
     /**
      * @notice Updates the voting window duration for disputes.
-     * @param _votingWindow Window in seconds.
+     * @param _vw Window in seconds.
      */
-    function setVotingWindow(uint32 _votingWindow) external onlyOwner {
-        require(_votingWindow >= 1 hours, "Window too short");
-        votingWindow = _votingWindow;
+    function setVotingWindow(uint32 _vw) external onlyOwner {
+        if (_vw < 1 hours) revert ErrWindowShort();
+        votingWindow = _vw;
     }
 
     /**
@@ -1029,7 +979,7 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
      * @param idx Milestone index.
      */
     function getMilestone(uint256 id, uint8 idx) external view returns (Milestone memory) {
-        require(idx < _milestones[id].length, "Invalid milestone index");
+        if (idx >= _milestones[id].length) revert ErrBadIndex();
         return _milestones[id][idx];
     }
 
@@ -1041,6 +991,20 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
         return _milestones[id].length;
     }
 
+    struct DisputeView {
+        uint64 disputeRaisedTime;
+        uint64 disputeVotingDeadline;
+        address[3] selectedArbitrators;
+        uint8 voteCount;
+        uint16 aiFreelancerShareBps;
+        bytes32 aiReportHash;
+        bool hasAiRecommendation;
+        bool resolved;
+        uint16 finalFreelancerShareBps;
+        string resolutionMethod;
+        bytes32[] evidenceHashes;
+    }
+
     /**
      * @notice Retrieves dispute state and evidence for a milestone.
      * @param id Agreement ID.
@@ -1049,45 +1013,30 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
     function getDispute(uint256 id, uint8 idx)
         external
         view
-        returns (
-            uint64 disputeRaisedTime,
-            uint64 disputeVotingDeadline,
-            address[3] memory selectedArbitrators,
-            uint8 voteCount,
-            uint16 aiFreelancerShareBps,
-            bytes32 aiReportHash,
-            bool hasAiRecommendation,
-            bool resolved,
-            uint16 finalFreelancerShareBps,
-            string memory resolutionMethod,
-            bytes32[] memory evidenceHashes
-        )
+        returns (DisputeView memory)
     {
         Dispute storage d = _disputes[id][idx];
-        return (
-            d.disputeRaisedTime,
-            d.votingDeadline,
-            d.selectedArbitrators,
-            d.voteCount,
-            d.aiFreelancerShareBps,
-            d.aiReportHash,
-            d.hasAiRecommendation,
-            d.resolved,
-            d.finalFreelancerShareBps,
-            d.resolutionMethod,
-            _disputeEvidence[id][idx]
-        );
+        DisputeView memory v;
+        v.disputeRaisedTime = d.disputeRaisedTime;
+        v.disputeVotingDeadline = d.votingDeadline;
+        v.selectedArbitrators = d.selectedArbitrators;
+        v.voteCount = d.voteCount;
+        v.aiFreelancerShareBps = d.aiFreelancerShareBps;
+        v.aiReportHash = d.aiReportHash;
+        v.hasAiRecommendation = d.hasAiRecommendation;
+        v.resolved = d.resolved;
+        v.finalFreelancerShareBps = d.finalFreelancerShareBps;
+        if (d.resolutionMethod == 1) v.resolutionMethod = "VOTE";
+        else if (d.resolutionMethod == 2) v.resolutionMethod = "AI_FALLBACK";
+        else if (d.resolutionMethod == 3) v.resolutionMethod = "PROGRESS_FALLBACK";
+        else v.resolutionMethod = "";
+        v.evidenceHashes = _disputeEvidence[id][idx];
+        return v;
     }
 
     /**
      * @notice Retrieves the current payment summary accounting for an agreement.
-     * @dev Invariant: locked + released + disputed + refunded + feesPaid == totalFunded.
      * @param id Agreement ID.
-     * @return locked Amount currently locked in pending/submitted milestones.
-     * @return released Amount released to the freelancer.
-     * @return disputed Amount frozen in active disputes.
-     * @return refunded Amount refunded to the client (penalties, reclaims, dispute balances).
-     * @return feesPaid Amount collected in platform fees.
      */
     function getPaymentSummary(uint256 id)
         external
@@ -1114,7 +1063,7 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
         view
         returns (Amendment memory)
     {
-        require(amendmentId < _amendments[id].length, "Invalid amendment ID");
+        if (amendmentId >= _amendments[id].length) revert ErrBadAmendment();
         return _amendments[id][amendmentId];
     }
 
@@ -1140,80 +1089,70 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
     /**
      * @dev Internal milestone payout processing logic.
      */
-    function _processPayout(
-        uint256 id,
-        uint8 idx,
-        bool isAuto
-    ) internal {
-        Agreement storage agreement = _agreements[id];
-        require(agreement.status == AgreementStatus.Active, "Agreement not active");
-        require(idx < _milestones[id].length, "Invalid milestone index");
+    function _processPayout(uint256 id, uint8 idx, bool isAuto) internal {
+        Agreement storage ag = _agreements[id];
+        if (ag.status != AgreementStatus.Active) revert ErrNotActive();
+        if (idx >= _milestones[id].length) revert ErrBadIndex();
 
-        Milestone storage milestone = _milestones[id][idx];
-        require(milestone.status == MilestoneStatus.Submitted, "Milestone not submitted");
+        Milestone storage m = _milestones[id][idx];
+        if (m.status != MilestoneStatus.Submitted) revert ErrNotSubmitted();
 
         // Lateness penalty calculation
-        uint256 daysLate = 0;
-        if (milestone.submissionTime > milestone.deadline) {
-            daysLate = (milestone.submissionTime - milestone.deadline) / 1 days;
+        uint256 daysLate;
+        if (m.submissionTime > m.deadline) {
+            daysLate = (m.submissionTime - m.deadline) / 1 days;
         }
 
-        uint256 penaltyBps = daysLate * agreement.latePenaltyBpsPerDay;
-        if (penaltyBps > agreement.maxLatePenaltyBps) {
-            penaltyBps = agreement.maxLatePenaltyBps;
+        uint256 penBps = daysLate * ag.latePenaltyBpsPerDay;
+        if (penBps > ag.maxLatePenaltyBps) {
+            penBps = ag.maxLatePenaltyBps;
         }
 
-        uint256 penaltyRefund = (milestone.amount * penaltyBps) / 10000;
-        uint256 amountAfterPenalty = milestone.amount - penaltyRefund;
-        uint256 fee = (amountAfterPenalty * feeBps) / 10000;
-        uint256 freelancerAmount = amountAfterPenalty - fee;
+        uint256 penRefund = (m.amount * penBps) / 10000;
+        uint256 afterPen = m.amount - penRefund;
+        uint256 fee = (afterPen * feeBps) / 10000;
+        uint256 fAmt = afterPen - fee;
 
         // Accounting update
-        _paymentSummaries[id].locked -= milestone.amount;
-        _paymentSummaries[id].released += freelancerAmount;
-        _paymentSummaries[id].refunded += penaltyRefund;
+        _paymentSummaries[id].locked -= m.amount;
+        _paymentSummaries[id].released += fAmt;
+        _paymentSummaries[id].refunded += penRefund;
         _paymentSummaries[id].feesPaid += fee;
 
-        milestone.paidAmount = freelancerAmount;
-        milestone.status = MilestoneStatus.Paid;
+        m.paidAmount = fAmt;
+        m.status = MilestoneStatus.Paid;
 
         emit MilestoneApproved(id, idx, isAuto);
-        emit MilestonePaid(id, idx, freelancerAmount, fee, penaltyRefund);
+        emit MilestonePaid(id, idx, fAmt, fee, penRefund);
 
         // Safe payouts
-        if (freelancerAmount > 0) {
-            (bool okF, ) = payable(agreement.freelancer).call{value: freelancerAmount}("");
-            require(okF, "Freelancer payment failed");
+        if (fAmt > 0) {
+            (bool ok, ) = payable(ag.freelancer).call{value: fAmt}("");
+            if (!ok) revert ErrTransferFailed();
         }
-        if (penaltyRefund > 0) {
-            (bool okC, ) = payable(agreement.client).call{value: penaltyRefund}("");
-            require(okC, "Penalty refund failed");
+        if (penRefund > 0) {
+            (bool ok, ) = payable(ag.client).call{value: penRefund}("");
+            if (!ok) revert ErrTransferFailed();
         }
         if (fee > 0) {
-            (bool okFee, ) = payable(treasury).call{value: fee}("");
-            require(okFee, "Platform fee payment failed");
+            (bool ok, ) = payable(treasury).call{value: fee}("");
+            if (!ok) revert ErrTransferFailed();
         }
 
-        _checkAgreementCompletion(id);
+        _checkCompletion(id);
     }
 
     /**
      * @dev Checks if all milestones are Paid or Refunded. If so, completes agreement.
      */
-    function _checkAgreementCompletion(uint256 id) internal {
-        Milestone[] storage mList = _milestones[id];
-        bool allDone = true;
-        for (uint256 i = 0; i < mList.length; i++) {
-            if (
-                mList[i].status != MilestoneStatus.Paid &&
-                mList[i].status != MilestoneStatus.Refunded
-            ) {
-                allDone = false;
-                break;
-            }
+    function _checkCompletion(uint256 id) internal {
+        Milestone[] storage ms = _milestones[id];
+        for (uint256 i; i < ms.length; ) {
+            if (ms[i].status != MilestoneStatus.Paid && ms[i].status != MilestoneStatus.Refunded)
+                return;
+            unchecked { ++i; }
         }
-
-        if (allDone && _agreements[id].status != AgreementStatus.Completed) {
+        if (_agreements[id].status != AgreementStatus.Completed) {
             _agreements[id].status = AgreementStatus.Completed;
             emit AgreementCompleted(id);
         }
@@ -1230,36 +1169,36 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
         address freelancer
     ) internal view returns (address[3] memory selected) {
         address[] memory eligible = new address[](arbitratorPool.length);
-        uint256 eligibleCount = 0;
+        uint256 cnt;
 
-        for (uint256 i = 0; i < arbitratorPool.length; i++) {
+        for (uint256 i; i < arbitratorPool.length; ) {
             address arb = arbitratorPool[i];
             if (arb != client && arb != freelancer) {
-                eligible[eligibleCount] = arb;
-                eligibleCount++;
+                eligible[cnt] = arb;
+                cnt++;
             }
+            unchecked { ++i; }
         }
 
-        require(eligibleCount >= 3, "Not enough eligible arbitrators in pool");
+        if (cnt < 3) revert ErrTooFewArbitrators();
 
         uint256 seed = uint256(
             keccak256(
                 abi.encodePacked(
-                    block.prevrandao,
+                    block.difficulty,
                     block.timestamp,
                     id,
                     idx,
-                    eligibleCount
+                    cnt
                 )
             )
         );
 
-        for (uint256 i = 0; i < 3; i++) {
-            uint256 pick = i + (uint256(keccak256(abi.encodePacked(seed, i))) % (eligibleCount - i));
+        for (uint256 i; i < 3; ) {
+            uint256 pick = i + (uint256(keccak256(abi.encodePacked(seed, i))) % (cnt - i));
             selected[i] = eligible[pick];
             eligible[pick] = eligible[i];
+            unchecked { ++i; }
         }
-
-        return selected;
     }
 }

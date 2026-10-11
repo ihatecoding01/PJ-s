@@ -11,6 +11,236 @@
   },
   {
     "inputs": [],
+    "name": "ErrAlreadyAccepted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrAlreadyClosed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrAlreadyResolved",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrAlreadyVoted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrArrayMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrBadAddress",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrBadAmendment",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrBadIndex",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrBpsExceeded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrClientIsFreelancer",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrDeadlineOrder",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrDeadlinePast",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrDisputeWindowPending",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrDuplicateArbitrator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrEmptyHash",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrFeeExceeded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrGracePending",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrInvalidFreelancer",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrLumpSumSingle",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrMaxPenaltyExceeded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrMaxRevisions",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNoMilestones",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotActive",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotArbitrator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotAwaitingFund",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotCancellable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotDisputable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotDisputed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotDraft",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotReclaimable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotSubmittable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotSubmitted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrOnlyClient",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrOnlyCounterparty",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrOnlyFreelancer",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrOnlyOracle",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrOnlyParties",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrReviewPending",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrShareExceeded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrTooFewArbitrators",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrTransferFailed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrVotingEnded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrVotingPending",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrWindowShort",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrWrongFundAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrZeroAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ExpectedPause",
     "type": "error"
   },
@@ -638,7 +868,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "arbitrator",
+        "name": "arb",
         "type": "address"
       }
     ],
@@ -1500,7 +1730,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "arbitrator",
+        "name": "arb",
         "type": "address"
       }
     ],
@@ -1559,7 +1789,7 @@
     "inputs": [
       {
         "internalType": "uint32",
-        "name": "_votingWindow",
+        "name": "_vw",
         "type": "uint32"
       }
     ],

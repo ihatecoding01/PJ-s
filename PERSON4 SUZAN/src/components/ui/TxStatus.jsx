@@ -16,19 +16,19 @@ export default function TxStatus({
   errorMessage,
   className = '',
 }) {
-  const explorerUrl = import.meta.env.VITE_EXPLORER_URL || 'https://amoy.polygonscan.com';
-  const isMock = import.meta.env.VITE_USE_MOCK === 'true';
+  const explorerUrl = import.meta.env.VITE_EXPLORER_URL || 'https://sepolia.etherscan.io';
 
   if (!status || status === 'idle') return null;
 
-  if (isMock || status === 'mock_disabled') {
+  // Only show mock_disabled message when explicitly passed (no wallet at all)
+  if (status === 'mock_disabled') {
     return (
       <div className={`flex items-start gap-2.5 p-3.5 bg-sage/80 border border-gray rounded-[10px] text-xs text-forest ${className}`}>
         <Info className="w-4 h-4 text-forest shrink-0 mt-0.5" />
         <div>
-          <span className="font-heading font-semibold">Mock mode: no real transaction.</span>
+          <span className="font-heading font-semibold">No wallet connected.</span>
           <p className="text-ink/70 mt-0.5">
-            Blockchain transactions require a live network connection with MetaMask and deployed contracts. Connect to localhost (8545) or Polygon Amoy to execute live on-chain transactions.
+            Connect a MetaMask wallet or use a demo account to submit real on-chain transactions on Sepolia testnet.
           </p>
         </div>
       </div>

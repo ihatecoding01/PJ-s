@@ -6,6 +6,7 @@ import { MessageSquare, Send, Coins, Users } from 'lucide-react';
 import { useWallet } from '../../context/WalletContext.jsx';
 import { createThread } from '../../api/threads.js';
 import { useToast } from '../../context/ToastContext.jsx';
+import { DEMO_ACCOUNTS } from '../../mock/mockStore.js';
 
 export default function PostCard({ post, onSelect, onSelectPost, onStartChat }) {
   const { address } = useWallet();
@@ -22,7 +23,7 @@ export default function PostCard({ post, onSelect, onSelectPost, onStartChat }) 
   const handleStartChat = async (e) => {
     e.stopPropagation();
     try {
-      const targetAddr = authorAddress || '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC';
+      const targetAddr = authorAddress || DEMO_ACCOUNTS.FREELANCER.address;
       const thread = await createThread({
         otherAddress: targetAddr,
         recipientId: targetAddr,

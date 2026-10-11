@@ -56,7 +56,7 @@ async function main() {
     assert(health.status === 200 && health.data.data.status === 'ok', 'GET /health returns 200 and status ok');
 
     const config = await request('/config');
-    assert(config.status === 200 && config.data.data.chainId === 31337, 'GET /config returns 200 and chain config');
+    assert(config.status === 200 && (config.data.data.chainId === 11155111 || config.data.data.chainId === 31337), 'GET /config returns 200 and chain config');
 
     // 2. Authentication Flow with ethers Wallet
     console.log('\n2. Testing Wallet Authentication');

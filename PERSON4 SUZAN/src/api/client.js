@@ -78,7 +78,8 @@ async function handleMockRequest(endpoint, options = {}) {
   if (path === '/auth/verify' && method === 'POST') {
     const addr = body.address.toLowerCase();
     const token = `mock-jwt-token-${addr}-${Date.now()}`;
-    const user = mockStore.data.users[addr] || {
+    const matchedDemo = Object.values(DEMO_ACCOUNTS).find(d => d.address.toLowerCase() === addr);
+    const user = matchedDemo || mockStore.data.users[addr] || {
       address: addr,
       name: `User ${addr.substring(0, 6)}`,
       role: 'FREELANCER',
@@ -93,7 +94,8 @@ async function handleMockRequest(endpoint, options = {}) {
 
   // 2. Users
   if (path === '/users/me' && method === 'GET') {
-    const user = mockStore.data.users[currentAddress] || DEMO_ACCOUNTS.CLIENT;
+    const matchedDemo = Object.values(DEMO_ACCOUNTS).find(d => d.address.toLowerCase() === currentAddress);
+    const user = matchedDemo || mockStore.data.users[currentAddress] || DEMO_ACCOUNTS.CLIENT;
     return user;
   }
   if (path === '/users/me' && method === 'PUT') {
@@ -107,7 +109,8 @@ async function handleMockRequest(endpoint, options = {}) {
   }
   if (path.startsWith('/users/') && method === 'GET') {
     const addr = path.replace('/users/', '').toLowerCase();
-    const user = mockStore.data.users[addr] || {
+    const matchedDemo = Object.values(DEMO_ACCOUNTS).find(d => d.address.toLowerCase() === addr);
+    const user = matchedDemo || mockStore.data.users[addr] || {
       address: addr,
       name: `User ${addr.substring(0, 6)}`,
       role: 'FREELANCER',
@@ -675,8 +678,8 @@ async function handleMockRequest(endpoint, options = {}) {
   // 8. Config & Health
   if (path === '/config' && method === 'GET') {
     return {
-      chainId: Number(import.meta.env.VITE_CHAIN_ID || 31337),
-      contractAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+      chainId: Number(import.meta.env.VITE_CHAIN_ID || 11155111),
+      contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS || '0xc1C0415872eA86DfdA31615B9Ad94d795974CA1e',
       abi: abiJson
     };
   }

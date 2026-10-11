@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd \"PERSON4 SUZAN\" && npm install && npm run build",
+  "outputDirectory": "PERSON4 SUZAN/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

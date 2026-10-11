@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getPosts, getProposals } from '../api/posts.js';
-import { mockStore } from '../mock/mockStore.js';
+import { mockStore, DEMO_ACCOUNTS } from '../mock/mockStore.js';
 import PostCard from '../components/community/PostCard.jsx';
 import CreatePostModal from '../components/community/CreatePostModal.jsx';
 import ProposalModal from '../components/community/ProposalModal.jsx';
@@ -90,7 +90,7 @@ export default function CommunityPage({
           ? (selectedPost.author.walletAddress || '')
           : (selectedPost.author || selectedPost.creatorAddress || '')
       ) : '';
-      const target = otherAddr || fallbackAddr || '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC';
+      const target = otherAddr || fallbackAddr || DEMO_ACCOUNTS.FREELANCER.address;
 
       const thread = await createThread({
         otherAddress: target,

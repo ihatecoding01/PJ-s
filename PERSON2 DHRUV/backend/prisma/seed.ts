@@ -20,11 +20,11 @@ async function main() {
   await prisma.post.deleteMany();
   await prisma.user.deleteMany();
 
-  // 1. Seed Three Users
-  console.log('Seeding 3 users...');
+  // 1. Seed Users
+  console.log('Seeding users...');
   const userClient = await prisma.user.create({
     data: {
-      walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+      walletAddress: '0x5eD39B1d5EF7962bb70c7Ac09F9016fE7a00E7E4',
       nonce: 'seed_nonce_client_alice',
       role: 'CLIENT',
       name: 'Alice Client',
@@ -36,7 +36,7 @@ async function main() {
 
   const userFreelancer = await prisma.user.create({
     data: {
-      walletAddress: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+      walletAddress: '0x9908CAB15D339845c83775120F3f8373583Cc476',
       nonce: 'seed_nonce_freelancer_bob',
       role: 'FREELANCER',
       name: 'Bob Freelancer',
@@ -46,15 +46,15 @@ async function main() {
     },
   });
 
-  const userAuditor = await prisma.user.create({
+  const userDeployer = await prisma.user.create({
     data: {
-      walletAddress: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
-      nonce: 'seed_nonce_freelancer_charlie',
-      role: 'FREELANCER',
-      name: 'Charlie Auditor',
-      bio: 'Security researcher and smart contract audit specialist.',
-      skills: 'Smart Contract Audits, Foundry, Slither, Python',
-      githubUsername: 'charlie-sec',
+      walletAddress: '0x3fCDb56bCFeFf21Cd18593E97C70aA95DB44E0f2',
+      nonce: 'seed_nonce_deployer_admin',
+      role: 'ADMIN',
+      name: 'Deployer / Admin',
+      bio: 'Contract deployer and platform admin.',
+      skills: 'Solidity, Architecture',
+      githubUsername: 'deployer-admin',
     },
   });
 
@@ -75,7 +75,7 @@ async function main() {
 
   const post2 = await prisma.post.create({
     data: {
-      authorId: userAuditor.id,
+      authorId: userDeployer.id,
       type: 'SERVICE',
       title: 'Comprehensive Smart Contract Security Audit',
       description:
@@ -211,7 +211,7 @@ async function main() {
   });
 
   console.log('✅ Seeding completed successfully!');
-  console.log(`- Users seeded: 3 (${userClient.walletAddress}, ${userFreelancer.walletAddress}, ${userAuditor.walletAddress})`);
+  console.log(`- Users seeded: 3 (${userClient.walletAddress}, ${userFreelancer.walletAddress}, ${userDeployer.walletAddress})`);
   console.log(`- Posts seeded: 2 (Post ID: ${post1.id}, Post ID: ${post2.id})`);
   console.log(`- Thread seeded: 1 (Thread ID: ${thread.id})`);
   console.log(`- Agreement seeded: 1 (Agreement ID: ${agreement.id}, Status: LOCKED, Canonical Hash: ${canonicalHash})`);

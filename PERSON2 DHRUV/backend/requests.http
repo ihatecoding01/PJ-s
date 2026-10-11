@@ -23,7 +23,7 @@ POST {{baseUrl}}/auth/nonce HTTP/1.1
 Content-Type: application/json
 
 {
-  "walletAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+  "walletAddress": "0x3fCDb56bCFeFf21Cd18593E97C70aA95DB44E0f2"
 }
 
 ### Verify Signature and Receive JWT
@@ -31,7 +31,7 @@ POST {{baseUrl}}/auth/verify HTTP/1.1
 Content-Type: application/json
 
 {
-  "walletAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "walletAddress": "0x3fCDb56bCFeFf21Cd18593E97C70aA95DB44E0f2",
   "signature": "0x401bcff3c690f0580980fa2a9bcba33c5bdf135dbce4847e0996c5e2ec74f2603845b4b1259fbdae1a491ca0f47e305e717882202613d9426f4f10738a9a4b8e1c"
 }
 

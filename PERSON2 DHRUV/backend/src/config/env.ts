@@ -15,9 +15,9 @@ const envSchema = z.object({
   AI_SERVICE_URL: z.string().default('http://localhost:8000'),
   AI_INTERNAL_KEY: z.string().default(''),
   CHAIN_MOCK: z.preprocess((val) => val === 'true' || val === true, z.boolean()).default(true),
-  RPC_URL: z.string().default('http://127.0.0.1:8545'),
-  CHAIN_ID: z.coerce.number().default(31337),
-  CONTRACT_ADDRESS: z.string().default('0x5FbDB2315678afecb367f032d93F642f64180aa3'),
+  RPC_URL: z.string().default('https://ethereum-sepolia-rpc.publicnode.com'),
+  CHAIN_ID: z.coerce.number().default(11155111),
+  CONTRACT_ADDRESS: z.string().default('0xc1C0415872eA86DfdA31615B9Ad94d795974CA1e'),
   ORACLE_PRIVATE_KEY: z
     .string()
     .default('0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'),

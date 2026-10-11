@@ -38,8 +38,23 @@ export function WalletProvider({ children }) {
 
   // Restore session on mount
   useEffect(() => {
-    const savedAddr = localStorage.getItem('fairwork_user_address');
-    const savedJwt = localStorage.getItem('fairwork_jwt');
+    let savedAddr = localStorage.getItem('fairwork_user_address');
+    let savedJwt = localStorage.getItem('fairwork_jwt');
+
+    // Auto-migrate legacy Hardhat addresses to new configured Sepolia personas
+    const OLD_ADDRESS_MAP = {
+      '0x70997970c51812dc3a010c7d01b50e0d17dc79c8': DEMO_ACCOUNTS.CLIENT.address.toLowerCase(),
+      '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc': DEMO_ACCOUNTS.FREELANCER.address.toLowerCase(),
+      '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266': DEMO_ACCOUNTS.DEPLOYER.address.toLowerCase(),
+    };
+
+    if (savedAddr && OLD_ADDRESS_MAP[savedAddr.toLowerCase()]) {
+      savedAddr = OLD_ADDRESS_MAP[savedAddr.toLowerCase()];
+      savedJwt = `mock-token-${savedAddr}`;
+      localStorage.setItem('fairwork_user_address', savedAddr);
+      localStorage.setItem('fairwork_jwt', savedJwt);
+    }
+
     if (savedAddr && savedJwt) {
       setAddress(savedAddr.toLowerCase());
       setJwt(savedJwt);
@@ -47,11 +62,12 @@ export function WalletProvider({ children }) {
     } else if (isMock) {
       // Auto-load demo client in mock mode if empty
       const demoClient = DEMO_ACCOUNTS.CLIENT;
-      setAddress(demoClient.address.toLowerCase());
+      const clientAddr = demoClient.address.toLowerCase();
+      setAddress(clientAddr);
       setUser(demoClient);
-      const fakeToken = `mock-token-${demoClient.address}`;
+      const fakeToken = `mock-token-${clientAddr}`;
       setJwt(fakeToken);
-      localStorage.setItem('fairwork_user_address', demoClient.address.toLowerCase());
+      localStorage.setItem('fairwork_user_address', clientAddr);
       localStorage.setItem('fairwork_jwt', fakeToken);
     }
   }, [isMock]);
@@ -242,6 +258,12 @@ export function WalletProvider({ children }) {
   };
 
   const isWrongNetwork = Boolean(chainId && configuredChainId && chainId !== configuredChainId);
+  const isOwner = Boolean(
+    address && (
+      (user && user.role === 'ADMIN') ||
+      (DEMO_ACCOUNTS.DEPLOYER && DEMO_ACCOUNTS.DEPLOYER.address.toLowerCase() === address.toLowerCase())
+    )
+  );
 
   return (
     <WalletContext.Provider
@@ -253,6 +275,7 @@ export function WalletProvider({ children }) {
         user,
         jwt,
         isConnected: Boolean(address && jwt),
+        isOwner,
         isConnecting,
         isWrongNetwork,
         isMock,

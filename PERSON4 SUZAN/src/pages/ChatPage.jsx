@@ -3,6 +3,7 @@ import { getThreads, getMessages, sendMessage } from '../api/threads.js';
 import { draftAgreement } from '../api/agreements.js';
 import { useWallet } from '../context/WalletContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import { DEMO_ACCOUNTS } from '../mock/mockStore.js';
 import { Card, Button, Badge, Modal, EmptyState } from '../components/ui/index.js';
 import AddressChip from '../components/ui/AddressChip.jsx';
 import { formatRelativeTime } from '../lib/formatters.js';
@@ -145,7 +146,7 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
   const currentParticipants = getThreadParticipants(currentThread);
   const counterparty = currentParticipants.find(p => address && p.toLowerCase() !== address.toLowerCase())
     || currentParticipants[0]
-    || '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC';
+    || DEMO_ACCOUNTS.FREELANCER.address;
 
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8 animate-fade-in">

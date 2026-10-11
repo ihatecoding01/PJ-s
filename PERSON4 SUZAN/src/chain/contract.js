@@ -43,10 +43,10 @@ export async function fetchContractConfig() {
     console.warn('Could not fetch remote config, using defaults:', err);
   }
 
-  // Fallback defaults
+  // Fallback defaults — Sepolia deployed contract
   cachedConfig = {
-    chainId: Number(import.meta.env.VITE_CHAIN_ID || 31337),
-    contractAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+    chainId: Number(import.meta.env.VITE_CHAIN_ID || 11155111),
+    contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS || '0xc1C0415872eA86DfdA31615B9Ad94d795974CA1e',
     abi: FAIRWORK_ABI
   };
   return cachedConfig;
@@ -63,10 +63,17 @@ export function getProvider() {
 }
 
 /**
- * Get fallback JsonRpcProvider for local Hardhat node
+ * Get fallback JsonRpcProvider — uses Sepolia public RPC so demo accounts
+ * send real on-chain transactions visible on Etherscan.
  */
 export function getFallbackProvider() {
-  return new JsonRpcProvider('http://127.0.0.1:8545');
+  const chainId = Number(import.meta.env.VITE_CHAIN_ID || 11155111);
+  if (chainId === 31337) {
+    return new JsonRpcProvider('http://127.0.0.1:8545');
+  }
+  // Use public Sepolia RPCs for demo accounts
+  const rpcUrl = SUPPORTED_NETWORKS[chainId]?.rpcUrls?.[0] || 'https://ethereum-sepolia-rpc.publicnode.com';
+  return new JsonRpcProvider(rpcUrl);
 }
 
 /**

@@ -1,8 +1,10 @@
 {
   "contract": "FairWork",
-  "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "network": "localhost",
-  "chainId": 31337,
-  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "deployedAt": "2026-10-10T12:39:28.800Z"
+  "address": "0xc1C0415872eA86DfdA31615B9Ad94d795974CA1e",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deployer": "0x3fCDb56bCFeFf21Cd18593E97C70aA95DB44E0f2",
+  "client": "0x5eD39B1d5EF7962bb70c7Ac09F9016fE7a00E7E4",
+  "freelancer": "0x9908CAB15D339845c83775120F3f8373583Cc476",
+  "deployedAt": "2026-10-11T11:00:00.000Z"
 }

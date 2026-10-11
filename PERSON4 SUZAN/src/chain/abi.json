@@ -11,6 +11,236 @@
   },
   {
     "inputs": [],
+    "name": "ErrAlreadyAccepted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrAlreadyClosed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrAlreadyResolved",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrAlreadyVoted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrArrayMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrBadAddress",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrBadAmendment",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrBadIndex",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrBpsExceeded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrClientIsFreelancer",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrDeadlineOrder",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrDeadlinePast",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrDisputeWindowPending",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrDuplicateArbitrator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrEmptyHash",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrFeeExceeded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrGracePending",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrInvalidFreelancer",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrLumpSumSingle",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrMaxPenaltyExceeded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrMaxRevisions",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNoMilestones",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotActive",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotArbitrator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotAwaitingFund",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotCancellable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotDisputable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotDisputed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotDraft",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotReclaimable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotSubmittable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrNotSubmitted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrOnlyClient",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrOnlyCounterparty",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrOnlyFreelancer",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrOnlyOracle",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrOnlyParties",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrReviewPending",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrShareExceeded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrTooFewArbitrators",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrTransferFailed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrVotingEnded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrVotingPending",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrWindowShort",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrWrongFundAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrZeroAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ExpectedPause",
     "type": "error"
   },
@@ -638,7 +868,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "arbitrator",
+        "name": "arb",
         "type": "address"
       }
     ],
@@ -741,69 +971,76 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "freelancer",
-        "type": "address"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "termsHash",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "string",
-        "name": "termsURI",
-        "type": "string"
-      },
-      {
-        "internalType": "enum FairWork.PaymentMode",
-        "name": "mode",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint16",
-        "name": "latePenaltyBpsPerDay",
-        "type": "uint16"
-      },
-      {
-        "internalType": "uint16",
-        "name": "maxLatePenaltyBps",
-        "type": "uint16"
-      },
-      {
-        "internalType": "uint32",
-        "name": "reviewWindow",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint32",
-        "name": "graceWindow",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint8",
-        "name": "maxRevisions",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "amounts",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "uint64[]",
-        "name": "deadlines",
-        "type": "uint64[]"
-      },
-      {
-        "internalType": "uint16[]",
-        "name": "requiredProgressBps",
-        "type": "uint16[]"
-      },
-      {
-        "internalType": "bytes32[]",
-        "name": "criteriaHashes",
-        "type": "bytes32[]"
+        "components": [
+          {
+            "internalType": "address",
+            "name": "freelancer",
+            "type": "address"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "termsHash",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "string",
+            "name": "termsURI",
+            "type": "string"
+          },
+          {
+            "internalType": "enum FairWork.PaymentMode",
+            "name": "mode",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint16",
+            "name": "latePenaltyBpsPerDay",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint16",
+            "name": "maxLatePenaltyBps",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint32",
+            "name": "reviewWindow",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint32",
+            "name": "graceWindow",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint8",
+            "name": "maxRevisions",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "amounts",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "uint64[]",
+            "name": "deadlines",
+            "type": "uint64[]"
+          },
+          {
+            "internalType": "uint16[]",
+            "name": "requiredProgressBps",
+            "type": "uint16[]"
+          },
+          {
+            "internalType": "bytes32[]",
+            "name": "criteriaHashes",
+            "type": "bytes32[]"
+          }
+        ],
+        "internalType": "struct FairWork.CreateAgreementParams",
+        "name": "p",
+        "type": "tuple"
       }
     ],
     "name": "createAgreement",
@@ -1066,59 +1303,66 @@
     "name": "getDispute",
     "outputs": [
       {
-        "internalType": "uint64",
-        "name": "disputeRaisedTime",
-        "type": "uint64"
-      },
-      {
-        "internalType": "uint64",
-        "name": "disputeVotingDeadline",
-        "type": "uint64"
-      },
-      {
-        "internalType": "address[3]",
-        "name": "selectedArbitrators",
-        "type": "address[3]"
-      },
-      {
-        "internalType": "uint8",
-        "name": "voteCount",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint16",
-        "name": "aiFreelancerShareBps",
-        "type": "uint16"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "aiReportHash",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bool",
-        "name": "hasAiRecommendation",
-        "type": "bool"
-      },
-      {
-        "internalType": "bool",
-        "name": "resolved",
-        "type": "bool"
-      },
-      {
-        "internalType": "uint16",
-        "name": "finalFreelancerShareBps",
-        "type": "uint16"
-      },
-      {
-        "internalType": "string",
-        "name": "resolutionMethod",
-        "type": "string"
-      },
-      {
-        "internalType": "bytes32[]",
-        "name": "evidenceHashes",
-        "type": "bytes32[]"
+        "components": [
+          {
+            "internalType": "uint64",
+            "name": "disputeRaisedTime",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint64",
+            "name": "disputeVotingDeadline",
+            "type": "uint64"
+          },
+          {
+            "internalType": "address[3]",
+            "name": "selectedArbitrators",
+            "type": "address[3]"
+          },
+          {
+            "internalType": "uint8",
+            "name": "voteCount",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint16",
+            "name": "aiFreelancerShareBps",
+            "type": "uint16"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "aiReportHash",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bool",
+            "name": "hasAiRecommendation",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "resolved",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint16",
+            "name": "finalFreelancerShareBps",
+            "type": "uint16"
+          },
+          {
+            "internalType": "string",
+            "name": "resolutionMethod",
+            "type": "string"
+          },
+          {
+            "internalType": "bytes32[]",
+            "name": "evidenceHashes",
+            "type": "bytes32[]"
+          }
+        ],
+        "internalType": "struct FairWork.DisputeView",
+        "name": "",
+        "type": "tuple"
       }
     ],
     "stateMutability": "view",
@@ -1500,7 +1744,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "arbitrator",
+        "name": "arb",
         "type": "address"
       }
     ],
@@ -1559,7 +1803,7 @@
     "inputs": [
       {
         "internalType": "uint32",
-        "name": "_votingWindow",
+        "name": "_vw",
         "type": "uint32"
       }
     ],

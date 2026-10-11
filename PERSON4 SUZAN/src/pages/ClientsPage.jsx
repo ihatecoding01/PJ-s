@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Mail, FileCheck2, ExternalLink, MessageSquare, ArrowUpRight, Star, Briefcase, Zap } from 'lucide-react';
 import { useWallet } from '../context/WalletContext.jsx';
 import { apiFetch } from '../api/client.js';
+import { DEMO_ACCOUNTS } from '../mock/mockStore.js';
 import { Card, Button, Badge, AmountDisplay, EmptyState, AddressChip } from '../components/ui/index.js';
 
 export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
@@ -93,9 +94,10 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
         // Fallback realistic demo clients if map is empty
         if (counterpartiesMap.size === 0) {
           if (isFreelancer) {
-            counterpartiesMap.set('0x70997970c51812dc3a010c7d01b50e0d17dc79c8', {
-              address: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
-              name: 'Alice Client',
+            const cAddr = DEMO_ACCOUNTS.CLIENT.address.toLowerCase();
+            counterpartiesMap.set(cAddr, {
+              address: cAddr,
+              name: DEMO_ACCOUNTS.CLIENT.name,
               role: 'CLIENT',
               agreementsCount: 2,
               totalValueMatic: 4.3,
@@ -105,9 +107,10 @@ export default function ClientsPage({ onOpenAgreement, onNavigateToChat }) {
               lastActive: Date.now() - 86400000,
             });
           } else {
-            counterpartiesMap.set('0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc', {
-              address: '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc',
-              name: 'Bob Freelancer',
+            const fAddr = DEMO_ACCOUNTS.FREELANCER.address.toLowerCase();
+            counterpartiesMap.set(fAddr, {
+              address: fAddr,
+              name: DEMO_ACCOUNTS.FREELANCER.name,
               role: 'FREELANCER',
               agreementsCount: 2,
               totalValueMatic: 4.3,

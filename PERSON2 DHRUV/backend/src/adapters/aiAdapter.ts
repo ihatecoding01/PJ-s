@@ -173,7 +173,7 @@ export class AiAdapter {
       });
 
       if (!response.ok) {
-        const errJson = await response.json().catch(() => null);
+        const errJson = (await response.json().catch(() => null)) as any;
         const code = errJson?.detail?.code || (response.status === 429 ? 'GITHUB_RATE_LIMIT' : 'AI_SERVICE_ERROR');
         const message = errJson?.detail?.message || `AI Service error: ${response.statusText}`;
         const err = new Error(message);
@@ -181,7 +181,7 @@ export class AiAdapter {
         throw err;
       }
 
-      const resData = await response.json();
+      const resData = (await response.json()) as any;
       const terms = resData.terms;
 
       // Ensure compatibility with both schemas
@@ -227,7 +227,7 @@ export class AiAdapter {
       });
 
       if (!response.ok) {
-        const errJson = await response.json().catch(() => null);
+        const errJson = (await response.json().catch(() => null)) as any;
         const message = errJson?.detail?.message || `AI Review error: ${response.statusText}`;
         throw new Error(message);
       }
@@ -298,7 +298,7 @@ export class AiAdapter {
       });
 
       if (!response.ok) {
-        const errJson = await response.json().catch(() => null);
+        const errJson = (await response.json().catch(() => null)) as any;
         const code = errJson?.detail?.code || (response.status === 429 ? 'GITHUB_RATE_LIMIT' : 'AI_SERVICE_ERROR');
         const message = errJson?.detail?.message || `GitHub analysis error: ${response.statusText}`;
         const err = new Error(message);
@@ -306,7 +306,7 @@ export class AiAdapter {
         throw err;
       }
 
-      const resData = await response.json();
+      const resData = (await response.json()) as any;
       const progressBps = resData.progress_bps ?? 8000;
       const testsPassing = resData.signals?.tests_status === 'passing';
 
@@ -394,12 +394,12 @@ export class AiAdapter {
       });
 
       if (!response.ok) {
-        const errJson = await response.json().catch(() => null);
+        const errJson = (await response.json().catch(() => null)) as any;
         const message = errJson?.detail?.message || `Dispute summary error: ${response.statusText}`;
         throw new Error(message);
       }
 
-      const resData = await response.json();
+      const resData = (await response.json()) as any;
       const shareBps = resData.recommended_freelancer_share_bps ?? 5000;
       const freelancerPct = Math.round(shareBps / 100);
       const clientPct = 100 - freelancerPct;

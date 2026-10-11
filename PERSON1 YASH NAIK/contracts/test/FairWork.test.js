@@ -268,7 +268,7 @@ describe("FairWork Smart Contract", function () {
       // Attempt claim before review window expires
       await expect(
         fairWork.connect(freelancer).claimAfterReviewWindow(1, 0)
-      ).to.be.revertedWith("Review window has not elapsed");
+      ).to.be.revertedWithCustomError(fairWork, "ErrReviewPending");
 
       // Advance time past review window
       await time.increase(reviewWindow + 10);
@@ -313,7 +313,7 @@ describe("FairWork Smart Contract", function () {
       // Before deadline + graceWindow
       await expect(
         fairWork.connect(client).reclaimMissedMilestone(1, 0)
-      ).to.be.revertedWith("Grace period not elapsed");
+      ).to.be.revertedWithCustomError(fairWork, "ErrGracePending");
 
       // Advance time past deadline + graceWindow
       await time.increaseTo(deadline + graceWindow + 10);
@@ -555,7 +555,7 @@ describe("FairWork Smart Contract", function () {
           [10000],
           [ethers.keccak256(ethers.toUtf8Bytes("M1"))]
         )
-      ).to.be.revertedWith("Client cannot be freelancer");
+      ).to.be.revertedWithCustomError(fairWork, "ErrClientIsFreelancer");
 
       // Create valid agreement
       await fairWork.connect(client).createAgreement(
@@ -577,19 +577,19 @@ describe("FairWork Smart Contract", function () {
       // Only freelancer can accept
       await expect(
         fairWork.connect(nonParty).acceptAgreement(1)
-      ).to.be.revertedWith("Only freelancer can accept");
+      ).to.be.revertedWithCustomError(fairWork, "ErrOnlyFreelancer");
 
       await fairWork.connect(freelancer).acceptAgreement(1);
 
       // Only client can fund
       await expect(
         fairWork.connect(nonParty).fundAgreement(1, { value: ONE_ETHER })
-      ).to.be.revertedWith("Only client can fund");
+      ).to.be.revertedWithCustomError(fairWork, "ErrOnlyClient");
 
       // Must fund exact amount
       await expect(
         fairWork.connect(client).fundAgreement(1, { value: HALF_ETHER })
-      ).to.be.revertedWith("Must fund exact total amount");
+      ).to.be.revertedWithCustomError(fairWork, "ErrWrongFundAmount");
 
       await fairWork.connect(client).fundAgreement(1, { value: ONE_ETHER });
 
@@ -597,7 +597,7 @@ describe("FairWork Smart Contract", function () {
       await fairWork.connect(freelancer).submitMilestone(1, 0, ethers.keccak256(ethers.toUtf8Bytes("sub")), "sha");
       await expect(
         fairWork.connect(nonParty).recordProgress(1, 0, 8000, ethers.keccak256(ethers.toUtf8Bytes("rep")))
-      ).to.be.revertedWith("Only oracle can record progress");
+      ).to.be.revertedWithCustomError(fairWork, "ErrOnlyOracle");
 
       // Non-owner cannot set fee or add arbitrator
       await expect(
@@ -607,7 +607,7 @@ describe("FairWork Smart Contract", function () {
       // Fee cannot exceed 500 bps
       await expect(
         fairWork.connect(owner).setFeeBps(600)
-      ).to.be.revertedWith("Fee exceeds 500 bps");
+      ).to.be.revertedWithCustomError(fairWork, "ErrFeeExceeded");
 
       // Pausable enforcement
       await fairWork.connect(owner).pause();
@@ -786,7 +786,7 @@ describe("FairWork Smart Contract", function () {
       // Freelancer cannot accept own proposal
       await expect(
         fairWork.connect(freelancer).acceptAmendment(1, 0)
-      ).to.be.revertedWith("Only client can accept");
+      ).to.be.revertedWithCustomError(fairWork, "ErrOnlyCounterparty");
 
       // Client accepts amendment
       await expect(fairWork.connect(client).acceptAmendment(1, 0))

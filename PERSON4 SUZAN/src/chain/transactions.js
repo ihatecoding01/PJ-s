@@ -7,23 +7,8 @@ import { canonicalHash } from '../lib/canonicalHash.js';
  */
 async function executeTx(actionName, txFunc, { onPending, onSuccess, onError } = {}) {
   try {
-    const isMock = import.meta.env.VITE_USE_MOCK === 'true' && (!window.ethereum || !window.ethereum.selectedAddress);
-
-    if (isMock) {
-      // Simulate on-chain transaction lifecycle in mock mode
-      const fakeTxHash = '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-      if (onPending) onPending(fakeTxHash);
-      await new Promise(r => setTimeout(r, 1200));
-      const fakeReceipt = {
-        hash: fakeTxHash,
-        status: 1,
-        blockNumber: 1234567,
-        gasUsed: 85000n
-      };
-      if (onSuccess) onSuccess(fakeReceipt);
-      return { txHash: fakeTxHash, receipt: fakeReceipt };
-    }
-
+    // All transactions (including demo accounts) now go on-chain via Sepolia RPC.
+    // Demo accounts sign with their private key; MetaMask users sign in-browser.
     const tx = await txFunc();
     if (onPending) onPending(tx.hash);
     const receipt = await tx.wait();
@@ -40,40 +25,52 @@ async function executeTx(actionName, txFunc, { onPending, onSuccess, onError } =
  * createAgreement (Client)
  */
 export async function txCreateAgreement(terms, callbacks = {}) {
-  const { args } = termsToChain(terms);
-  
-  const isMock = import.meta.env.VITE_USE_MOCK === 'true' && (!window.ethereum || !window.ethereum.selectedAddress);
-  if (isMock) {
-    const fakeTxHash = '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-    if (callbacks.onPending) callbacks.onPending(fakeTxHash);
-    await new Promise(r => setTimeout(r, 1200));
-    const randomId = Math.floor(Math.random() * 900) + 100;
-    const fakeReceipt = { hash: fakeTxHash, status: 1 };
-    if (callbacks.onSuccess) callbacks.onSuccess(fakeReceipt);
-    return { txHash: fakeTxHash, receipt: fakeReceipt, onchainId: randomId };
-  }
+  const { named } = termsToChain(terms);
 
-  const contract = await getContractWithSigner();
-  const tx = await contract.createAgreement(...args);
-  if (callbacks.onPending) callbacks.onPending(tx.hash);
-  const receipt = await tx.wait();
+  // Build the struct matching FairWork.CreateAgreementParams
+  const params = {
+    freelancer: named.freelancer,
+    termsHash: named.termsHash,
+    termsURI: named.termsURI,
+    mode: named.mode,
+    latePenaltyBpsPerDay: named.latePenaltyBpsPerDay,
+    maxLatePenaltyBps: named.maxLatePenaltyBps,
+    reviewWindow: named.reviewWindow,
+    graceWindow: named.graceWindow,
+    maxRevisions: named.maxRevisions,
+    amounts: named.amounts,
+    deadlines: named.deadlines,
+    requiredProgressBps: named.requiredProgressBps,
+    criteriaHashes: named.criteriaHashes
+  };
 
-  // Parse AgreementCreated event from logs
-  let onchainId = null;
-  for (const log of receipt.logs) {
-    try {
-      const parsed = contract.interface.parseLog(log);
-      if (parsed && parsed.name === 'AgreementCreated') {
-        onchainId = Number(parsed.args[0] || parsed.args.id);
-        break;
+  try {
+    const contract = await getContractWithSigner();
+    const tx = await contract.createAgreement(params);
+    if (callbacks.onPending) callbacks.onPending(tx.hash);
+    const receipt = await tx.wait();
+
+    // Parse AgreementCreated event from logs
+    let onchainId = null;
+    for (const log of receipt.logs) {
+      try {
+        const parsed = contract.interface.parseLog(log);
+        if (parsed && parsed.name === 'AgreementCreated') {
+          onchainId = Number(parsed.args[0] || parsed.args.id);
+          break;
+        }
+      } catch {
+        // ignore other logs
       }
-    } catch {
-      // ignore other logs
     }
-  }
 
-  if (callbacks.onSuccess) callbacks.onSuccess(receipt);
-  return { txHash: tx.hash, receipt, onchainId };
+    if (callbacks.onSuccess) callbacks.onSuccess(receipt);
+    return { txHash: tx.hash, receipt, onchainId };
+  } catch (err) {
+    const reason = decodeRevertReason(err);
+    if (callbacks.onError) callbacks.onError(reason, err);
+    throw new Error(reason);
+  }
 }
 
 /**

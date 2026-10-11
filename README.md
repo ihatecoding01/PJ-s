@@ -98,6 +98,17 @@ npm run dev
 
 ## 🔑 Demo Accounts & Wallets
 
+### Live Sepolia Testnet Accounts (Connected)
+
+| Role | Address | Sepolia Balance | Explorer |
+| :--- | :--- | :---: | :--- |
+| **Client** | `0x5eD39B1d5EF7962bb70c7Ac09F9016fE7a00E7E4` | 0.05 ETH | [View on Etherscan](https://sepolia.etherscan.io/address/0x5eD39B1d5EF7962bb70c7Ac09F9016fE7a00E7E4) |
+| **Freelancer** | `0x9908CAB15D339845c83775120F3f8373583Cc476` | 0.05 ETH | [View on Etherscan](https://sepolia.etherscan.io/address/0x9908CAB15D339845c83775120F3f8373583Cc476) |
+| **Deployer / Admin** | `0x3fCDb56bCFeFf21Cd18593E97C70aA95DB44E0f2` | 0.05 ETH | [View on Etherscan](https://sepolia.etherscan.io/address/0x3fCDb56bCFeFf21Cd18593E97C70aA95DB44E0f2) |
+| **Contract** | `0xc1C0415872eA86DfdA31615B9Ad94d795974CA1e` | - | [View on Etherscan](https://sepolia.etherscan.io/address/0xc1C0415872eA86DfdA31615B9Ad94d795974CA1e) |
+
+### Local Hardhat Accounts (Local Testing Fallback)
+
 Pre-funded Hardhat development accounts for local MetaMask testing:
 
 | Role | Account Index | Address | Private Key |

@@ -57,7 +57,7 @@ export default function DisputesPage({ onOpenAgreement }) {
               status: 'OPEN',
               votingDeadline: Date.now() + 3 * 86400 * 1000,
               selectedArbitrators: [
-                '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+                '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
                 '0x15d34aaf54267db7d7c367839aaf71a00a2c6a65',
                 '0x9965507d1a55bcc2695c58ba16fb37d819b0a4df'
               ],
