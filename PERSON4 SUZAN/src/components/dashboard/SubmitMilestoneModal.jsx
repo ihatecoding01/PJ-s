@@ -5,6 +5,7 @@ import { submitMilestone as apiSubmitMilestone } from '../../api/milestones.js';
 import { txSubmitMilestone } from '../../chain/transactions.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { GitCommit, Loader2, Bot, Sparkles, CheckCircle2 } from 'lucide-react';
+import GithubDeliverableModal from './GithubDeliverableModal.jsx';
 
 export default function SubmitMilestoneModal({
   isOpen,
@@ -23,6 +24,7 @@ export default function SubmitMilestoneModal({
   const [prUrl, setPrUrl] = useState('');
   const [notes, setNotes] = useState('');
   const [statusStep, setStatusStep] = useState(null); // 'AI_ANALYZING' | 'CHAIN_SIGNING' | null
+  const [isGithubModalOpen, setIsGithubModalOpen] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,30 +72,40 @@ export default function SubmitMilestoneModal({
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`Submit Deliverable for Milestone #${idx + 1}`}
-      subtitle="Submit verifiable Git commit SHAs and deliverable pull requests"
-      maxWidth="max-w-md"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
-            Commit SHA (40-char or 7-char hash) *
-          </label>
-          <div className="relative">
-            <GitCommit className="w-4 h-4 text-forest absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              required
-              value={commitSha}
-              onChange={(e) => setCommitSha(e.target.value)}
-              placeholder="e.g. 9f83a45c81d2e0b5f1234567890abcdef1234567"
-              className="w-full bg-white border border-gray rounded-[10px] pl-9 pr-3 py-2.5 text-xs font-mono text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest"
-            />
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={`Submit Deliverable for Milestone #${idx + 1}`}
+        subtitle="Submit verifiable Git commit SHAs and deliverable pull requests"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70">
+                Commit SHA (40-char or 7-char hash) *
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsGithubModalOpen(true)}
+                className="text-[11px] font-heading font-semibold text-forest hover:underline inline-flex items-center gap-1"
+              >
+                <Sparkles className="w-3 h-3 text-coral" /> Select from GitHub
+              </button>
+            </div>
+            <div className="relative">
+              <GitCommit className="w-4 h-4 text-forest absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                required
+                value={commitSha}
+                onChange={(e) => setCommitSha(e.target.value)}
+                placeholder="e.g. 9f83a45c81d2e0b5f1234567890abcdef1234567"
+                className="w-full bg-white border border-gray rounded-[10px] pl-9 pr-3 py-2.5 text-xs font-mono text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest"
+              />
+            </div>
           </div>
-        </div>
 
         <div>
           <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
@@ -161,5 +173,16 @@ export default function SubmitMilestoneModal({
         </div>
       </form>
     </Modal>
+
+    <GithubDeliverableModal
+      isOpen={isGithubModalOpen}
+      onClose={() => setIsGithubModalOpen(false)}
+      repoUrl={terms?.github?.repoUrl || 'https://github.com/fairwork-platform/project-escrow'}
+      onSelectCommit={({ commitSha: sha, prUrl: url }) => {
+        setCommitSha(sha);
+        if (url) setPrUrl(url);
+      }}
+    />
+  </>
   );
 }

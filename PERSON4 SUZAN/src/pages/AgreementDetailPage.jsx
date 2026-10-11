@@ -20,6 +20,7 @@ import ArbitratorVoteCard from '../components/disputes/ArbitratorVoteCard.jsx';
 import PaymentSummaryCards from '../components/payments/PaymentSummaryCards.jsx';
 import MilestonePaymentTable from '../components/payments/MilestonePaymentTable.jsx';
 import TimelineView from '../components/timeline/TimelineView.jsx';
+import ExportContractModal from '../components/agreements/ExportContractModal.jsx';
 import {
   Layers,
   Coins,
@@ -30,7 +31,8 @@ import {
   Scale,
   RefreshCw,
   ExternalLink,
-  ArrowLeft
+  ArrowLeft,
+  Printer
 } from 'lucide-react';
 
 export default function AgreementDetailPage({ agreementId, onBack }) {
@@ -47,6 +49,7 @@ export default function AgreementDetailPage({ agreementId, onBack }) {
   const [isProposeAmendmentOpen, setIsProposeAmendmentOpen] = useState(false);
   const [isRaiseDisputeOpen, setIsRaiseDisputeOpen] = useState(false);
   const [disputeMilestoneIdx, setDisputeMilestoneIdx] = useState(0);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState('milestones');
   const [isLoading, setIsLoading] = useState(true);
@@ -183,6 +186,16 @@ export default function AgreementDetailPage({ agreementId, onBack }) {
               </span>
               <AmountDisplay amount={terms.totalAmount} size="lg" />
             </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsExportModalOpen(true)}
+              title="Download Legal PDF / Certificate"
+              icon={Printer}
+              className="text-xs"
+            >
+              Export Certificate
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -374,6 +387,13 @@ export default function AgreementDetailPage({ agreementId, onBack }) {
         onchainId={agreement.onchainId}
         milestoneIdx={disputeMilestoneIdx}
         onSuccess={loadAllAgreementData}
+      />
+
+      {/* Export Contract Legal Certificate Modal */}
+      <ExportContractModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        agreement={agreement}
       />
     </div>
   );

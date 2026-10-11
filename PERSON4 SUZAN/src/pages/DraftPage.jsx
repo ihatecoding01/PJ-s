@@ -344,28 +344,55 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
-              Payment Mode
-            </label>
-            <div className="flex gap-2">
-              {['MILESTONE', 'LUMP_SUM'].map(mode => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => {
-                    setTerms(prev => ({ ...prev, paymentMode: mode }));
-                    setHasUnsavedChanges(true);
-                  }}
-                  className={`flex-1 py-2 px-3 text-xs font-heading font-semibold rounded-[8px] border transition-all ${
-                    terms.paymentMode === mode
-                      ? 'bg-forest text-ivory border-forest shadow-sm'
-                      : 'bg-white border-gray text-ink/70 hover:bg-sage'
-                  }`}
-                >
-                  {mode}
-                </button>
-              ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
+                Payment Mode
+              </label>
+              <div className="flex gap-2">
+                {['MILESTONE', 'LUMP_SUM'].map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => {
+                      setTerms(prev => ({ ...prev, paymentMode: mode }));
+                      setHasUnsavedChanges(true);
+                    }}
+                    className={`flex-1 py-2 px-3 text-xs font-heading font-semibold rounded-[8px] border transition-all ${
+                      terms.paymentMode === mode
+                        ? 'bg-forest text-ivory border-forest shadow-sm'
+                        : 'bg-white border-gray text-ink/70 hover:bg-sage'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
+                Escrow Currency
+              </label>
+              <div className="flex gap-2">
+                {['MATIC', 'USDC', 'USDT'].map(curr => (
+                  <button
+                    key={curr}
+                    type="button"
+                    onClick={() => {
+                      setTerms(prev => ({ ...prev, currency: curr }));
+                      setHasUnsavedChanges(true);
+                    }}
+                    className={`flex-1 py-2 px-2 text-xs font-heading font-semibold rounded-[8px] border transition-all ${
+                      (terms.currency || 'MATIC') === curr
+                        ? 'bg-forest text-ivory border-forest shadow-sm'
+                        : 'bg-white border-gray text-ink/70 hover:bg-sage'
+                    }`}
+                  >
+                    {curr}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

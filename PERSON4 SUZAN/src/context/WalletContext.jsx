@@ -216,10 +216,13 @@ export function WalletProvider({ children }) {
     toast.info('Wallet disconnected');
   };
 
-  const handleSwitchNetwork = async () => {
+  const handleSwitchNetwork = async (targetId) => {
     try {
-      await switchChainNetwork(configuredChainId);
-      toast.success(`Switched to chain ${configuredChainId}`);
+      const netId = Number(targetId || configuredChainId);
+      await switchChainNetwork(netId);
+      setChainId(netId);
+      setConfiguredChainId(netId);
+      toast.success(`Switched to chain ${netId}`);
     } catch (err) {
       toast.error(err.message || 'Failed to switch network');
     }

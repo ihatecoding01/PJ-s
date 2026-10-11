@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useWallet } from '../../context/WalletContext.jsx';
 import { DEMO_ACCOUNTS } from '../../mock/mockStore.js';
+import { SUPPORTED_NETWORKS } from '../../chain/contract.js';
 import Button from '../ui/Button.jsx';
 import AddressChip from '../ui/AddressChip.jsx';
 import { apiFetch } from '../../api/client.js';
@@ -33,7 +34,10 @@ export default function TopBar({
     openConnectModal,
     disconnectWallet,
     switchDemoAccount,
-    isMock
+    isMock,
+    chainId,
+    configuredChainId,
+    switchNetwork
   } = useWallet();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,8 +45,10 @@ export default function TopBar({
   const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isNetworkMenuOpen, setIsNetworkMenuOpen] = useState(false);
   const alertsRef = useRef(null);
   const profileMenuRef = useRef(null);
+  const networkMenuRef = useRef(null);
 
   // Fetch alerts from GET /alerts
   useEffect(() => {
@@ -116,6 +122,69 @@ export default function TopBar({
 
         {/* Right Action Controls */}
         <div className="flex items-center gap-3">
+          {/* Interactive Network Switcher Dropdown */}
+          <div className="relative" ref={networkMenuRef}>
+            <button
+              onClick={() => setIsNetworkMenuOpen(!isNetworkMenuOpen)}
+              className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-[8px] bg-white border border-gray hover:border-forest/40 text-xs font-mono font-medium text-ink transition-colors"
+              title="Switch Blockchain Network"
+            >
+              <span className={`w-2 h-2 rounded-full ${Number(configuredChainId) === 80002 ? 'bg-purple-600' : 'bg-emerald-500'}`} />
+              <span>{SUPPORTED_NETWORKS[configuredChainId]?.name || `Chain ${configuredChainId}`}</span>
+              <ChevronDown className="w-3 h-3 text-ink/50" />
+            </button>
+
+            {isNetworkMenuOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-white border-2 border-ink rounded-card shadow-brutal p-3 z-40 animate-slide-in">
+                <div className="pb-2 mb-2 border-b border-gray">
+                  <span className="text-[10px] font-heading font-bold uppercase tracking-wider text-ink/60 block">
+                    Active EVM Network
+                  </span>
+                  <span className="text-xs font-mono font-bold text-forest">
+                    {SUPPORTED_NETWORKS[configuredChainId]?.name} (ID: {configuredChainId})
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  {Object.keys(SUPPORTED_NETWORKS).map((netId) => {
+                    const net = SUPPORTED_NETWORKS[netId];
+                    const isSelected = Number(configuredChainId) === Number(netId);
+                    return (
+                      <button
+                        key={netId}
+                        onClick={() => {
+                          if (switchNetwork) switchNetwork(netId);
+                          setIsNetworkMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between p-2 rounded-[6px] text-xs font-medium text-left transition-colors ${
+                          isSelected ? 'bg-sage text-forest font-bold' : 'hover:bg-ivory text-ink'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${Number(netId) === 80002 ? 'bg-purple-600' : 'bg-emerald-500'}`} />
+                          <span>{net.name}</span>
+                        </div>
+                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-forest" />}
+                      </button>
+                    );
+                  })}
+
+                  <div className="pt-2 mt-2 border-t border-gray/60">
+                    <a
+                      href="https://faucet.polygon.technology/"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between p-2 rounded-[6px] text-xs font-medium text-forest hover:bg-sage/40 transition-colors"
+                    >
+                      <span>Get Amoy Testnet MATIC (Faucet)</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Prominent coral "+ New Project" button */}
           <Button
             variant="primary"

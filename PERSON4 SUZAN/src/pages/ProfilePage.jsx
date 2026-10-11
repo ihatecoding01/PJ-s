@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { Card, Button, Badge } from '../components/ui/index.js';
 import AddressChip from '../components/ui/AddressChip.jsx';
 import { User, Github, Save, ExternalLink, ShieldCheck, CheckCircle2, Wallet } from 'lucide-react';
+import ReputationCard from '../components/reputation/ReputationCard.jsx';
 
 export default function ProfilePage({ targetAddress = null }) {
   const { address, user, isConnected, openConnectModal, refreshUser } = useWallet();
@@ -273,6 +274,9 @@ export default function ProfilePage({ targetAddress = null }) {
           )}
         </div>
       </div>
+
+      {/* Soulbound Reputation (ERC-5192) */}
+      <ReputationCard address={activeAddress} user={user} />
     </div>
   );
 }
