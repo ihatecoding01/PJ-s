@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import Card from '../common/Card.jsx';
-import Button from '../common/Button.jsx';
+import Card from '../ui/Card.jsx';
+import Button from '../ui/Button.jsx';
 import VerificationBadge from './VerificationBadge.jsx';
 import PlainLanguageModal from './PlainLanguageModal.jsx';
 import {
@@ -36,12 +36,8 @@ export default function ChainWizard({ agreement, onAgreementUpdated }) {
   const isFreelancer = address && terms?.freelancer && address.toLowerCase() === terms.freelancer.toLowerCase();
 
   // Wizard state determination
-  // Step 1: Created on-chain?
   const hasOnchainId = Boolean(agreement.onchainId);
-  // Step 2: Accepted?
-  // If on-chain or mock state indicates accepted
-  const isAccepted = agreement.status === 'Active' || agreement.status === 'AwaitingFunding' && hasOnchainId;
-  // Step 3: Funded?
+  const isAccepted = agreement.status === 'Active' || (agreement.status === 'AwaitingFunding' && hasOnchainId);
   const isFunded = agreement.status === 'Active' || agreement.status === 'Completed' || agreement.status === 'Disputed';
 
   // Execute Step 1: Create on-chain (Client)
@@ -52,7 +48,7 @@ export default function ChainWizard({ agreement, onAgreementUpdated }) {
 
       const { txHash, receipt, onchainId } = await txCreateAgreement(terms, {
         onPending: (hash) => {
-          toastId = toast.pendingTx(hash, 'Creating FairWork escrow agreement on-chain...');
+          toastId = toast.pendingTx(hash, 'Creating SANKALP escrow agreement on-chain...');
         },
         onSuccess: (rec) => {
           if (toastId) toast.confirmedTx(toastId, rec.hash, 'Agreement successfully created on-chain!');
@@ -63,7 +59,6 @@ export default function ChainWizard({ agreement, onAgreementUpdated }) {
       });
 
       const assignedId = onchainId || 1;
-      // Call POST /agreements/:id/link-chain
       const linked = await linkChain(agreement.id, {
         onchainId: assignedId,
         txHash
@@ -169,7 +164,7 @@ export default function ChainWizard({ agreement, onAgreementUpdated }) {
     {
       num: 1,
       title: 'Create On-Chain',
-      desc: 'Client signs createAgreement to record terms hash in FairWork contract.',
+      desc: 'Client signs createAgreement to record terms hash in contract.',
       done: hasOnchainId,
       isCurrent: !hasOnchainId,
       action: () => setActiveModalStep('CREATE'),
@@ -200,19 +195,19 @@ export default function ChainWizard({ agreement, onAgreementUpdated }) {
 
   return (
     <Card className="space-y-6">
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800 flex-wrap gap-2">
+      <div className="flex items-center justify-between pb-4 border-b border-gray flex-wrap gap-2">
         <div>
-          <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
-            <Lock className="w-4 h-4 text-teal-400" />
-            On-Chain Escrow Setup Wizard
+          <h3 className="text-base font-heading font-bold text-ink flex items-center gap-2">
+            <Lock className="w-4 h-4 text-forest" />
+            On-Chain Escrow Activation Wizard
           </h3>
-          <p className="text-xs text-slate-400">
-            Cryptographic state machine transitions required before work commences.
+          <p className="text-xs text-ink/60 mt-0.5">
+            Sequential state transitions required before milestone deliverables commence.
           </p>
         </div>
 
         {agreement.onchainId && (
-          <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-300">
+          <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-sage-light text-forest border border-forest/20 font-semibold">
             On-Chain ID: #{agreement.onchainId}
           </span>
         )}
@@ -229,65 +224,70 @@ export default function ChainWizard({ agreement, onAgreementUpdated }) {
         {steps.map((s) => (
           <div
             key={s.num}
-            className={`p-4 rounded-xl border flex flex-col justify-between transition-all ${
+            className={`p-4 rounded-card border flex flex-col justify-between transition-all ${
               s.done
-                ? 'bg-emerald-950/20 border-emerald-500/30'
+                ? 'bg-sage-light/60 border-forest/30 text-forest'
                 : s.isCurrent
-                ? 'bg-surface-800/80 border-teal-500/40 shadow-glow-teal'
-                : 'bg-surface-900/40 border-slate-800 opacity-60'
+                ? 'bg-white border-2 border-ink shadow-brutal text-ink'
+                : 'bg-ivory border-gray opacity-60 text-ink/70'
             }`}
           >
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono font-bold text-slate-400">Step 0{s.num}</span>
+                <span className="text-xs font-mono font-bold">STEP 0{s.num}</span>
                 {s.done ? (
-                  <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+                  <span className="flex items-center gap-1 text-[11px] font-heading font-bold text-forest">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Complete
                   </span>
                 ) : s.isCurrent ? (
-                  <span className="flex items-center gap-1 text-[11px] font-bold text-teal-300 bg-teal-500/15 px-2 py-0.5 rounded animate-pulse">
-                    <Clock className="w-3.5 h-3.5" /> Action Needed
+                  <span className="flex items-center gap-1 text-[11px] font-heading font-bold text-coral">
+                    <Clock className="w-3.5 h-3.5" /> Next Action
                   </span>
                 ) : (
-                  <span className="text-[11px] text-slate-500">Upcoming</span>
+                  <span className="text-[11px] font-mono text-ink/40">Locked</span>
                 )}
               </div>
-              <h4 className="text-sm font-bold text-slate-100">{s.title}</h4>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">{s.desc}</p>
+              <h4 className="font-heading font-bold text-sm text-ink mb-1">{s.title}</h4>
+              <p className="text-xs text-ink/70 leading-relaxed mb-4">{s.desc}</p>
             </div>
 
             {s.isCurrent && (
-              <div className="pt-4 mt-4 border-t border-slate-800/80">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={s.action}
-                  disabled={!s.eligible}
-                  className="w-full"
-                >
-                  {s.eligible ? s.actionLabel : `Waiting for ${s.num === 2 ? 'Freelancer' : 'Client'}`}
-                </Button>
+              <div className="pt-2 border-t border-gray">
+                {s.eligible ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="w-full"
+                    onClick={s.action}
+                  >
+                    {s.actionLabel}
+                  </Button>
+                ) : (
+                  <div className="text-[11px] font-medium text-ink/60 bg-sage/50 p-2 rounded text-center">
+                    Awaiting counterparty action
+                  </div>
+                )}
               </div>
             )}
           </div>
         ))}
       </div>
 
-      {/* Cancel option before Active */}
-      {!isFunded && hasOnchainId && (isClient || isFreelancer) && (
+      {/* Cancel Option for client if created but unfunded */}
+      {hasOnchainId && !isFunded && isClient && (
         <div className="pt-2 flex justify-end">
           <Button
-            variant="danger"
+            variant="ghost"
             size="sm"
             onClick={() => setActiveModalStep('CANCEL')}
-            icon={XCircle}
+            className="text-xs text-coral hover:bg-coral/10"
           >
             Cancel Unfunded Agreement
           </Button>
         </div>
       )}
 
-      {/* Plain Language Confirmation Modal */}
+      {/* Plain Language Modal Before Any Transaction */}
       <PlainLanguageModal
         isOpen={Boolean(activeModalStep)}
         onClose={() => setActiveModalStep(null)}

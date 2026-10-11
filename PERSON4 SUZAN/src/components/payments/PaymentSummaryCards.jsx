@@ -1,5 +1,6 @@
 import React from 'react';
-import Card from '../common/Card.jsx';
+import Card from '../ui/Card.jsx';
+import AmountDisplay from '../ui/AmountDisplay.jsx';
 import { formatMatic } from '../../lib/formatters.js';
 import { Lock, CheckCircle2, AlertOctagon, RotateCcw, Coins } from 'lucide-react';
 
@@ -22,106 +23,90 @@ export default function PaymentSummaryCards({ payments }) {
 
   return (
     <Card className="space-y-6">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800 flex-wrap gap-2">
-        <h4 className="text-base font-bold text-slate-100 flex items-center gap-2">
-          <Coins className="w-4 h-4 text-teal-400" />
+      <div className="flex items-center justify-between pb-3 border-b border-gray flex-wrap gap-2">
+        <h4 className="text-base font-heading font-bold text-ink flex items-center gap-2">
+          <Coins className="w-4 h-4 text-forest" />
           Escrow Fund Balances & Settlement Tracking
         </h4>
-        <span className="text-xs font-mono text-slate-400">
-          Protocol Fees Paid: <strong className="text-teal-300">{formatMatic(feesPaid)}</strong>
+        <span className="text-xs font-mono text-ink/60">
+          Protocol Fees Paid: <strong className="text-forest">{feesPaid.toFixed(4)} MATIC</strong>
         </span>
       </div>
 
       {/* Visual Stacked Progress Bar */}
       <div className="space-y-2">
-        <div className="w-full h-4 rounded-full bg-surface-800 overflow-hidden flex border border-slate-700">
+        <div className="w-full h-4 rounded-full bg-gray overflow-hidden flex border border-gray">
           {released > 0 && (
             <div
-              className="bg-emerald-500 h-full transition-all duration-500"
+              className="bg-forest h-full transition-all duration-300"
               style={{ width: `${releasedPct}%` }}
               title={`Released: ${released} MATIC (${releasedPct}%)`}
             />
           )}
           {locked > 0 && (
             <div
-              className="bg-teal-500 h-full transition-all duration-500"
+              className="bg-sage-light h-full transition-all duration-300"
               style={{ width: `${lockedPct}%` }}
               title={`Locked: ${locked} MATIC (${lockedPct}%)`}
             />
           )}
           {disputed > 0 && (
             <div
-              className="bg-rose-500 h-full transition-all duration-500"
+              className="bg-coral h-full transition-all duration-300"
               style={{ width: `${disputedPct}%` }}
               title={`Disputed: ${disputed} MATIC (${disputedPct}%)`}
             />
           )}
           {refunded > 0 && (
             <div
-              className="bg-amber-500 h-full transition-all duration-500"
+              className="bg-gray h-full transition-all duration-300"
               style={{ width: `${refundedPct}%` }}
               title={`Refunded: ${refunded} MATIC (${refundedPct}%)`}
             />
           )}
         </div>
-
-        {/* Legend */}
-        <div className="flex items-center gap-4 text-xs font-mono flex-wrap justify-between pt-1">
-          <span className="flex items-center gap-1.5 text-emerald-400">
-            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /> Released ({releasedPct}%)
-          </span>
-          <span className="flex items-center gap-1.5 text-teal-400">
-            <span className="w-2.5 h-2.5 rounded-sm bg-teal-500" /> Locked ({lockedPct}%)
-          </span>
-          <span className="flex items-center gap-1.5 text-rose-400">
-            <span className="w-2.5 h-2.5 rounded-sm bg-rose-500" /> Disputed ({disputedPct}%)
-          </span>
-          <span className="flex items-center gap-1.5 text-amber-400">
-            <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" /> Refunded ({refundedPct}%)
-          </span>
-        </div>
       </div>
 
       {/* 4 Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="p-3.5 rounded-xl bg-surface-850 border border-teal-500/30">
-          <div className="flex items-center justify-between text-xs text-teal-300">
-            <span className="font-semibold uppercase tracking-wider text-[10px]">Locked In Escrow</span>
-            <Lock className="w-3.5 h-3.5" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-3.5 rounded-card bg-sage/40 border border-gray">
+          <div className="flex items-center gap-1.5 text-xs text-ink/70 mb-1">
+            <Lock className="w-3.5 h-3.5 text-forest" />
+            <span className="font-heading font-semibold">Locked in Escrow</span>
           </div>
-          <span className="text-lg font-bold font-mono text-slate-100 block mt-1">
-            {formatMatic(locked)}
-          </span>
+          <div className="mt-1">
+            <AmountDisplay amount={locked} size="sm" />
+          </div>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-surface-850 border border-emerald-500/30">
-          <div className="flex items-center justify-between text-xs text-emerald-300">
-            <span className="font-semibold uppercase tracking-wider text-[10px]">Released to Freelancer</span>
-            <CheckCircle2 className="w-3.5 h-3.5" />
+        <div className="p-3.5 rounded-card bg-sage/40 border border-gray">
+          <div className="flex items-center gap-1.5 text-xs text-ink/70 mb-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-forest" />
+            <span className="font-heading font-semibold">Released Payouts</span>
           </div>
-          <span className="text-lg font-bold font-mono text-slate-100 block mt-1">
-            {formatMatic(released)}
-          </span>
+          <div className="mt-1">
+            <AmountDisplay amount={released} size="sm" />
+          </div>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-surface-850 border border-rose-500/30">
-          <div className="flex items-center justify-between text-xs text-rose-300">
-            <span className="font-semibold uppercase tracking-wider text-[10px]">Frozen in Dispute</span>
-            <AlertOctagon className="w-3.5 h-3.5" />
+        <div className="p-3.5 rounded-card bg-coral/20 border border-coral/40">
+          <div className="flex items-center gap-1.5 text-xs text-coral-900 mb-1">
+            <AlertOctagon className="w-3.5 h-3.5 text-coral" />
+            <span className="font-heading font-semibold">Disputed Funds</span>
           </div>
-          <span className="text-lg font-bold font-mono text-slate-100 block mt-1">
-            {formatMatic(disputed)}
-          </span>
+          <div className="mt-1">
+            <AmountDisplay amount={disputed} size="sm" />
+          </div>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-surface-850 border border-amber-500/30">
-          <div className="flex items-center justify-between text-xs text-amber-300">
-            <span className="font-semibold uppercase tracking-wider text-[10px]">Refunded to Client</span>
-            <RotateCcw className="w-3.5 h-3.5" />
+        <div className="p-3.5 rounded-card bg-gray border border-gray">
+          <div className="flex items-center gap-1.5 text-xs text-ink/70 mb-1">
+            <RotateCcw className="w-3.5 h-3.5 text-ink/60" />
+            <span className="font-heading font-semibold">Refunded Capital</span>
           </div>
-          <span className="text-lg font-bold font-mono text-slate-100 block mt-1">
-            {formatMatic(refunded)}
-          </span>
+          <div className="mt-1">
+            <AmountDisplay amount={refunded} size="sm" />
+          </div>
         </div>
       </div>
     </Card>

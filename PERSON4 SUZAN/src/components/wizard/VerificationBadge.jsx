@@ -30,37 +30,37 @@ export default function VerificationBadge({
   if (!localHash) return null;
 
   return (
-    <div className={`p-3.5 rounded-xl border backdrop-blur-md transition-all ${
+    <div className={`p-3.5 rounded-card border transition-all ${
       isMatch
-        ? 'bg-emerald-950/20 border-emerald-500/30'
-        : 'bg-rose-950/25 border-rose-500/40 animate-pulse'
+        ? 'bg-sage-light/60 border-forest/30 text-forest'
+        : 'bg-coral/25 border-coral text-ink'
     } ${className}`}>
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {isMatch ? (
-            <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+            <ShieldCheck className="w-5 h-5 text-forest shrink-0" />
           ) : (
-            <AlertOctagon className="w-5 h-5 text-rose-400 shrink-0" />
+            <AlertOctagon className="w-5 h-5 text-coral shrink-0" />
           )}
           <div>
             <div className="flex items-center gap-2">
-              <span className={`text-xs font-bold uppercase tracking-wider ${
-                isMatch ? 'text-emerald-300' : 'text-rose-300'
+              <span className={`text-xs font-heading font-bold uppercase tracking-wider ${
+                isMatch ? 'text-forest' : 'text-coral-900'
               }`}>
                 {isMatch ? 'Terms Verified On-Chain' : 'Terms Hash Mismatch Warning!'}
               </span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded font-mono bg-surface-900 border border-slate-700 text-slate-400">
-                keccak256
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-white border border-gray text-ink/70">
+                Keccak-256
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-              Hash: <span className="text-slate-300">{shortenAddress(localHash, 8)}</span>
+            <p className="text-[11px] font-mono text-ink/70 mt-0.5">
+              Hash: <span className="font-semibold text-ink">{shortenAddress(localHash, 8)}</span>
             </p>
           </div>
         </div>
 
         {isMatch && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+          <span className="inline-flex items-center gap-1 text-[11px] font-heading font-semibold text-forest bg-sage px-2.5 py-1 rounded-full border border-forest/20">
             <CheckCircle2 className="w-3.5 h-3.5" /> Canonical Match
           </span>
         )}

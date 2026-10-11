@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import Card from '../common/Card.jsx';
-import Badge from '../common/Badge.jsx';
-import Button from '../common/Button.jsx';
-import CountdownTimer from '../common/CountdownTimer.jsx';
+import Card from '../ui/Card.jsx';
+import Badge from '../ui/Badge.jsx';
+import Button from '../ui/Button.jsx';
+import Tooltip from '../ui/Tooltip.jsx';
+import AmountDisplay from '../ui/AmountDisplay.jsx';
+import CountdownTimer from '../ui/CountdownTimer.jsx';
 import AiProgressCard from './AiProgressCard.jsx';
 import LatePenaltyPreview from './LatePenaltyPreview.jsx';
 import SubmitMilestoneModal from './SubmitMilestoneModal.jsx';
@@ -26,7 +28,8 @@ import {
   Coins,
   Scale,
   Sparkles,
-  Lock
+  Lock,
+  GitCommit
 } from 'lucide-react';
 
 export default function MilestoneCard({
@@ -61,13 +64,14 @@ export default function MilestoneCard({
   const reviewWindowSec = Number(terms?.reviewWindowDays || 5) * 86400;
   const graceWindowSec = Number(terms?.graceDays || 3) * 86400;
 
-  // Let's check submission time (if submitted)
   const submittedAtSec = milestone.submittedAt || (milestone.submission ? Math.floor(Date.now() / 1000) - 86400 : 0);
   const reviewExpirySec = submittedAtSec + reviewWindowSec;
   const isReviewWindowExpired = milestone.status === 'Submitted' && Math.floor(Date.now() / 1000) >= reviewExpirySec;
 
   const deadlinePlusGraceSec = deadlineSec + graceWindowSec;
   const isGraceExpired = isDeadlinePassed && Math.floor(Date.now() / 1000) >= deadlinePlusGraceSec;
+
+  const isCompleted = milestone.status === 'Paid' || milestone.status === 'Approved';
 
   // Approve Milestone (Client)
   const handleApprove = async () => {
@@ -109,7 +113,7 @@ export default function MilestoneCard({
 
       await txClaimAfterReviewWindow(onchainId || 1, idx, {
         onPending: (hash) => {
-          toastId = toast.pendingTx(hash, 'Claiming payment after client silence...');
+          toastId = toast.pendingTx(hash, 'Claiming payment after client review silence...');
         },
         onSuccess: (rec) => {
           if (toastId) toast.confirmedTx(toastId, rec.hash, 'Payment claimed successfully via auto-approval!');
@@ -141,10 +145,10 @@ export default function MilestoneCard({
 
       await txReclaimMissedMilestone(onchainId || 1, idx, {
         onPending: (hash) => {
-          toastId = toast.pendingTx(hash, 'Reclaiming escrow funds after missed deadline & grace...');
+          toastId = toast.pendingTx(hash, 'Reclaiming escrow funds on missed deliverable...');
         },
         onSuccess: (rec) => {
-          if (toastId) toast.confirmedTx(toastId, rec.hash, 'Escrow funds refunded to client balance!');
+          if (toastId) toast.confirmedTx(toastId, rec.hash, 'Funds successfully refunded!');
         },
         onError: (err) => {
           if (toastId) toast.failedTx(toastId, err);
@@ -161,72 +165,73 @@ export default function MilestoneCard({
   };
 
   return (
-    <Card className="transition-all duration-300 space-y-4">
+    <Card className={`transition-all duration-200 space-y-4 ${isCompleted ? 'bg-sage-light/40 border-forest/30' : 'bg-white'}`}>
       {/* Top Summary Bar */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-start gap-3">
-          <span className="w-8 h-8 rounded-xl bg-teal-500/15 border border-teal-500/30 text-teal-300 font-mono font-bold text-sm flex items-center justify-center shrink-0">
+          <span className="w-8 h-8 rounded-[8px] bg-sage text-forest font-heading font-bold text-sm flex items-center justify-center shrink-0 border border-gray">
             {idx + 1}
           </span>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="text-base font-bold text-slate-100">
+              <h4 className="text-base font-heading font-bold text-ink">
                 {termsMilestone?.title || `Milestone #${idx + 1}`}
               </h4>
-              <Badge label={milestone.status} variant={milestone.status} size="sm" />
+              <Badge status={milestone.status} size="sm">
+                {milestone.status}
+              </Badge>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">
-              {termsMilestone?.description || 'Milestone deliverable'}
+            <p className="text-xs text-ink/70 mt-0.5 line-clamp-1">
+              {termsMilestone?.description || 'Milestone deliverable specification'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <div className="text-right">
-            <span className="text-xs text-slate-400 block font-sans">Amount</span>
-            <span className="text-sm font-mono font-bold text-teal-300">
-              {formatMatic(milestone.amount || termsMilestone?.amount)}
-            </span>
+            <span className="text-[10px] text-ink/50 block font-heading font-semibold uppercase tracking-wider">Amount</span>
+            <AmountDisplay amount={milestone.amount || termsMilestone?.amount} size="md" />
           </div>
           <button
             onClick={() => setExpanded(!expanded)}
-            className="p-1.5 rounded-lg bg-surface-800 text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-1.5 rounded-[8px] bg-sage/60 hover:bg-sage text-forest transition-colors"
+            aria-label="Toggle details"
           >
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
-      {/* Countdown Timers & Alerts */}
+      {/* Countdown Timers & Window Indicators */}
       <div className="flex items-center gap-2 flex-wrap pt-1">
         {/* Deadline Timer */}
         {milestone.status !== 'Paid' && milestone.status !== 'Refunded' && termsMilestone?.deadline && (
           <CountdownTimer
-            targetTime={termsMilestone.deadline}
-            label="Deadline"
+            targetDate={termsMilestone.deadline}
+            deadlineLabel="Deadline"
           />
         )}
 
         {/* Review Window Timer (when Submitted) */}
         {milestone.status === 'Submitted' && (
           <CountdownTimer
-            targetTime={reviewExpirySec}
-            label="Client Review Window"
+            targetDate={reviewExpirySec * 1000}
+            deadlineLabel="Review Window"
           />
         )}
 
         {/* Grace Window Timer (if deadline passed & not submitted) */}
         {milestone.status === 'Pending' && isDeadlinePassed && (
           <CountdownTimer
-            targetTime={deadlinePlusGraceSec}
-            label="Grace Window for Reclaim"
+            targetDate={deadlinePlusGraceSec * 1000}
+            deadlineLabel="Grace Window"
           />
         )}
       </div>
 
       {/* Primary Action Buttons Bar */}
       {isAgreementActive && (
-        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-3 flex-wrap">
+        <div className="pt-3 border-t border-gray flex items-center justify-between gap-3 flex-wrap">
           {/* Left: Role actions */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* Freelancer: Submit form */}
@@ -248,7 +253,7 @@ export default function MilestoneCard({
                   variant="primary"
                   size="sm"
                   onClick={handleApprove}
-                  isLoading={isProcessing}
+                  loading={isProcessing}
                   icon={CheckCircle2}
                 >
                   Approve & Release Funds
@@ -265,36 +270,40 @@ export default function MilestoneCard({
               </>
             )}
 
-            {/* Freelancer: Claim after review window */}
+            {/* Freelancer: Claim after review window with Tooltip */}
             {isFreelancer && milestone.status === 'Submitted' && (
-              <div title={isReviewWindowExpired ? 'Claim payment now' : `Enabled after ${terms?.reviewWindowDays || 5}-day review window expires`}>
+              <Tooltip
+                content={isReviewWindowExpired ? 'Claim payment now' : `Enabled after ${terms?.reviewWindowDays || 5}-day review window expires without client response.`}
+              >
                 <Button
-                  variant="accent"
+                  variant="forest"
                   size="sm"
                   onClick={handleClaimAutoApproval}
-                  isLoading={isProcessing}
+                  loading={isProcessing}
                   disabled={!isReviewWindowExpired || isProcessing}
                   icon={Sparkles}
                 >
                   Claim Payment (Auto-Approval)
                 </Button>
-              </div>
+              </Tooltip>
             )}
 
-            {/* Client: Reclaim missed milestone */}
+            {/* Client: Reclaim missed milestone with Tooltip */}
             {isClient && milestone.status === 'Pending' && (
-              <div title={isGraceExpired ? 'Reclaim escrow funds' : 'Enabled only after deadline + grace period has expired'}>
+              <Tooltip
+                content={isGraceExpired ? 'Reclaim escrow funds' : 'Enabled only after deadline + grace period has expired.'}
+              >
                 <Button
                   variant="danger"
                   size="sm"
                   onClick={handleReclaimMissed}
-                  isLoading={isProcessing}
+                  loading={isProcessing}
                   disabled={!isGraceExpired || isProcessing}
                   icon={Coins}
                 >
                   Reclaim Funds (Missed Deadline)
                 </Button>
-              </div>
+              </Tooltip>
             )}
           </div>
 
@@ -305,7 +314,6 @@ export default function MilestoneCard({
               size="sm"
               onClick={() => onOpenDispute(idx)}
               icon={Scale}
-              className="text-amber-400 border-amber-500/40 hover:bg-amber-500/10"
             >
               Raise Dispute
             </Button>
@@ -315,33 +323,36 @@ export default function MilestoneCard({
 
       {/* Expanded Accordion: Details, AI Card, Late Penalty */}
       {expanded && (
-        <div className="space-y-4 pt-3 border-t border-slate-800 animate-fade-in">
+        <div className="space-y-4 pt-3 border-t border-gray animate-fade-in">
           {/* Submission Details */}
           {milestone.submission && (
-            <div className="p-3.5 rounded-xl bg-surface-850 border border-slate-800 space-y-2 text-xs">
-              <span className="font-semibold text-slate-300 uppercase tracking-wider block text-[10px]">
+            <div className="p-3.5 rounded-card bg-ivory border border-gray space-y-2 text-xs">
+              <span className="font-heading font-semibold text-ink/60 uppercase tracking-wider block text-[10px]">
                 Submission Information
               </span>
               <div className="flex items-center gap-4 flex-wrap font-mono">
-                <span>Commit: <strong className="text-teal-300">{milestone.submission.commitSha?.substring(0, 8)}</strong></span>
+                <span className="flex items-center gap-1 text-ink">
+                  <GitCommit className="w-3.5 h-3.5 text-forest" />
+                  Commit: <strong className="text-forest">{milestone.submission.commitSha?.slice(0, 8)}</strong>
+                </span>
                 {milestone.submission.prUrl && (
                   <a
                     href={milestone.submission.prUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-indigo-400 hover:underline"
+                    className="text-forest hover:underline"
                   >
                     View Pull Request &rarr;
                   </a>
                 )}
               </div>
               {milestone.submission.notes && (
-                <p className="text-slate-300 italic">{milestone.submission.notes}</p>
+                <p className="text-ink/80 italic">{milestone.submission.notes}</p>
               )}
             </div>
           )}
 
-          {/* AI Progress Card */}
+          {/* Advisory AI Progress Card */}
           {milestone.aiReport && (
             <AiProgressCard
               aiReport={milestone.aiReport}
@@ -349,36 +360,37 @@ export default function MilestoneCard({
             />
           )}
 
-          {/* Late Penalty Calculator Preview */}
+          {/* Late Penalty Preview */}
           <LatePenaltyPreview
-            milestoneAmount={milestone.amount || termsMilestone?.amount || 0}
+            milestone={milestone}
+            terms={terms}
             deadlineSec={deadlineSec}
-            latePenaltyBpsPerDay={terms?.latePenaltyBpsPerDay}
-            maxLatePenaltyBps={terms?.maxLatePenaltyBps}
           />
         </div>
       )}
 
-      {/* Submit Modal */}
+      {/* Submit Milestone Modal */}
       <SubmitMilestoneModal
         isOpen={isSubmitModalOpen}
         onClose={() => setIsSubmitModalOpen(false)}
+        milestone={milestone}
+        terms={terms}
         agreementId={agreement.id}
         onchainId={onchainId}
-        milestoneIdx={idx}
-        milestoneTitle={termsMilestone?.title}
         onSuccess={() => {
+          setIsSubmitModalOpen(false);
           if (onMilestoneUpdated) onMilestoneUpdated();
         }}
       />
 
-      {/* Reject Modal */}
+      {/* Reject Milestone Modal */}
       <RejectMilestoneModal
         isOpen={isRejectModalOpen}
         onClose={() => setIsRejectModalOpen(false)}
+        milestone={milestone}
         onchainId={onchainId}
-        milestoneIdx={idx}
         onSuccess={() => {
+          setIsRejectModalOpen(false);
           if (onMilestoneUpdated) onMilestoneUpdated();
         }}
       />

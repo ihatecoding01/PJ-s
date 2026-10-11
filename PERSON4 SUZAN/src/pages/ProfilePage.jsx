@@ -2,14 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { getMe, updateMe, getUser } from '../api/users.js';
 import { useWallet } from '../context/WalletContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import Card from '../components/common/Card.jsx';
-import Button from '../components/common/Button.jsx';
-import AddressBadge from '../components/common/AddressBadge.jsx';
-import Badge from '../components/common/Badge.jsx';
+import { Card, Button, Badge } from '../components/ui/index.js';
+import AddressChip from '../components/ui/AddressChip.jsx';
 import { User, Github, Save, ExternalLink, ShieldCheck, CheckCircle2, Wallet } from 'lucide-react';
 
 export default function ProfilePage({ targetAddress = null }) {
-  const { address, isConnected, connectWallet, refreshUser } = useWallet();
+  const { address, user, isConnected, openConnectModal, refreshUser } = useWallet();
   const toast = useToast();
 
   const isMyProfile = !targetAddress || (address && targetAddress.toLowerCase() === address.toLowerCase());
@@ -30,13 +28,26 @@ export default function ProfilePage({ targetAddress = null }) {
       }
       try {
         setIsLoading(true);
-        const data = isMyProfile ? await getMe() : await getUser(targetAddress);
+        let data = null;
+        try {
+          data = isMyProfile ? await getMe() : await getUser(targetAddress);
+        } catch {
+          if (isMyProfile && user) {
+            data = user;
+          }
+        }
         if (data) {
           setName(data.name || '');
           setBio(data.bio || '');
           setRole(data.role || 'FREELANCER');
-          setSkillsInput((data.skills || []).join(', '));
+          setSkillsInput(Array.isArray(data.skills) ? data.skills.join(', ') : (data.skills || ''));
           setGithubUsername(data.githubUsername || '');
+        } else if (isMyProfile && user) {
+          setName(user.name || '');
+          setBio(user.bio || '');
+          setRole(user.role || 'FREELANCER');
+          setSkillsInput(Array.isArray(user.skills) ? user.skills.join(', ') : (user.skills || ''));
+          setGithubUsername(user.githubUsername || '');
         }
       } catch (err) {
         toast.error('Could not load profile');
@@ -45,7 +56,7 @@ export default function ProfilePage({ targetAddress = null }) {
       }
     }
     loadProfile();
-  }, [targetAddress, isMyProfile, isConnected]);
+  }, [targetAddress, isMyProfile, isConnected, user]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -60,7 +71,7 @@ export default function ProfilePage({ targetAddress = null }) {
         githubUsername: githubUsername.trim()
       });
       await refreshUser();
-      toast.success('Profile updated successfully!');
+      toast.success('Profile updated successfully');
     } catch (err) {
       toast.error(err.message || 'Failed to update profile');
     } finally {
@@ -68,28 +79,20 @@ export default function ProfilePage({ targetAddress = null }) {
     }
   };
 
-  if (isLoading) {
+  if (!isConnected && isMyProfile) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16 text-center text-slate-400">
-        Loading profile...
-      </div>
-    );
-  }
-
-  if (isMyProfile && !isConnected) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-5">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center text-teal-400 shadow-glow-teal">
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-5 animate-fade-in">
+        <div className="w-16 h-16 mx-auto rounded-card bg-sage flex items-center justify-center text-forest">
           <User className="w-8 h-8" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-slate-100">Connect Your Wallet to View Profile</h2>
-          <p className="text-sm text-slate-400 max-w-md mx-auto">
-            Connect via MetaMask or select an instant demo persona to manage your Web3 identity, skills, and GitHub credentials.
+          <h2 className="text-2xl font-heading font-bold text-ink">Connect Wallet to Manage Profile</h2>
+          <p className="text-sm text-ink/60 max-w-md mx-auto">
+            Your SANKALP identity binds your on-chain address to verifiable GitHub credentials and reputation.
           </p>
         </div>
         <div className="pt-2">
-          <Button variant="primary" size="lg" onClick={connectWallet} icon={Wallet}>
+          <Button variant="primary" size="lg" onClick={openConnectModal} icon={Wallet}>
             Connect Wallet
           </Button>
         </div>
@@ -97,121 +100,179 @@ export default function ProfilePage({ targetAddress = null }) {
     );
   }
 
+  const activeAddress = targetAddress || address;
+
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">
-            {isMyProfile ? 'Your Web3 Identity & Profile' : 'Public Member Profile'}
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            {isMyProfile ? 'Configure your role, skills, and linked GitHub credentials.' : 'Verified platform participant details.'}
-          </p>
-        </div>
-        <AddressBadge address={targetAddress || address} chars={4} />
+    <div className="max-w-5xl mx-auto px-4 lg:px-8 py-8 space-y-8 animate-fade-in">
+      <div>
+        <h1 className="text-2xl md:text-3xl font-heading font-bold text-ink tracking-tight">
+          {isMyProfile ? 'Your SANKALP Identity' : 'Public Profile'}
+        </h1>
+        <p className="text-sm text-ink/60 mt-1">
+          Cryptographically linked decentralized freelancer profile with verified deliverables.
+        </p>
       </div>
 
-      <Card className="space-y-6">
-        <form onSubmit={handleSave} className="space-y-5">
-          {/* Display Name */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Display Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Alice Vanguard"
-              disabled={!isMyProfile}
-              className="w-full bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-400 disabled:opacity-70"
-            />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Profile Card */}
+        <Card className="flex flex-col items-center text-center p-6 space-y-4">
+          <div className="w-20 h-20 rounded-full bg-forest text-ivory flex items-center justify-center font-heading font-bold text-2xl shadow-sm">
+            {name ? name.charAt(0).toUpperCase() : 'U'}
           </div>
 
-          {/* Role selector */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Primary Platform Role
-            </label>
-            {isMyProfile ? (
-              <div className="grid grid-cols-3 gap-2">
-                {['CLIENT', 'FREELANCER', 'ARBITRATOR'].map(r => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                      role === r
-                        ? 'bg-teal-500/20 border-teal-500/50 text-teal-300'
-                        : 'bg-surface-800 border-slate-700 text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
+            <h2 className="text-lg font-heading font-bold text-ink">{name || 'Anonymous User'}</h2>
+            <div className="mt-1 flex items-center justify-center gap-1.5">
+              <Badge status={role === 'CLIENT' ? 'pending' : 'success'}>
+                {role}
+              </Badge>
+            </div>
+            {activeAddress && (
+              <div className="mt-3 flex justify-center">
+                <AddressChip address={activeAddress} />
               </div>
-            ) : (
-              <Badge label={role} variant={role} size="md" />
             )}
           </div>
 
-          {/* GitHub Username */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              GitHub Username (for commit verification)
-            </label>
-            <div className="flex items-center gap-2 bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5">
-              <Github className="w-4 h-4 text-slate-400 shrink-0" />
-              <input
-                type="text"
-                value={githubUsername}
-                onChange={(e) => setGithubUsername(e.target.value)}
-                placeholder="github-handle"
-                disabled={!isMyProfile}
-                className="w-full bg-transparent text-sm text-slate-100 focus:outline-none font-mono disabled:opacity-70"
-              />
-            </div>
-          </div>
-
-          {/* Bio */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Bio & Experience
-            </label>
-            <textarea
-              rows={3}
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Web3 engineer building decentralized escrow, DeFi protocols, or security audits..."
-              disabled={!isMyProfile}
-              className="w-full bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-400 resize-none disabled:opacity-70"
-            />
-          </div>
-
-          {/* Skills */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Skills & Proficiencies (comma separated)
-            </label>
-            <input
-              type="text"
-              value={skillsInput}
-              onChange={(e) => setSkillsInput(e.target.value)}
-              placeholder="Solidity, React, Hardhat, Ethers.js, Security Auditing"
-              disabled={!isMyProfile}
-              className="w-full bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-400 disabled:opacity-70"
-            />
-          </div>
-
-          {isMyProfile && (
-            <div className="pt-3 border-t border-slate-800 flex justify-end">
-              <Button type="submit" variant="primary" isLoading={isSaving} icon={Save}>
-                Save Changes
-              </Button>
-            </div>
+          {bio && (
+            <p className="text-xs text-ink/70 leading-relaxed text-left bg-ivory p-3.5 rounded-card border border-gray w-full">
+              {bio}
+            </p>
           )}
-        </form>
-      </Card>
+
+          {githubUsername && (
+            <a
+              href={`https://github.com/${githubUsername}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 text-xs font-mono text-forest bg-sage/60 px-3 py-1.5 rounded-[8px] hover:bg-sage transition-colors border border-gray"
+            >
+              <Github className="w-4 h-4" />
+              github.com/{githubUsername}
+              <ExternalLink className="w-3 h-3 text-ink/40" />
+            </a>
+          )}
+        </Card>
+
+        {/* Profile Edit Form */}
+        <div className="md:col-span-2">
+          {isMyProfile ? (
+            <Card className="space-y-6">
+              <h3 className="font-heading font-bold text-base text-ink pb-3 border-b border-gray">
+                Edit Profile Details
+              </h3>
+
+              <form onSubmit={handleSave} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
+                    Display Name
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Dhruv"
+                    className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-xs text-ink focus:outline-none focus:border-forest"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
+                    Persona Role
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['FREELANCER', 'CLIENT', 'BOTH'].map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRole(r)}
+                        className={`py-2 px-3 text-xs font-heading font-semibold rounded-[8px] border transition-all ${
+                          role === r
+                            ? 'bg-forest text-ivory border-forest shadow-sm'
+                            : 'bg-white border-gray text-ink/70 hover:bg-sage'
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
+                    Professional Bio
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Describe your Web3 background, escrow experience, and core domains..."
+                    className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-xs text-ink focus:outline-none focus:border-forest"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
+                    Skills (Comma Separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={skillsInput}
+                    onChange={(e) => setSkillsInput(e.target.value)}
+                    placeholder="TypeScript, Solidity, React, Smart Contracts, DeFi"
+                    className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-xs text-ink focus:outline-none focus:border-forest"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
+                    GitHub Username (Used for Milestone Code Analysis)
+                  </label>
+                  <input
+                    type="text"
+                    value={githubUsername}
+                    onChange={(e) => setGithubUsername(e.target.value)}
+                    placeholder="your-github-username"
+                    className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-xs text-ink focus:outline-none focus:border-forest"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    loading={isSaving}
+                    icon={Save}
+                  >
+                    Save Changes
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          ) : (
+            <Card className="space-y-4">
+              <h3 className="font-heading font-bold text-base text-ink pb-3 border-b border-gray">
+                Verified Skills & Endorsements
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {skillsInput ? (
+                  skillsInput.split(',').map((skill, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1 rounded-full text-xs font-medium bg-sage text-forest border border-forest/15"
+                    >
+                      {skill.trim()}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-xs text-ink/50">No listed skills.</p>
+                )}
+              </div>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

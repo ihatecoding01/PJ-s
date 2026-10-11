@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useWallet } from '../../context/WalletContext.jsx';
-import Button from './Button.jsx';
+import Button from '../ui/Button.jsx';
 import { SUPPORTED_NETWORKS } from '../../chain/contract.js';
 
 export default function NetworkBanner() {
@@ -12,23 +12,23 @@ export default function NetworkBanner() {
   const targetNet = SUPPORTED_NETWORKS[configuredChainId] || { name: `Chain ${configuredChainId}` };
 
   return (
-    <div className="bg-gradient-to-r from-rose-950/90 via-surface-900 to-amber-950/90 border-b border-rose-500/40 px-4 py-2.5 text-slate-100 z-40">
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
+    <div className="bg-coral/25 border-b-2 border-coral px-4 py-2.5 text-ink z-40">
+      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs md:text-sm">
         <div className="flex items-center gap-2.5">
-          <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 animate-bounce" />
+          <AlertTriangle className="w-4 h-4 text-coral shrink-0" />
           <span>
-            <strong className="text-rose-300 font-semibold">Wrong Network Detected:</strong> Connected to Chain ID{' '}
-            <code className="text-rose-200 font-mono bg-rose-950 px-1.5 py-0.5 rounded">{chainId}</code>, but FairWork requires{' '}
-            <strong className="text-teal-300">{targetNet.name}</strong> (Chain ID{' '}
-            <code className="text-teal-200 font-mono bg-surface-800 px-1.5 py-0.5 rounded">{configuredChainId}</code>).
+            <strong className="font-heading font-bold text-ink">Wrong Network:</strong> Connected to Chain ID{' '}
+            <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-coral/40">{chainId}</code>, but SANKALP requires{' '}
+            <strong className="font-heading font-semibold text-forest">{targetNet.name}</strong> (Chain ID{' '}
+            <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-forest/30">{configuredChainId}</code>).
           </span>
         </div>
         <Button
-          variant="danger"
+          variant="primary"
           size="sm"
           onClick={switchNetwork}
           icon={RefreshCw}
-          className="whitespace-nowrap font-medium"
+          className="whitespace-nowrap font-medium text-xs py-1"
         >
           Switch to {targetNet.name}
         </Button>

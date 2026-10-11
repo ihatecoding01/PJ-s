@@ -9,10 +9,16 @@
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
     "deploy:amoy": "hardhat run scripts/deploy.js --network polygonAmoy",
     "seed": "hardhat run scripts/seed.js --network localhost",
-    "check": "hardhat run scripts/check-status.js --network localhost",
-    "node": "hardhat node"
+    "node": "hardhat node",
+    "chain": "hardhat node"
   },
-  "keywords": ["solidity", "hardhat", "escrow", "fairwork", "blockchain"],
+  "keywords": [
+    "solidity",
+    "hardhat",
+    "escrow",
+    "fairwork",
+    "blockchain"
+  ],
   "author": "Person 1 - Yash Naik",
   "license": "MIT",
   "devDependencies": {
@@ -21,6 +27,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.2",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "fairwork-monorepo": "file:../.."
   }
 }

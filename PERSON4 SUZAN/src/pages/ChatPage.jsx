@@ -3,9 +3,8 @@ import { getThreads, getMessages, sendMessage } from '../api/threads.js';
 import { draftAgreement } from '../api/agreements.js';
 import { useWallet } from '../context/WalletContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import AddressBadge from '../components/common/AddressBadge.jsx';
-import Button from '../components/common/Button.jsx';
-import Card from '../components/common/Card.jsx';
+import { Card, Button, Badge, Modal, EmptyState } from '../components/ui/index.js';
+import AddressChip from '../components/ui/AddressChip.jsx';
 import { formatRelativeTime } from '../lib/formatters.js';
 import {
   MessageSquare,
@@ -14,7 +13,11 @@ import {
   Bot,
   Loader2,
   User,
-  ArrowRight
+  ArrowRight,
+  Shield,
+  Clock,
+  Coins,
+  FileCheck2
 } from 'lucide-react';
 
 export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
@@ -28,16 +31,32 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
   const [isSending, setIsSending] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
   const [isLoadingThreads, setIsLoadingThreads] = useState(true);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   const messagesEndRef = useRef(null);
+
+  // Helper to extract participant addresses safely from mock or API threads
+  const getThreadParticipants = (t) => {
+    if (!t) return [];
+    if (Array.isArray(t.participants)) {
+      return t.participants
+        .map(p => (typeof p === 'string' ? p : p?.walletAddress || ''))
+        .filter(Boolean);
+    }
+    const addrs = [];
+    if (t.client?.walletAddress) addrs.push(t.client.walletAddress);
+    if (t.freelancer?.walletAddress) addrs.push(t.freelancer.walletAddress);
+    return addrs;
+  };
 
   // Load threads
   const loadThreadsList = async () => {
     try {
       const data = await getThreads();
-      setThreads(data || []);
-      if (!selectedThreadId && data && data.length > 0) {
-        setSelectedThreadId(data[0].id);
+      const list = Array.isArray(data) ? data : (data?.threads || []);
+      setThreads(list);
+      if (!selectedThreadId && list.length > 0) {
+        setSelectedThreadId(list[0].id);
       }
     } catch {
       // ignore
@@ -66,7 +85,7 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
       try {
         const msgs = await getMessages(selectedThreadId);
         if (isMounted) {
-          setMessages(msgs || []);
+          setMessages(Array.isArray(msgs) ? msgs : []);
         }
       } catch (err) {
         console.warn('Poll error:', err);
@@ -74,7 +93,7 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
     };
 
     fetchMsgs();
-    const interval = setInterval(fetchMsgs, 5000); // Poll every 5 seconds as specified!
+    const interval = setInterval(fetchMsgs, 5000); // 5s polling
 
     return () => {
       isMounted = false;
@@ -108,11 +127,12 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
 
     try {
       setIsDrafting(true);
-      toast.info('AI is analyzing messages and structuring AgreementTerms...');
+      toast.info('Advisory AI is parsing chat context and synthesizing AgreementTerms...');
       const result = await draftAgreement(selectedThreadId);
       toast.success('Agreement terms drafted by AI! Redirecting to review...');
+      setIsAiModalOpen(false);
       if (onOpenDraftReview) {
-        onOpenDraftReview(result.agreementId);
+        onOpenDraftReview(result.agreementId || result.id);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to generate AI agreement draft');
@@ -122,56 +142,65 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
   };
 
   const currentThread = threads.find(t => t.id === selectedThreadId);
-  const counterparty = currentThread?.participants?.find(p => p.toLowerCase() !== address?.toLowerCase()) || currentThread?.participants?.[0];
+  const currentParticipants = getThreadParticipants(currentThread);
+  const counterparty = currentParticipants.find(p => address && p.toLowerCase() !== address.toLowerCase())
+    || currentParticipants[0]
+    || '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC';
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-[calc(100vh-160px)] min-h-[580px]">
+    <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8 animate-fade-in">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-[calc(100vh-170px)] min-h-[580px]">
         {/* Left: Threads List */}
-        <div className="md:col-span-4 flex flex-col bg-surface-900/70 border border-slate-800 rounded-2xl overflow-hidden backdrop-blur-xl">
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-teal-400" />
-              Chat Threads
+        <div className="md:col-span-4 flex flex-col bg-white border border-gray rounded-card overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-gray flex items-center justify-between bg-sage/30">
+            <h2 className="text-sm font-heading font-bold text-ink flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-forest" />
+              Negotiation Threads
             </h2>
-            <span className="text-xs text-slate-400 font-mono">{threads.length}</span>
+            <span className="text-xs text-ink/50 font-mono">{threads.length}</span>
           </div>
 
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60 p-2">
+          <div className="flex-1 overflow-y-auto divide-y divide-gray p-2 space-y-1">
             {isLoadingThreads ? (
-              <div className="p-4 text-center text-xs text-slate-500">Loading threads...</div>
+              <div className="p-4 text-center text-xs text-ink/50">Loading conversations...</div>
             ) : threads.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-500">
-                No active conversations. Start a chat from any community post!
+              <div className="p-6 text-center text-xs text-ink/50">
+                No active chat threads. Start a chat from a community project proposal.
               </div>
             ) : (
               threads.map(t => {
-                const other = t.participants?.find(p => p.toLowerCase() !== address?.toLowerCase()) || t.participants?.[0];
                 const isSelected = t.id === selectedThreadId;
+                const parts = getThreadParticipants(t);
+                const other = parts.find(p => address && p.toLowerCase() !== address.toLowerCase())
+                  || parts[0]
+                  || t.postTitle
+                  || 'Counterparty';
+
                 return (
                   <button
                     key={t.id}
                     onClick={() => setSelectedThreadId(t.id)}
-                    className={`w-full text-left p-3 rounded-xl transition-all flex flex-col gap-1.5 ${
+                    className={`w-full text-left p-3 rounded-[10px] transition-all ${
                       isSelected
-                        ? 'bg-surface-800 border border-teal-500/30 shadow-md'
-                        : 'hover:bg-surface-850 border border-transparent'
+                        ? 'bg-sage-light/60 border border-forest/30 font-semibold'
+                        : 'hover:bg-sage/40 border border-transparent'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <AddressBadge address={other} chars={3} showExplorer={false} />
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        {formatRelativeTime(t.updatedAt)}
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-mono text-ink truncate">
+                        {typeof other === 'string' && other.startsWith('0x')
+                          ? `${other.slice(0, 8)}...${other.slice(-4)}`
+                          : String(other).slice(0, 20)}
                       </span>
+                      {t.updatedAt && (
+                        <span className="text-[10px] text-ink/50">
+                          {formatRelativeTime(t.updatedAt)}
+                        </span>
+                      )}
                     </div>
-                    {t.postTitle && (
-                      <span className="text-xs font-semibold text-slate-300 truncate">
-                        {t.postTitle}
-                      </span>
+                    {t.lastMessage && (
+                      <p className="text-xs text-ink/70 truncate">{t.lastMessage}</p>
                     )}
-                    <p className="text-xs text-slate-400 line-clamp-1">
-                      {t.lastMessage || 'No messages yet'}
-                    </p>
                   </button>
                 );
               })
@@ -180,90 +209,70 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
         </div>
 
         {/* Right: Message Window */}
-        <div className="md:col-span-8 flex flex-col bg-surface-900/70 border border-slate-800 rounded-2xl overflow-hidden backdrop-blur-xl">
-          {currentThread ? (
+        <div className="md:col-span-8 flex flex-col bg-white border border-gray rounded-card overflow-hidden shadow-sm">
+          {selectedThreadId ? (
             <>
-              {/* Thread Header */}
-              <div className="p-4 border-b border-slate-800 bg-surface-950/40 flex items-center justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
-                    <User className="w-4 h-4" />
+              {/* Header Bar with prominent "Generate agreement with AI" button */}
+              <div className="p-4 border-b border-gray flex flex-wrap items-center justify-between gap-3 bg-sage/30">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-forest text-ivory flex items-center justify-center font-heading font-bold text-xs">
+                    {counterparty && typeof counterparty === 'string' && counterparty.startsWith('0x')
+                      ? counterparty.charAt(2).toUpperCase()
+                      : 'C'}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-400">Consultation with</span>
-                      <AddressBadge address={counterparty} chars={4} />
-                    </div>
-                    {currentThread.postTitle && (
-                      <p className="text-xs font-semibold text-slate-300 truncate max-w-sm">
-                        {currentThread.postTitle}
-                      </p>
+                    <h3 className="font-heading font-bold text-xs text-ink">
+                      Negotiation with Counterparty
+                    </h3>
+                    {counterparty && typeof counterparty === 'string' && counterparty.startsWith('0x') && (
+                      <AddressChip address={counterparty} showExplorer={false} />
                     )}
                   </div>
                 </div>
 
-                {/* AI Draft Button */}
+                {/* Prominent Coral AI Agreement Drafter Button */}
                 <Button
-                  variant="accent"
+                  variant="primary"
                   size="sm"
-                  onClick={handleGenerateAgreement}
-                  isLoading={isDrafting}
-                  disabled={messages.length === 0}
-                  icon={Bot}
-                  className="shadow-glow-indigo"
+                  onClick={() => setIsAiModalOpen(true)}
+                  icon={Sparkles}
+                  className="font-heading font-semibold"
                 >
-                  Generate Agreement with AI
+                  Generate agreement with AI
                 </Button>
               </div>
 
-              {/* AI helper banner if thread has enough context */}
-              {messages.length >= 2 && (
-                <div className="bg-indigo-950/30 border-b border-indigo-500/20 px-4 py-2 flex items-center justify-between text-xs text-indigo-300">
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    AI has parsed scope & milestones. Ready to generate draft!
-                  </span>
-                  <button
-                    onClick={handleGenerateAgreement}
-                    className="underline hover:text-indigo-200 font-semibold"
-                  >
-                    Draft now &rarr;
-                  </button>
-                </div>
-              )}
-
-              {/* Messages area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Messages Container */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-ivory/50">
                 {messages.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center text-slate-500 space-y-2">
-                    <Bot className="w-8 h-8 text-slate-600" />
-                    <p className="text-sm">Start discussing your project scope and milestones here.</p>
-                    <p className="text-xs text-slate-600 max-w-xs">
-                      The AI service analyzes your messages to formulate an escrow agreement automatically.
-                    </p>
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 text-ink/50 text-xs">
+                    <MessageSquare className="w-8 h-8 text-forest/40 mb-2" />
+                    <p>No messages yet in this negotiation thread.</p>
+                    <p className="mt-1">Agree on scope, deliverables, and budget in MATIC.</p>
                   </div>
                 ) : (
-                  messages.map(msg => {
-                    const isMe = address && msg.sender?.toLowerCase() === address.toLowerCase();
+                  messages.map((m, idx) => {
+                    const senderAddr = m.senderAddress || m.sender || m.sender?.walletAddress || '';
+                    const isMe = address && senderAddr && senderAddr.toLowerCase() === address.toLowerCase();
+                    const textBody = m.content || m.text || '';
+
                     return (
                       <div
-                        key={msg.id}
+                        key={m.id || idx}
                         className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                       >
-                        <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-slate-400 font-mono">
-                          <span>{isMe ? 'You' : `${msg.sender?.substring(0, 6)}...`}</span>
-                          <span>•</span>
-                          <span>{formatRelativeTime(msg.ts)}</span>
-                        </div>
                         <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                          className={`max-w-[75%] rounded-card p-3.5 text-xs leading-relaxed ${
                             isMe
-                              ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white rounded-tr-sm shadow-md'
-                              : 'bg-surface-800 text-slate-100 rounded-tl-sm border border-slate-750'
+                              ? 'bg-forest text-ivory rounded-br-xs'
+                              : 'bg-white border border-gray text-ink rounded-bl-xs shadow-xs'
                           }`}
                         >
-                          {msg.text}
+                          <p className="whitespace-pre-wrap">{textBody}</p>
                         </div>
+                        <span className="text-[10px] text-ink/40 mt-1 px-1 font-mono">
+                          {formatRelativeTime(m.createdAt || m.ts)}
+                        </span>
                       </div>
                     );
                   })
@@ -271,21 +280,21 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input box */}
-              <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-800 bg-surface-950/40 flex items-center gap-2">
+              {/* Message Input Bar */}
+              <form onSubmit={handleSendMessage} className="p-3 border-t border-gray bg-white flex items-center gap-2">
                 <input
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Type message, clarify milestones, deadlines..."
-                  className="flex-1 bg-surface-800 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-400"
+                  placeholder="Discuss milestone deliverables, budget, and acceptance criteria..."
+                  className="flex-1 bg-ivory text-ink border border-gray rounded-[10px] px-3.5 py-2 text-xs placeholder:text-ink/40 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
                 />
                 <Button
                   type="submit"
                   variant="primary"
-                  size="md"
-                  isLoading={isSending}
-                  disabled={!inputText.trim()}
+                  size="sm"
+                  disabled={!inputText.trim() || isSending}
+                  loading={isSending}
                   icon={Send}
                 >
                   Send
@@ -293,12 +302,76 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
               </form>
             </>
           ) : (
-            <div className="h-full flex items-center justify-center text-slate-500 text-sm">
-              Select or open a thread to view messages.
+            <div className="h-full flex items-center justify-center">
+              <EmptyState
+                icon={MessageSquare}
+                title="Select a conversation"
+                description="Choose an existing negotiation thread from the left or open a new one from Projects."
+              />
             </div>
           )}
         </div>
       </div>
+
+      {/* AI Agreement Generator Modal with explicit Submit Form Button */}
+      {isAiModalOpen && (
+        <Modal
+          isOpen={isAiModalOpen}
+          onClose={() => setIsAiModalOpen(false)}
+          title="Autogenerate Smart Agreement with AI"
+          subtitle="SANKALP advisory AI will synthesize milestones, penalties, and terms from your conversation."
+          maxWidth="max-w-xl"
+        >
+          <div className="space-y-5 text-ink">
+            <div className="p-4 rounded-card bg-ivory border border-gray space-y-3">
+              <div className="flex items-center gap-2 text-forest font-heading font-bold text-xs uppercase tracking-wider">
+                <Sparkles className="w-4 h-4 text-coral" />
+                <span>AI Synthesis Engine Details</span>
+              </div>
+              <ul className="text-xs text-ink/80 space-y-2 list-disc list-inside">
+                <li>Analyzes recent message exchange to formulate concrete milestone deliverables.</li>
+                <li>Assigns standard 5-day client review window with automated fallback protection.</li>
+                <li>Applies calibrated 1% / day late penalty (capped at 30%) with grace period.</li>
+                <li>Computes canonical Keccak-256 hash for immutable verification before chain creation.</li>
+              </ul>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-card bg-white border border-gray">
+                <span className="text-ink/50 block mb-1">Counterparty</span>
+                <span className="font-mono font-semibold text-ink truncate block">
+                  {counterparty ? `${counterparty.slice(0, 10)}...${counterparty.slice(-6)}` : 'Demo Partner'}
+                </span>
+              </div>
+              <div className="p-3 rounded-card bg-white border border-gray">
+                <span className="text-ink/50 block mb-1">Escrow Currency</span>
+                <span className="font-mono font-semibold text-forest">MATIC (Polygon)</span>
+              </div>
+            </div>
+
+            {/* Explicit Form Submission Button */}
+            <div className="pt-4 border-t border-gray flex items-center justify-end gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsAiModalOpen(false)}
+                disabled={isDrafting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleGenerateAgreement}
+                loading={isDrafting}
+                icon={FileCheck2}
+              >
+                Draft Agreement & Open Review
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -486,8 +486,23 @@ class MockStore {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        this.data = JSON.parse(saved);
-        return;
+        const parsed = JSON.parse(saved);
+        const initial = getInitialState();
+        if (parsed && typeof parsed === 'object') {
+          this.data = {
+            ...initial,
+            ...parsed,
+            posts: Array.isArray(parsed.posts) && parsed.posts.length > 0 ? parsed.posts : initial.posts,
+            agreements: Array.isArray(parsed.agreements) ? parsed.agreements : initial.agreements,
+            users: { ...initial.users, ...(parsed.users || {}) },
+            threads: Array.isArray(parsed.threads) ? parsed.threads : initial.threads,
+            messages: parsed.messages || initial.messages,
+            proposals: parsed.proposals || initial.proposals,
+            disputes: parsed.disputes || initial.disputes,
+            timeline: parsed.timeline || initial.timeline,
+          };
+          return;
+        }
       }
     } catch {
       // ignore

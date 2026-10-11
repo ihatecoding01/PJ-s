@@ -4,37 +4,52 @@
 
 @layer base {
   body {
-    @apply bg-surface-950 text-slate-100 font-sans antialiased overflow-x-hidden;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(20, 184, 166, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(139, 92, 246, 0.05) 0px, transparent 50%);
-    background-attachment: fixed;
+    @apply bg-ivory text-ink font-sans antialiased overflow-x-hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading tracking-tight text-ink;
+  }
+
+  /* Accessible focus ring for every interactive element */
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply outline-none ring-2 ring-forest ring-offset-2 ring-offset-ivory;
   }
 }
 
-/* Custom scrollbars */
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Custom restrained scrollbars in sage theme */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #F8F8F0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #25334d;
+  background: #E7EFE3;
   border-radius: 9999px;
+  border: 1px solid #E6E8E2;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #14b8a6;
+  background: #D2E2CD;
 }
 
 @keyframes slideIn {
   from {
-    transform: translateY(100%);
+    transform: translateY(12px);
     opacity: 0;
   }
   to {
@@ -46,18 +61,16 @@
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: scale(0.98);
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
 .animate-slide-in {
-  animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.15s ease-out forwards;
 }

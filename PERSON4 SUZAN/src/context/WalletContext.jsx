@@ -93,15 +93,15 @@ export function WalletProvider({ children }) {
       setIsConnecting(true);
       const addr = targetAddress.toLowerCase();
 
-      if (isMock && (!window.ethereum || !window.ethereum.selectedAddress)) {
-        // Fast mock sign-in
+      if (isMock) {
+        // Instant mock sign-in
         const { token, user: loggedUser } = await verifySignature(addr, 'mock-sig');
         localStorage.setItem('fairwork_jwt', token);
         localStorage.setItem('fairwork_user_address', addr);
         setJwt(token);
         setAddress(addr);
         setUser(loggedUser);
-        toast.success(`Logged in as ${loggedUser.name || addr.substring(0, 8)}`);
+        toast.success(`Connected as ${loggedUser.name || addr.substring(0, 8)}`);
         return;
       }
 
@@ -159,6 +159,19 @@ export function WalletProvider({ children }) {
     if (!acc) return;
     try {
       setIsConnecting(true);
+      if (isMock) {
+        const addr = acc.address.toLowerCase();
+        const fakeToken = `mock-token-${addr}`;
+        localStorage.setItem('fairwork_user_address', addr);
+        localStorage.setItem('fairwork_jwt', fakeToken);
+        setAddress(addr);
+        setUser(acc);
+        setJwt(fakeToken);
+        setIsConnectModalOpen(false);
+        toast.success(`Connected as ${acc.name} (${acc.role})`);
+        return;
+      }
+
       if (acc.privateKey) {
         // Authenticate with real backend using cryptographic SIWE
         const demoWallet = new Wallet(acc.privateKey);

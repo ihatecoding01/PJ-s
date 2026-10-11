@@ -186,22 +186,25 @@ async function handleMockRequest(endpoint, options = {}) {
 
   // 4. Threads & Messages
   if (path === '/threads' && method === 'GET') {
-    const userThreads = mockStore.data.threads.filter(t =>
-      t.participants.includes(currentAddress)
-    );
+    const userThreads = mockStore.data.threads.filter(t => {
+      const parts = Array.isArray(t.participants) ? t.participants.map(p => (typeof p === 'string' ? p : p?.walletAddress || '').toLowerCase()) : [];
+      return parts.includes(currentAddress);
+    });
     return userThreads.length ? userThreads : mockStore.data.threads;
   }
   if (path === '/threads' && method === 'POST') {
-    const otherAddr = body.otherAddress.toLowerCase();
-    const existing = mockStore.data.threads.find(t =>
-      t.participants.includes(currentAddress) && t.participants.includes(otherAddr)
-    );
+    const rawOther = body?.otherAddress || body?.recipientId || DEMO_ACCOUNTS.FREELANCER.address;
+    const otherAddr = String(rawOther).toLowerCase();
+    const existing = mockStore.data.threads.find(t => {
+      const parts = Array.isArray(t.participants) ? t.participants.map(p => (typeof p === 'string' ? p : p?.walletAddress || '').toLowerCase()) : [];
+      return parts.includes(currentAddress) && parts.includes(otherAddr);
+    });
     if (existing) return existing;
 
     const newThread = {
       id: `thread-${Date.now()}`,
-      postId: body.postId || null,
-      postTitle: body.postId ? mockStore.data.posts.find(p => p.id === body.postId)?.title : 'Direct Consultation',
+      postId: body?.postId || null,
+      postTitle: body?.postId ? mockStore.data.posts.find(p => p.id === body.postId)?.title : (body?.subject || 'Direct Consultation'),
       participants: [currentAddress, otherAddr],
       lastMessage: 'Thread opened',
       updatedAt: new Date().toISOString()
@@ -213,24 +216,39 @@ async function handleMockRequest(endpoint, options = {}) {
   }
   if (path.match(/^\/threads\/[^/]+\/messages$/) && method === 'GET') {
     const threadId = path.split('/')[2];
-    return mockStore.data.messages[threadId] || [];
+    const msgs = mockStore.data.messages[threadId] || [];
+    return msgs.map(m => ({
+      id: m.id,
+      threadId: m.threadId,
+      sender: m.sender || m.senderAddress,
+      senderAddress: m.senderAddress || m.sender,
+      text: m.text || m.content,
+      content: m.content || m.text,
+      createdAt: m.createdAt || m.ts || new Date().toISOString(),
+      ts: m.ts || m.createdAt || new Date().toISOString()
+    }));
   }
   if (path.match(/^\/threads\/[^/]+\/messages$/) && method === 'POST') {
     const threadId = path.split('/')[2];
+    const textContent = body?.content || body?.text || '';
+    const nowIso = new Date().toISOString();
     const newMsg = {
       id: `msg-${Date.now()}`,
       threadId,
       sender: currentAddress,
-      text: body.text,
-      ts: new Date().toISOString()
+      senderAddress: currentAddress,
+      text: textContent,
+      content: textContent,
+      createdAt: nowIso,
+      ts: nowIso
     };
     if (!mockStore.data.messages[threadId]) mockStore.data.messages[threadId] = [];
     mockStore.data.messages[threadId].push(newMsg);
 
     const thread = mockStore.data.threads.find(t => t.id === threadId);
     if (thread) {
-      thread.lastMessage = body.text;
-      thread.updatedAt = newMsg.ts;
+      thread.lastMessage = textContent;
+      thread.updatedAt = nowIso;
     }
     mockStore.save();
     return newMsg;

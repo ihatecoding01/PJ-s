@@ -163,3 +163,22 @@ export function decodeRevertReason(error) {
   }
   return String(error);
 }
+
+/**
+ * Cast arbitrator dispute vote
+ */
+export async function castVote(agreementId, milestoneIndex, freelancerShareBps) {
+  const contract = await getContractWithSigner();
+  return await contract.castVote(agreementId, milestoneIndex, freelancerShareBps);
+}
+
+/**
+ * Finalize dispute resolution after voting / deadline
+ */
+export async function finalizeDispute(agreementId, milestoneIndex) {
+  const contract = await getContractWithSigner();
+  if (typeof contract.resolveDispute === 'function') {
+    return await contract.resolveDispute(agreementId, milestoneIndex);
+  }
+  return null;
+}

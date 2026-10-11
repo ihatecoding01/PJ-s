@@ -1,0 +1,288 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Search,
+  Bell,
+  Plus,
+  Menu,
+  ChevronDown,
+  User,
+  Shield,
+  LogOut,
+  RefreshCw,
+  ExternalLink,
+  CheckCircle2,
+  AlertTriangle
+} from 'lucide-react';
+import { useWallet } from '../../context/WalletContext.jsx';
+import { DEMO_ACCOUNTS } from '../../mock/mockStore.js';
+import Button from '../ui/Button.jsx';
+import AddressChip from '../ui/AddressChip.jsx';
+import { apiFetch } from '../../api/client.js';
+
+export default function TopBar({
+  onToggleSidebar,
+  setActivePage,
+  onOpenCreateProject,
+  onSearch,
+}) {
+  const {
+    address,
+    user,
+    isConnected,
+    isOwner,
+    openConnectModal,
+    disconnectWallet,
+    switchDemoAccount,
+    isMock
+  } = useWallet();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [alerts, setAlerts] = useState([]);
+  const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
+  const [isAlertsOpen, setIsAlertsOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const alertsRef = useRef(null);
+  const profileMenuRef = useRef(null);
+
+  // Fetch alerts from GET /alerts
+  useEffect(() => {
+    let isMounted = true;
+    async function loadAlerts() {
+      try {
+        const data = await apiFetch('/alerts?resolved=false');
+        if (isMounted && data) {
+          const list = Array.isArray(data) ? data : (data.alerts || []);
+          setAlerts(list);
+          setUnreadAlertsCount(list.length);
+        }
+      } catch (err) {
+        // Fallback silently if alerts unavailable
+      }
+    }
+    loadAlerts();
+    const interval = setInterval(loadAlerts, 15000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Click outside listener for dropdowns
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (alertsRef.current && !alertsRef.current.contains(event.target)) {
+        setIsAlertsOpen(false);
+      }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setIsProfileMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (onSearch) {
+      onSearch(searchQuery);
+    }
+    setActivePage('projects');
+  };
+
+  return (
+    <header className="sticky top-0 z-20 bg-ivory/90 backdrop-blur-md border-b border-gray px-4 lg:px-8 py-3.5">
+      <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
+        {/* Left: Mobile hamburger + Search bar */}
+        <div className="flex items-center gap-3 flex-1 max-w-md">
+          <button
+            onClick={onToggleSidebar}
+            className="lg:hidden p-2 text-ink/70 hover:text-ink hover:bg-sage rounded-[8px]"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <form onSubmit={handleSearchSubmit} className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search projects, agreements, clients..."
+              className="w-full pl-9 pr-4 py-2 text-xs md:text-sm bg-white border border-gray rounded-[10px] text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 transition-all"
+            />
+          </form>
+        </div>
+
+        {/* Right Action Controls */}
+        <div className="flex items-center gap-3">
+          {/* Prominent coral "+ New Project" button */}
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Plus}
+            onClick={onOpenCreateProject}
+            className="font-heading font-semibold"
+          >
+            New Project
+          </Button>
+
+          {/* Alerts Notification Bell backed by GET /alerts */}
+          <div className="relative" ref={alertsRef}>
+            <button
+              onClick={() => setIsAlertsOpen(!isAlertsOpen)}
+              className="relative p-2 rounded-[8px] bg-white border border-gray hover:bg-sage/50 text-ink transition-colors"
+              aria-label="Open notifications"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadAlertsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-coral border-2 border-ivory text-ink font-heading font-bold text-[10px] flex items-center justify-center">
+                  {unreadAlertsCount > 9 ? '9+' : unreadAlertsCount}
+                </span>
+              )}
+            </button>
+
+            {isAlertsOpen && (
+              <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white border-2 border-ink rounded-card shadow-brutal p-4 z-40 animate-slide-in">
+                <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray">
+                  <h4 className="font-heading font-bold text-sm text-ink">Notifications & Alerts</h4>
+                  <span className="text-xs font-mono text-ink/60">{alerts.length} active</span>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto space-y-2.5">
+                  {alerts.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-ink/50">
+                      No pending alerts or notifications.
+                    </div>
+                  ) : (
+                    alerts.map((al, idx) => (
+                      <div
+                        key={al.id || idx}
+                        className="p-3 bg-sage/40 hover:bg-sage/70 rounded-[8px] border border-gray/60 transition-colors text-left"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-xs font-heading font-semibold text-ink">
+                            {al.title || 'Platform Alert'}
+                          </span>
+                          <span className="text-[10px] font-mono text-ink/50">
+                            {al.type || 'Notice'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-ink/70 mt-1 leading-relaxed">
+                          {al.message || al.description || 'Milestone or agreement deadline approaching.'}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Profile & Wallet Menu */}
+          {isConnected ? (
+            <div className="relative" ref={profileMenuRef}>
+              <button
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                className="flex items-center gap-2 p-1.5 pl-2.5 rounded-[10px] bg-white border border-gray hover:border-forest/40 transition-colors"
+                aria-label="User profile menu"
+              >
+                <div className="w-6 h-6 rounded-full bg-forest text-ivory flex items-center justify-center text-xs font-heading font-bold">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <span className="hidden md:inline text-xs font-heading font-medium text-ink max-w-[100px] truncate">
+                  {user?.name || (address ? `${address.slice(0, 6)}...` : 'User')}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-ink/60" />
+              </button>
+
+              {isProfileMenuOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-white border-2 border-ink rounded-card shadow-brutal p-3 z-40 animate-slide-in">
+                  <div className="pb-3 mb-2 border-b border-gray">
+                    <p className="text-xs font-heading font-bold text-ink truncate">{user?.name || 'Verified User'}</p>
+                    <p className="text-[11px] text-forest font-medium">{user?.role || 'CLIENT / FREELANCER'}</p>
+                    {address && (
+                      <div className="mt-2">
+                        <AddressChip address={address} showExplorer={false} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => {
+                        setActivePage('profile');
+                        setIsProfileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-xs font-medium text-ink hover:bg-sage text-left"
+                    >
+                      <User className="w-3.5 h-3.5 text-forest" />
+                      View & Edit Profile
+                    </button>
+
+                    {isOwner && (
+                      <button
+                        onClick={() => {
+                          setActivePage('admin');
+                          setIsProfileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-xs font-medium text-ink hover:bg-sage text-left"
+                      >
+                        <Shield className="w-3.5 h-3.5 text-coral" />
+                        Admin Council
+                      </button>
+                    )}
+
+                    {isMock && (
+                      <div className="pt-2 mt-2 border-t border-gray">
+                        <span className="text-[10px] font-heading font-bold text-ink/60 uppercase tracking-wider px-2 block mb-1">
+                          Switch Mock Persona
+                        </span>
+                        <div className="space-y-1">
+                          {Object.keys(DEMO_ACCOUNTS).map(key => (
+                            <button
+                              key={key}
+                              onClick={() => {
+                                switchDemoAccount(key);
+                                setIsProfileMenuOpen(false);
+                              }}
+                              className="w-full text-left px-2.5 py-1 text-xs rounded-[6px] hover:bg-sage-light text-ink flex items-center justify-between"
+                            >
+                              <span>{DEMO_ACCOUNTS[key].name}</span>
+                              <span className="text-[10px] font-mono text-ink/50">{DEMO_ACCOUNTS[key].role}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-2 mt-2 border-t border-gray">
+                      <button
+                        onClick={() => {
+                          disconnectWallet();
+                          setIsProfileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-xs font-medium text-coral-900 hover:bg-coral/20 text-left"
+                      >
+                        <LogOut className="w-3.5 h-3.5 text-coral" />
+                        Disconnect Wallet
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openConnectModal}
+            >
+              Connect Wallet
+            </Button>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}

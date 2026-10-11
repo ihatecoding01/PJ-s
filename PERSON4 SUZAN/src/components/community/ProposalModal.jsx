@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import Modal from '../common/Modal.jsx';
-import Button from '../common/Button.jsx';
+import Modal from '../ui/Modal.jsx';
+import Button from '../ui/Button.jsx';
 import { createProposal } from '../../api/posts.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useWallet } from '../../context/WalletContext.jsx';
 
-export default function ProposalModal({ isOpen, onClose, post, onProposalSubmitted }) {
+export default function ProposalModal({ isOpen, onClose, post, onSubmitted, onProposalSubmitted }) {
   const toast = useToast();
   const { isConnected, connectWallet } = useWallet();
 
@@ -16,7 +16,7 @@ export default function ProposalModal({ isOpen, onClose, post, onProposalSubmitt
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isConnected) {
-      toast.warning('Connect wallet first');
+      toast.warning('Please connect wallet first');
       connectWallet();
       return;
     }
@@ -32,7 +32,8 @@ export default function ProposalModal({ isOpen, onClose, post, onProposalSubmitt
         message: message.trim()
       });
       toast.success('Proposal submitted successfully!');
-      onProposalSubmitted(proposal);
+      if (typeof onProposalSubmitted === 'function') onProposalSubmitted(proposal);
+      if (typeof onSubmitted === 'function') onSubmitted(proposal);
       onClose();
       setMessage('');
     } catch (err) {
@@ -45,10 +46,10 @@ export default function ProposalModal({ isOpen, onClose, post, onProposalSubmitt
   if (!post) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Submit Proposal for "${post.title}"`}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Submit Proposal for "${post.title}"`} maxWidth="max-w-lg">
+      <form onSubmit={handleSubmit} className="space-y-4 text-ink">
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-heading font-semibold text-ink/80 uppercase tracking-wider mb-1.5">
             Proposed Price / Rate
           </label>
           <input
@@ -56,13 +57,13 @@ export default function ProposalModal({ isOpen, onClose, post, onProposalSubmitt
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             placeholder="e.g. 2.5 MATIC"
-            className="w-full bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-400"
+            className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 font-mono"
             required
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-heading font-semibold text-ink/80 uppercase tracking-wider mb-1.5">
             Proposal Pitch & Plan
           </label>
           <textarea
@@ -70,16 +71,16 @@ export default function ProposalModal({ isOpen, onClose, post, onProposalSubmitt
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Highlight your Web3 experience, proposed milestone milestones, timeline, and GitHub profile..."
-            className="w-full bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-400 resize-none"
+            className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 resize-none font-sans"
             required
           />
         </div>
 
-        <div className="pt-2 flex justify-end gap-2">
+        <div className="pt-3 flex items-center justify-end gap-3 border-t border-gray">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" isLoading={isSubmitting}>
+          <Button type="submit" variant="primary" loading={isSubmitting}>
             Send Proposal
           </Button>
         </div>

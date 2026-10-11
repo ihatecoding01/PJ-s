@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import Modal from '../common/Modal.jsx';
-import Button from '../common/Button.jsx';
+import Modal from '../ui/Modal.jsx';
+import Button from '../ui/Button.jsx';
 import { createPost } from '../../api/posts.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useWallet } from '../../context/WalletContext.jsx';
 
-export default function CreatePostModal({ isOpen, onClose, onPostCreated }) {
+export default function CreatePostModal({ isOpen, onClose, onPostCreated, onCreated }) {
   const toast = useToast();
   const { isConnected, connectWallet } = useWallet();
 
@@ -45,10 +45,14 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated }) {
 
       const newPost = await createPost(postData);
       toast.success('Post created successfully in the community!');
-      onPostCreated(newPost);
+      
+      // Support both callback prop conventions safely
+      if (typeof onPostCreated === 'function') onPostCreated(newPost);
+      if (typeof onCreated === 'function') onCreated(newPost);
+      
       onClose();
 
-      // Reset
+      // Reset form
       setTitle('');
       setDescription('');
       setBudget('');
@@ -61,21 +65,21 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create Community Post">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Type toggle */}
+    <Modal isOpen={isOpen} onClose={onClose} title="Create Community Post" maxWidth="max-w-lg">
+      <form onSubmit={handleSubmit} className="space-y-4 text-ink">
+        {/* Post Type Toggle */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-heading font-semibold text-ink/80 uppercase tracking-wider mb-1.5">
             Post Type
           </label>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setType('JOB')}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
+              className={`py-2 px-3 rounded-[10px] text-xs font-heading font-semibold border transition-all ${
                 type === 'JOB'
-                  ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
-                  : 'bg-surface-800 border-slate-700 text-slate-400 hover:text-slate-200'
+                  ? 'bg-forest text-ivory border-forest shadow-sm'
+                  : 'bg-sage/40 border-gray text-ink/70 hover:bg-sage hover:text-ink'
               }`}
             >
               Hiring: Job Opportunity
@@ -83,10 +87,10 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated }) {
             <button
               type="button"
               onClick={() => setType('SERVICE')}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
+              className={`py-2 px-3 rounded-[10px] text-xs font-heading font-semibold border transition-all ${
                 type === 'SERVICE'
-                  ? 'bg-teal-500/20 border-teal-500/50 text-teal-300'
-                  : 'bg-surface-800 border-slate-700 text-slate-400 hover:text-slate-200'
+                  ? 'bg-forest text-ivory border-forest shadow-sm'
+                  : 'bg-sage/40 border-gray text-ink/70 hover:bg-sage hover:text-ink'
               }`}
             >
               Offering: Freelance Service
@@ -96,22 +100,22 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated }) {
 
         {/* Title */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-heading font-semibold text-ink/80 uppercase tracking-wider mb-1.5">
             Title
           </label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={type === 'JOB' ? 'e.g. Solidity Escrow Developer' : 'e.g. Fullstack React & Ethers dApp Development'}
-            className="w-full bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-400"
+            placeholder={type === 'JOB' ? 'e.g. Fullstack React & Solidity Escrow Engineer' : 'e.g. Smart Contract Audit & Optimization'}
+            className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 transition-all font-sans"
             required
           />
         </div>
 
         {/* Budget */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-heading font-semibold text-ink/80 uppercase tracking-wider mb-1.5">
             Budget / Price
           </label>
           <input
@@ -119,14 +123,14 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated }) {
             value={budget}
             onChange={(e) => setBudget(e.target.value)}
             placeholder="e.g. 2.5 MATIC"
-            className="w-full bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-400"
+            className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 transition-all font-mono"
             required
           />
         </div>
 
         {/* Skills */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-heading font-semibold text-ink/80 uppercase tracking-wider mb-1.5">
             Required Skills (comma separated)
           </label>
           <input
@@ -134,13 +138,13 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated }) {
             value={skillsInput}
             onChange={(e) => setSkillsInput(e.target.value)}
             placeholder="React, Solidity, Hardhat, Ethers.js"
-            className="w-full bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-400"
+            className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 transition-all font-sans"
           />
         </div>
 
         {/* Description */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-heading font-semibold text-ink/80 uppercase tracking-wider mb-1.5">
             Description & Scope
           </label>
           <textarea
@@ -148,16 +152,17 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated }) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Outline requirements, milestones, expected deliverables, and repo links..."
-            className="w-full bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-400 resize-none"
+            className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 transition-all resize-none font-sans"
             required
           />
         </div>
 
-        <div className="pt-2 flex justify-end gap-2">
+        {/* Actions */}
+        <div className="pt-3 flex items-center justify-end gap-3 border-t border-gray">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" isLoading={isSubmitting}>
+          <Button type="submit" variant="primary" loading={isSubmitting}>
             Publish Post
           </Button>
         </div>

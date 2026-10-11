@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import Modal from '../common/Modal.jsx';
-import Button from '../common/Button.jsx';
+import Modal from '../ui/Modal.jsx';
+import Button from '../ui/Button.jsx';
 import { submitMilestone as apiSubmitMilestone } from '../../api/milestones.js';
 import { txSubmitMilestone } from '../../chain/transactions.js';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -9,13 +9,15 @@ import { GitCommit, Loader2, Bot, Sparkles, CheckCircle2 } from 'lucide-react';
 export default function SubmitMilestoneModal({
   isOpen,
   onClose,
+  milestone,
+  terms,
   agreementId,
   onchainId,
-  milestoneIdx,
-  milestoneTitle,
+  milestoneIdx: rawIdx,
   onSuccess
 }) {
   const toast = useToast();
+  const idx = milestone?.idx ?? rawIdx ?? 0;
 
   const [commitSha, setCommitSha] = useState('');
   const [prUrl, setPrUrl] = useState('');
@@ -32,9 +34,9 @@ export default function SubmitMilestoneModal({
     try {
       // Step 1: POST backend submit -> triggers AI GitHub analysis
       setStatusStep('AI_ANALYZING');
-      toast.info('AI service is inspecting GitHub commits, PRs, and test suites...');
+      toast.info('Advisory AI service is inspecting GitHub commits, PRs, and test suites...');
 
-      const submitRes = await apiSubmitMilestone(agreementId, milestoneIdx, {
+      const submitRes = await apiSubmitMilestone(agreementId, idx, {
         commitSha: commitSha.trim(),
         prUrl: prUrl.trim(),
         notes: notes.trim()
@@ -46,7 +48,7 @@ export default function SubmitMilestoneModal({
       setStatusStep('CHAIN_SIGNING');
       let toastId = null;
 
-      await txSubmitMilestone(onchainId || 1, milestoneIdx, submissionHash, commitSha.trim(), {
+      await txSubmitMilestone(onchainId || 1, idx, submissionHash, commitSha.trim(), {
         onPending: (hash) => {
           toastId = toast.pendingTx(hash, 'Recording milestone submission on-chain...');
         },
@@ -58,14 +60,10 @@ export default function SubmitMilestoneModal({
         }
       });
 
-      toast.success('Milestone submitted! AI progress recorded and review window opened.');
-      onClose();
-      if (onSuccess) onSuccess(submitRes);
-      setCommitSha('');
-      setPrUrl('');
-      setNotes('');
+      toast.success(`Milestone #${idx + 1} successfully submitted! Client review window opened.`);
+      if (onSuccess) onSuccess();
     } catch (err) {
-      toast.error(err.message || 'Milestone submission failed');
+      toast.error(err.message || 'Submission failed');
     } finally {
       setStatusStep(null);
     }
@@ -75,86 +73,90 @@ export default function SubmitMilestoneModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Submit Deliverable: Milestone #${milestoneIdx + 1}`}
+      title={`Submit Deliverable for Milestone #${idx + 1}`}
+      subtitle="Submit verifiable Git commit SHAs and deliverable pull requests"
+      maxWidth="max-w-md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {statusStep === 'AI_ANALYZING' && (
-          <div className="p-4 rounded-xl bg-indigo-950/30 border border-indigo-500/40 text-center space-y-2">
-            <Loader2 className="w-6 h-6 animate-spin text-indigo-400 mx-auto" />
-            <h5 className="text-xs font-bold text-slate-100">AI Service Analyzing GitHub Signals</h5>
-            <p className="text-[11px] text-slate-400">
-              Evaluating diffs, test coverage, and acceptance criteria against commit {commitSha.substring(0, 7)}...
-            </p>
-          </div>
-        )}
-
-        {statusStep === 'CHAIN_SIGNING' && (
-          <div className="p-4 rounded-xl bg-teal-950/30 border border-teal-500/40 text-center space-y-2">
-            <Loader2 className="w-6 h-6 animate-spin text-teal-400 mx-auto" />
-            <h5 className="text-xs font-bold text-slate-100">Awaiting Wallet Signature</h5>
-            <p className="text-[11px] text-slate-400">
-              Confirm the on-chain submitMilestone transaction in your wallet.
-            </p>
-          </div>
-        )}
-
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-            Git Commit SHA <span className="text-rose-400">*</span>
+          <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
+            Commit SHA (40-char or 7-char hash) *
           </label>
-          <div className="flex items-center gap-2 bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5">
-            <GitCommit className="w-4 h-4 text-slate-400 shrink-0" />
+          <div className="relative">
+            <GitCommit className="w-4 h-4 text-forest absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
+              required
               value={commitSha}
               onChange={(e) => setCommitSha(e.target.value)}
-              placeholder="e.g. 9f8b3c1a2d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a"
-              className="w-full bg-transparent text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none"
-              required
-              disabled={Boolean(statusStep)}
+              placeholder="e.g. 9f83a45c81d2e0b5f1234567890abcdef1234567"
+              className="w-full bg-white border border-gray rounded-[10px] pl-9 pr-3 py-2.5 text-xs font-mono text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-            GitHub PR URL (optional)
+          <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
+            Pull Request URL (Optional)
           </label>
           <input
             type="url"
             value={prUrl}
             onChange={(e) => setPrUrl(e.target.value)}
-            placeholder="https://github.com/org/repo/pull/42"
-            className="w-full bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-400"
-            disabled={Boolean(statusStep)}
+            placeholder="https://github.com/org/repo/pull/4"
+            className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-xs text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/70 mb-1">
             Submission Notes & Verification Instructions
           </label>
           <textarea
             rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Instructions for testing, deployed staging preview links, or test credentials..."
-            className="w-full bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-400 resize-none"
-            disabled={Boolean(statusStep)}
+            placeholder="Describe completed criteria, commands to run tests, and environment details..."
+            className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2.5 text-xs text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest"
           />
         </div>
 
-        <div className="pt-2 flex justify-end gap-2 border-t border-slate-800">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={Boolean(statusStep)}>
+        {/* Step Progression Indicators */}
+        {statusStep && (
+          <div className="p-3 rounded-card bg-sage/60 border border-forest/20 text-xs text-forest space-y-1">
+            {statusStep === 'AI_ANALYZING' && (
+              <div className="flex items-center gap-2 font-heading font-semibold">
+                <Loader2 className="w-4 h-4 animate-spin text-forest" />
+                <span>Step 1/2: Analyzing GitHub commits with advisory AI...</span>
+              </div>
+            )}
+            {statusStep === 'CHAIN_SIGNING' && (
+              <div className="flex items-center gap-2 font-heading font-semibold">
+                <Loader2 className="w-4 h-4 animate-spin text-forest" />
+                <span>Step 2/2: Signing milestone submission on-chain...</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="pt-3 border-t border-gray flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            disabled={Boolean(statusStep)}
+          >
             Cancel
           </Button>
           <Button
             type="submit"
             variant="primary"
-            isLoading={Boolean(statusStep)}
+            size="sm"
+            loading={Boolean(statusStep)}
             disabled={Boolean(statusStep)}
           >
-            Run AI & Submit On-Chain
+            Submit for Review
           </Button>
         </div>
       </form>

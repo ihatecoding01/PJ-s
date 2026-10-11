@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import Card from '../components/common/Card.jsx';
-import Button from '../components/common/Button.jsx';
-import AddressBadge from '../components/common/AddressBadge.jsx';
+import { Card, Button, Badge } from '../components/ui/index.js';
+import AddressChip from '../components/ui/AddressChip.jsx';
 import {
   txAddArbitrator,
   txRemoveArbitrator,
@@ -23,11 +22,12 @@ import {
   Play,
   Pause,
   Percent,
-  CheckCircle2
+  CheckCircle2,
+  ShieldCheck
 } from 'lucide-react';
 
 export default function AdminPage() {
-  const { address } = useWallet();
+  const { address, isOwner } = useWallet();
   const toast = useToast();
 
   const [arbitrators, setArbitrators] = useState([
@@ -63,9 +63,9 @@ export default function AdminPage() {
         }
       });
 
-      setArbitrators(prev => [...prev, newArbitrator.trim().toLowerCase()]);
+      setArbitrators(prev => [...prev, newArbitrator.trim()]);
       setNewArbitrator('');
-      toast.success('Arbitrator added successfully!');
+      toast.success('Arbitrator added to pool');
     } catch (err) {
       toast.error(err.message || 'Failed to add arbitrator');
     } finally {
@@ -92,7 +92,7 @@ export default function AdminPage() {
       });
 
       setArbitrators(prev => prev.filter(a => a.toLowerCase() !== arbAddr.toLowerCase()));
-      toast.success('Arbitrator removed.');
+      toast.success('Arbitrator removed from pool');
     } catch (err) {
       toast.error(err.message || 'Failed to remove arbitrator');
     } finally {
@@ -100,218 +100,210 @@ export default function AdminPage() {
     }
   };
 
-  // Set Oracle
-  const handleSetOracle = async () => {
+  // Update Parameters
+  const handleUpdateParams = async (e) => {
+    e.preventDefault();
     try {
       setIsProcessing(true);
-      await txSetOracle(oracleAddress.trim());
-      toast.success('Protocol Oracle wallet updated on-chain!');
+      let toastId = null;
+
+      if (oracleAddress) {
+        await txSetOracle(oracleAddress.trim(), {
+          onPending: (hash) => { toastId = toast.pendingTx(hash, 'Updating Oracle address...'); },
+          onSuccess: (rec) => { if (toastId) toast.confirmedTx(toastId, rec.hash, 'Oracle updated!'); },
+          onError: (err) => { if (toastId) toast.failedTx(toastId, err); }
+        });
+      }
+
+      if (treasuryAddress) {
+        await txSetTreasury(treasuryAddress.trim(), {
+          onPending: (hash) => { toastId = toast.pendingTx(hash, 'Updating Treasury address...'); },
+          onSuccess: (rec) => { if (toastId) toast.confirmedTx(toastId, rec.hash, 'Treasury updated!'); },
+          onError: (err) => { if (toastId) toast.failedTx(toastId, err); }
+        });
+      }
+
+      await txSetFeeBps(Number(feeBps), {
+        onPending: (hash) => { toastId = toast.pendingTx(hash, 'Updating protocol Fee Bps...'); },
+        onSuccess: (rec) => { if (toastId) toast.confirmedTx(toastId, rec.hash, 'Fee updated!'); },
+        onError: (err) => { if (toastId) toast.failedTx(toastId, err); }
+      });
+
+      toast.success('Protocol configuration parameters saved!');
     } catch (err) {
-      toast.error(err.message || 'Failed to update oracle');
+      toast.error(err.message || 'Failed to update protocol params');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Set Treasury
-  const handleSetTreasury = async () => {
-    try {
-      setIsProcessing(true);
-      await txSetTreasury(treasuryAddress.trim());
-      toast.success('Treasury address updated on-chain!');
-    } catch (err) {
-      toast.error(err.message || 'Failed to update treasury');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Set Fee Bps
-  const handleSetFee = async () => {
-    if (Number(feeBps) > 500) {
-      toast.error('Protocol fee cannot exceed 500 bps (5.0%)');
-      return;
-    }
-    try {
-      setIsProcessing(true);
-      await txSetFeeBps(Number(feeBps));
-      toast.success(`Protocol fee set to ${feeBps} bps (${(feeBps / 100).toFixed(1)}%)!`);
-    } catch (err) {
-      toast.error(err.message || 'Failed to update fee');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Pause / Unpause
+  // Emergency Pause
   const handleTogglePause = async () => {
     try {
       setIsProcessing(true);
+      let toastId = null;
+
       if (isPaused) {
-        await txUnpause();
+        await txUnpause({
+          onPending: (hash) => { toastId = toast.pendingTx(hash, 'Unpausing protocol on-chain...'); },
+          onSuccess: (rec) => { if (toastId) toast.confirmedTx(toastId, rec.hash, 'Protocol unpaused!'); },
+          onError: (err) => { if (toastId) toast.failedTx(toastId, err); }
+        });
         setIsPaused(false);
-        toast.success('Protocol unpaused on-chain!');
+        toast.success('Protocol is now UNPAUSED');
       } else {
-        await txPause();
+        await txPause({
+          onPending: (hash) => { toastId = toast.pendingTx(hash, 'Emergency pausing protocol...'); },
+          onSuccess: (rec) => { if (toastId) toast.confirmedTx(toastId, rec.hash, 'Protocol paused!'); },
+          onError: (err) => { if (toastId) toast.failedTx(toastId, err); }
+        });
         setIsPaused(true);
-        toast.warning('Protocol paused on-chain.');
+        toast.warning('Protocol is now PAUSED');
       }
     } catch (err) {
-      toast.error(err.message || 'Failed to toggle pause');
+      toast.error(err.message || 'Pause toggle failed');
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Header */}
+    <div className="max-w-6xl mx-auto px-4 lg:px-8 py-8 space-y-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-mono text-rose-400 font-bold uppercase tracking-wider">
-              Governance & Admin
-            </span>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-surface-800 border border-slate-700 text-slate-300 font-mono">
-              Contract Owner Only
-            </span>
+            <h1 className="text-2xl md:text-3xl font-heading font-bold text-ink tracking-tight">
+              Protocol Governance Council
+            </h1>
+            <Badge variant="coral">Contract Owner Only</Badge>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">
-            FairWork Protocol Administration
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Manage authorized arbitrator tribunal members, backend oracle wallets, treasury fee routing, and circuit breaker.
+          <p className="text-sm text-ink/60">
+            Smart contract administrative operations: arbitrator pool management, oracle keys, and emergency circuits.
           </p>
         </div>
 
-        {/* Emergency Pause Toggle */}
         <Button
           variant={isPaused ? 'primary' : 'danger'}
           onClick={handleTogglePause}
-          isLoading={isProcessing}
+          loading={isProcessing}
           icon={isPaused ? Play : Pause}
         >
           {isPaused ? 'Unpause Protocol' : 'Emergency Pause'}
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Arbitrators Management */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Arbitrator Pool Card */}
         <Card className="space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-amber-400" />
-              Arbitrator Registry ({arbitrators.length})
+          <div className="flex items-center justify-between pb-3 border-b border-gray">
+            <h3 className="font-heading font-bold text-base text-ink flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-forest" />
+              Arbitrator Council Pool ({arbitrators.length})
             </h3>
           </div>
 
-          <div className="space-y-2">
-            {arbitrators.map((arb, i) => (
+          <form onSubmit={handleAddArbitrator} className="flex gap-2">
+            <input
+              type="text"
+              value={newArbitrator}
+              onChange={(e) => setNewArbitrator(e.target.value)}
+              placeholder="0x... new arbitrator address"
+              className="flex-1 bg-white border border-gray rounded-[10px] px-3.5 py-2 text-xs font-mono text-ink placeholder:text-ink/40 focus:outline-none focus:border-forest"
+            />
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              loading={isProcessing}
+              disabled={!newArbitrator.trim() || isProcessing}
+              icon={UserPlus}
+            >
+              Add
+            </Button>
+          </form>
+
+          <div className="space-y-2 pt-2">
+            {arbitrators.map((arb, idx) => (
               <div
-                key={i}
-                className="p-3 rounded-xl bg-surface-850 border border-slate-800 flex items-center justify-between gap-2"
+                key={idx}
+                className="flex items-center justify-between p-3 rounded-[10px] bg-sage/30 border border-gray"
               >
-                <AddressBadge address={arb} chars={4} showExplorer={false} />
+                <AddressChip address={arb} />
                 <button
+                  type="button"
                   onClick={() => handleRemoveArbitrator(arb)}
-                  disabled={isProcessing}
-                  className="p-1.5 text-slate-500 hover:text-rose-400 transition-colors"
-                  title="Remove Arbitrator"
+                  disabled={isProcessing || arbitrators.length <= 3}
+                  className="p-1 text-ink/40 hover:text-coral transition-colors disabled:opacity-30"
+                  title="Remove arbitrator"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))}
           </div>
-
-          {/* Add Arbitrator form */}
-          <form onSubmit={handleAddArbitrator} className="pt-2 border-t border-slate-800 flex gap-2">
-            <input
-              type="text"
-              value={newArbitrator}
-              onChange={(e) => setNewArbitrator(e.target.value)}
-              placeholder="0x... arbitrator address"
-              className="flex-1 bg-surface-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-teal-400"
-            />
-            <Button type="submit" variant="primary" size="sm" isLoading={isProcessing} icon={UserPlus}>
-              Add
-            </Button>
-          </form>
         </Card>
 
-        {/* System Addresses & Fee */}
-        <div className="space-y-6">
-          {/* Fee Configuration */}
-          <Card className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2 pb-3 border-b border-slate-800">
-              <Percent className="w-4 h-4 text-teal-400" />
-              Protocol Escrow Fee (Max 500 bps = 5.0%)
+        {/* Protocol Parameters Form */}
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-gray">
+            <h3 className="font-heading font-bold text-base text-ink flex items-center gap-2">
+              <Settings className="w-5 h-5 text-forest" />
+              Protocol Oracle & Financial Parameters
             </h3>
+          </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex-1">
-                <input
-                  type="number"
-                  min="0"
-                  max="500"
-                  value={feeBps}
-                  onChange={(e) => setFeeBps(e.target.value)}
-                  className="w-full bg-surface-800 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-100 font-mono focus:outline-none focus:border-teal-400"
-                />
-              </div>
-              <span className="text-xs text-slate-300 font-mono font-bold">
-                = {(Number(feeBps) / 100).toFixed(2)}%
-              </span>
-              <Button variant="secondary" size="sm" onClick={handleSetFee} isLoading={isProcessing}>
-                Update Fee
+          <form onSubmit={handleUpdateParams} className="space-y-4">
+            <div>
+              <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/60 mb-1">
+                Backend Oracle Signer Address
+              </label>
+              <input
+                type="text"
+                value={oracleAddress}
+                onChange={(e) => setOracleAddress(e.target.value)}
+                className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2 text-xs font-mono text-ink focus:outline-none focus:border-forest"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/60 mb-1">
+                Platform Treasury Address
+              </label>
+              <input
+                type="text"
+                value={treasuryAddress}
+                onChange={(e) => setTreasuryAddress(e.target.value)}
+                className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2 text-xs font-mono text-ink focus:outline-none focus:border-forest"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-ink/60 mb-1">
+                Protocol Fee (Basis Points - 100 bps = 1.0%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="500"
+                value={feeBps}
+                onChange={(e) => setFeeBps(Number(e.target.value))}
+                className="w-full bg-white border border-gray rounded-[10px] px-3.5 py-2 text-xs font-mono text-ink focus:outline-none focus:border-forest"
+              />
+            </div>
+
+            <div className="pt-2">
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                loading={isProcessing}
+                disabled={isProcessing}
+              >
+                Update Parameters
               </Button>
             </div>
-          </Card>
-
-          {/* Oracle & Treasury */}
-          <Card className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2 pb-3 border-b border-slate-800">
-              <Settings className="w-4 h-4 text-indigo-400" />
-              Protocol Oracle & Treasury
-            </h3>
-
-            {/* Oracle */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                Backend Oracle Address
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={oracleAddress}
-                  onChange={(e) => setOracleAddress(e.target.value)}
-                  className="flex-1 bg-surface-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono focus:outline-none focus:border-teal-400"
-                />
-                <Button variant="secondary" size="sm" onClick={handleSetOracle} isLoading={isProcessing}>
-                  Save
-                </Button>
-              </div>
-            </div>
-
-            {/* Treasury */}
-            <div className="space-y-1.5 pt-2">
-              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                Fee Treasury Address
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={treasuryAddress}
-                  onChange={(e) => setTreasuryAddress(e.target.value)}
-                  className="flex-1 bg-surface-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono focus:outline-none focus:border-teal-400"
-                />
-                <Button variant="secondary" size="sm" onClick={handleSetTreasury} isLoading={isProcessing}>
-                  Save
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
+          </form>
+        </Card>
       </div>
     </div>
   );
