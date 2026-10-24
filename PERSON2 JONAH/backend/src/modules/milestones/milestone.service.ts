@@ -63,14 +63,46 @@ export class MilestoneService {
       repoUrl = 'https://github.com/org/repo';
     }
 
-    // 1. Analyze repo through AI service
-    const aiAnalysis = await AiAdapter.analyzeMilestone({
-      repoUrl,
-      commitSha: data.commitSha,
-      milestoneTitle: milestone.title,
-      milestoneDescription: milestone.description,
-      acceptanceCriteria,
-    });
+    // 1. Analyze deliverable through AI service (code or multimodal)
+    const isMultimodal =
+      (data.deliverableType && data.deliverableType !== 'CODE') ||
+      !!data.deliverableContent ||
+      (data.assetUrl && !data.assetUrl.includes('github.com'));
+
+    let aiAnalysis: any;
+    if (isMultimodal) {
+      const deliverableType = data.deliverableType || 'DESIGN';
+      const deliverableContent = data.deliverableContent || data.assetUrl || data.notes || repoUrl;
+      const multimodalRes = await AiAdapter.verifyMultimodalDeliverable({
+        deliverableType,
+        deliverableContent,
+        milestoneTitle: milestone.title,
+        milestoneDescription: milestone.description,
+        acceptanceCriteria,
+      });
+
+      aiAnalysis = {
+        testsPassing: multimodalRes.tests_passing,
+        qualityScore: multimodalRes.quality_score,
+        progressBps: multimodalRes.overall_progress_bps,
+        summary: multimodalRes.summary,
+        verifiedFiles: multimodalRes.criteria_verdicts.map(
+          (v) => `[${v.verdict}] ${v.criterion}`
+        ),
+        recommendations: multimodalRes.criteria_verdicts.map(
+          (v) => `${v.criterion}: ${v.evidence}`
+        ),
+        criteriaVerdicts: multimodalRes.criteria_verdicts,
+      };
+    } else {
+      aiAnalysis = await AiAdapter.analyzeMilestone({
+        repoUrl,
+        commitSha: data.commitSha,
+        milestoneTitle: milestone.title,
+        milestoneDescription: milestone.description,
+        acceptanceCriteria,
+      });
+    }
 
     // 2. Compute canonical report hash and submission hash
     const canonicalReportHash = computeCanonicalHash({
@@ -104,7 +136,7 @@ export class MilestoneService {
     const report = await prisma.progressReport.create({
       data: {
         milestoneId: milestone.id,
-        repoUrl,
+        repoUrl: data.assetUrl || repoUrl,
         commitSha: data.commitSha,
         aiSummary: aiAnalysis.summary,
         testsPassing: aiAnalysis.testsPassing,
@@ -119,7 +151,7 @@ export class MilestoneService {
       where: { id: milestone.id },
       data: {
         status: 'SUBMITTED',
-        submissionRepoUrl: repoUrl,
+        submissionRepoUrl: data.assetUrl || repoUrl,
         submissionCommitSha: data.commitSha,
         submissionNotes: data.notes,
         submittedAt: new Date(),
@@ -136,6 +168,7 @@ export class MilestoneService {
       oracleTxHash: oracleTx.transactionHash,
       submissionHash,
       canonicalReportHash,
+      criteriaVerdicts: aiAnalysis.criteriaVerdicts || [],
     };
   }
 

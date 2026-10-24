@@ -18,6 +18,8 @@ import { apiFetch } from '../api/client.js';
 import { canonicalHash } from '../lib/canonicalHash.js';
 import { castVote as castVoteOnChain, finalizeDispute as finalizeDisputeOnChain } from '../chain/contract.js';
 import { Card, Button, Badge, Modal, AmountDisplay, CountdownTimer, TxStatus, EmptyState } from '../components/ui/index.js';
+import AiDisputeSummary from '../components/disputes/AiDisputeSummary.jsx';
+import ArbitratorCrossExaminer from '../components/disputes/ArbitratorCrossExaminer.jsx';
 
 export default function DisputesPage({ onOpenAgreement }) {
   const { address, isConnected, isMock } = useWallet();
@@ -217,52 +219,17 @@ export default function DisputesPage({ onOpenAgreement }) {
                   </Badge>
                 </div>
 
-                {/* Advisory AI Summary Card */}
-                <div className="p-4 rounded-card bg-sage/60 border border-forest/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-forest" />
-                      <h4 className="font-heading font-bold text-sm text-ink">
-                        Advisory AI Evidence Analysis
-                      </h4>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      loading={aiLoading}
-                      onClick={handleRequestAiSummary}
-                      icon={Sparkles}
-                    >
-                      {aiSummary ? 'Refresh AI Analysis' : 'Get AI Summary'}
-                    </Button>
-                  </div>
+                {/* Advisory AI Arbitrator Dossier & Claims vs. Fact Matrix */}
+                <AiDisputeSummary
+                  disputeId={selectedDispute.id}
+                  agreementId={selectedDispute.agreementId}
+                  initialSummary={aiSummary}
+                />
 
-                  {aiSummary ? (
-                    <div className="space-y-2.5 pt-2 text-xs leading-relaxed text-ink/80">
-                      <p>{aiSummary.summary}</p>
-                      <div className="p-3 rounded-[8px] bg-white border border-gray flex items-center justify-between">
-                        <div>
-                          <span className="font-heading font-semibold text-ink block">
-                            Recommended Settlement Split:
-                          </span>
-                          <span className="text-[11px] text-ink/60">
-                            Freelancer: {(aiSummary.recommendedShareBps / 100).toFixed(0)}% · Client: {(100 - aiSummary.recommendedShareBps / 100).toFixed(0)}%
-                          </span>
-                        </div>
-                        <span className="text-xs font-mono font-bold text-forest bg-sage-light px-2.5 py-1 rounded-full">
-                          Confidence: {(aiSummary.confidence * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-ink/60 italic">
-                        * Advisory only. The 3 selected human arbitrators determine the binding final settlement.
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-ink/60">
-                      Click "Get AI Summary" to synthesize off-chain Git commits, issue discussions, and acceptance criteria.
-                    </p>
-                  )}
-                </div>
+                {/* Interactive Arbitrator Evidence Cross-Examiner Tool */}
+                <ArbitratorCrossExaminer
+                  disputeId={selectedDispute.id}
+                />
 
                 {/* 3 Selected Arbitrators Panel */}
                 <div className="space-y-3">

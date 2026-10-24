@@ -5,6 +5,9 @@ export const submitMilestoneSchema = z.object({
   prUrl: z.string().trim().optional(),
   commitSha: z.string().trim().max(64).optional(),
   notes: z.string().trim().max(2000).optional(),
+  deliverableType: z.enum(['CODE', 'DESIGN', 'DOCUMENT', 'URL']).default('CODE').optional(),
+  deliverableContent: z.string().trim().max(10000).optional(),
+  assetUrl: z.string().trim().optional(),
 });
 
 export const reviewMilestoneSchema = z.object({

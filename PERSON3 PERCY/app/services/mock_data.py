@@ -4,6 +4,14 @@ from app.models.draft import DraftContractRequest, DraftContractResponse
 from app.models.review import ReviewContractRequest, ReviewContractResponse, ReviewFlag
 from app.models.github import GithubAnalyzeRequest, GithubAnalyzeResponse, GithubSignals, CriterionResult
 from app.models.dispute import DisputeSummaryRequest, DisputeSummaryResponse
+from app.models.multimodal import MultimodalVerifyRequest, MultimodalVerifyResponse, CriterionVerdict, VerdictEnum
+from app.models.dossier import (
+    ArbitratorDossierRequest,
+    ArbitratorDossierResponse,
+    ArbitratorQueryRequest,
+    ArbitratorQueryResponse,
+    ClaimEvidenceRow,
+)
 
 def get_mock_draft_response(req: DraftContractRequest) -> DraftContractResponse:
     now = datetime.now(timezone.utc)
@@ -240,3 +248,177 @@ def get_mock_plan_from_brief(req: Any) -> Any:
         rationale="Decomposed into 2 sequential phases (Architecture & Foundation -> Full Delivery) to optimize milestone escrow release and verify core functionality first.",
         suggested_tech_stack=["React 18", "FastAPI / Node.js", "Polygon / Ethereum", "Tailwind CSS", "Prisma / SQLAlchemy"]
     )
+
+def get_mock_multimodal_verify_response(req: MultimodalVerifyRequest) -> MultimodalVerifyResponse:
+    content_lower = req.deliverable_content.lower()
+    verdicts: List[CriterionVerdict] = []
+    
+    supported_weight = 0.0
+    total_criteria = len(req.acceptance_criteria)
+
+    for crit in req.acceptance_criteria:
+        words = [w.lower() for w in crit.split() if len(w) > 3]
+        matches = [w for w in words if w in content_lower]
+        
+        if len(matches) >= 2 or (len(words) <= 2 and len(matches) >= 1):
+            verdict = VerdictEnum.SUPPORTED
+            evidence = f"Verified matching references '{', '.join(matches)}' in submitted {req.deliverable_type} asset."
+            supported_weight += 1.0
+        elif len(matches) == 1:
+            verdict = VerdictEnum.UNCLEAR
+            evidence = f"Partial reference '{matches[0]}' observed, but comprehensive specification requires manual verification."
+            supported_weight += 0.5
+        else:
+            verdict = VerdictEnum.NOT_DEMONSTRATED
+            evidence = f"No direct components or references for '{crit}' identified in submitted {req.deliverable_type}."
+
+        verdicts.append(CriterionVerdict(
+            criterion=crit,
+            verdict=verdict,
+            evidence=evidence
+        ))
+
+    overall_progress_bps = int((supported_weight / max(1, total_criteria)) * 10000)
+    quality_score = max(40, min(100, int((supported_weight / max(1, total_criteria)) * 100)))
+    passing = overall_progress_bps >= (req.required_progress_bps or 7000)
+
+    summary = (
+        f"Multimodal {req.deliverable_type} verification completed. "
+        f"{sum(1 for v in verdicts if v.verdict == VerdictEnum.SUPPORTED)} of {total_criteria} criteria supported. "
+        f"Overall estimated deliverable progress: {overall_progress_bps / 100:.1f}%."
+    )
+
+    return MultimodalVerifyResponse(
+        overall_progress_bps=overall_progress_bps,
+        quality_score=quality_score,
+        summary=summary,
+        criteria_verdicts=verdicts,
+        tests_passing=passing
+    )
+
+def get_mock_arbitrator_dossier_response(req: ArbitratorDossierRequest) -> ArbitratorDossierResponse:
+    # Extract criteria from milestone terms
+    milestone_obj = req.milestone if isinstance(req.milestone, dict) else req.milestone.model_dump()
+    criteria = milestone_obj.get("acceptance_criteria") or milestone_obj.get("acceptanceCriteria") or [
+        "Core deliverable functionality",
+        "Automated unit & integration tests",
+        "Clean documentation and interface specs"
+    ]
+
+    claims_matrix = []
+    for idx, crit in enumerate(criteria):
+        if idx == 0:
+            client_claim = f"Client argues primary requirements were partially unmet: {req.rejection_reason[:80]}"
+            freelancer_claim = "Freelancer claims primary workflow functions as agreed in signed agreement."
+            factual_evidence = "Evidence and test run logs demonstrate 80% happy path operations succeed."
+            share = 7500
+        elif idx == 1:
+            client_claim = "Client points to unhandled exceptions and missing edge case coverage."
+            freelancer_claim = "Freelancer ran unit tests and confirmed all documented assertions pass."
+            factual_evidence = "Test logs confirm passing test suite, but stress tests for network drops were omitted."
+            share = 6500
+        else:
+            client_claim = "Client requested revisions that were not completed before deadline."
+            freelancer_claim = "Freelancer completed agreed scope; additional requests exceeded initial specification."
+            factual_evidence = "Terms diff indicates revision requests were beyond original milestone bounds."
+            share = 7000
+
+        claims_matrix.append(ClaimEvidenceRow(
+            criterion=crit,
+            client_claim=client_claim,
+            freelancer_claim=freelancer_claim,
+            factual_evidence=factual_evidence,
+            suggested_share_bps=share
+        ))
+
+    recommended_share_bps = int(sum(r.suggested_share_bps for r in claims_matrix) / max(1, len(claims_matrix)))
+
+    timeline = [
+        {"event": "Agreement Locked On-Chain", "actor": "Both Parties", "details": "Terms sealed with canonical SHA-256 hash."},
+        {"event": "Milestone Submitted", "actor": "Freelancer", "details": "Deliverable code and commit hashes submitted for review."},
+        {"event": "Milestone Rejected", "actor": "Client", "details": f"Reason: {req.rejection_reason}"},
+        {"event": "Dispute Initiated", "actor": "System", "details": "Escrow paused; 3 peer community arbitrators assigned."}
+    ]
+
+    unresolved_questions = [
+        "Did the client provide clear reproduction steps for the claimed failure before rejecting?",
+        "Did the freelancer communicate technical constraints prior to the milestone deadline?",
+        "Do the submitted automated tests satisfy the standard of good-faith engineering under Section 4?"
+    ]
+
+    executive_summary = (
+        f"Neutral Arbitrator Dossier for Dispute #{req.dispute_id}: "
+        f"Disagreement centers on deliverable completeness for milestone '{milestone_obj.get('title', 'Milestone')}'. "
+        f"Client rejection rationale: \"{req.rejection_reason}\". "
+        f"Objective evidence confirms {len(claims_matrix)} core criteria investigated, with substantial work verified. "
+        f"Advisory recommendation: {recommended_share_bps} bps ({recommended_share_bps / 100:.1f}%) to Freelancer, "
+        f"with the remaining balance refunded to Client."
+    )
+
+    return ArbitratorDossierResponse(
+        dispute_id=req.dispute_id,
+        executive_summary=executive_summary,
+        recommended_share_bps=recommended_share_bps,
+        claims_matrix=claims_matrix,
+        timeline=timeline,
+        unresolved_questions=unresolved_questions
+    )
+
+def get_mock_arbitrator_query_response(req: ArbitratorQueryRequest) -> ArbitratorQueryResponse:
+    q_lower = req.question.lower()
+    
+    if "deadline" in q_lower or "date" in q_lower or "late" in q_lower:
+        answer = (
+            "Based on verified on-chain timestamp records, the freelancer submitted the deliverable within the "
+            "allowable milestone window prior to grace period expiration. No late penalty clauses were triggered."
+        )
+        cited_evidence = [
+            "Milestone submission event timestamp in On-Chain Ledger",
+            "Agreement Terms Section 2.4: Late Penalty Schedule"
+        ]
+    elif "test" in q_lower or "pass" in q_lower or "jest" in q_lower or "crash" in q_lower:
+        answer = (
+            "The submitted repository contains an automated test suite where all 24 unit tests pass cleanly. "
+            "However, the error handling middleware fails gracefully only on expected input errors, but triggers an "
+            "unhandled promise rejection when simulated database timeouts occur."
+        )
+        cited_evidence = [
+            "Jest Automated Test Execution Log (commit a1b2c3)",
+            "Server error logs provided in Client Evidence Attachment #1"
+        ]
+    elif "figma" in q_lower or "design" in q_lower or "ui" in q_lower:
+        answer = (
+            "The client provided Figma design components on Day 2 of the agreement. The freelancer's submitted screens "
+            "faithfully implement the design tokens and layout grids, but mobile responsive break-points (375px) were missing."
+        )
+        cited_evidence = [
+            "Thread Message #4 from Client containing Figma URL",
+            "Figma frame inspection audit report"
+        ]
+    elif "revision" in q_lower or "feedback" in q_lower:
+        answer = (
+            "The signed agreement permits up to 2 formal revision rounds. Timeline records show the client issued 1 "
+            "formal revision notice before initiating the dispute."
+        )
+        cited_evidence = [
+            "Agreement Terms: maxRevisions = 2",
+            "Dispute Timeline: 1 review rejection logged"
+        ]
+    else:
+        answer = (
+            f"Regarding '{req.question}': An objective review of the signed agreement terms, submitted deliverables, "
+            f"and timeline events confirms that work was substantially delivered in good faith. Any minor deficiencies "
+            f"are advisory factors for the 3-arbitrator panel when setting the final payout percentage."
+        )
+        cited_evidence = [
+            "Signed Agreement Terms & Canonical Hash",
+            "Dispute Evidence Dossier Index"
+        ]
+
+    return ArbitratorQueryResponse(
+        dispute_id=req.dispute_id,
+        question=req.question,
+        answer=answer,
+        cited_evidence=cited_evidence
+    )
+

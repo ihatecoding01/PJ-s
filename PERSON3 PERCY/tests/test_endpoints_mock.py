@@ -183,3 +183,82 @@ def test_plan_from_brief_mock(client):
     # Check that milestone amounts sum to totalAmount
     total_ms = sum(float(m["amount"]) for m in data["terms"]["milestones"])
     assert total_ms == 3.0
+
+def test_multimodal_verify_mock(client):
+    payload = {
+        "deliverable_type": "DESIGN",
+        "deliverable_content": "Figma file containing Dashboard, Login screen, and Settings page with responsive layouts.",
+        "milestone_title": "UI Mockups",
+        "acceptance_criteria": [
+            "Dashboard screen with analytics charts",
+            "Dark mode variant",
+            "Mobile 375px responsive frame"
+        ]
+    }
+    res = client.post("/ai/deliverable/verify-multimodal", json=payload, headers=AUTH_HEADERS)
+    assert res.status_code == 200
+    data = res.json()
+    assert "overall_progress_bps" in data
+    assert 0 <= data["overall_progress_bps"] <= 10000
+    assert "quality_score" in data
+    assert 0 <= data["quality_score"] <= 100
+    assert "criteria_verdicts" in data
+    assert len(data["criteria_verdicts"]) == 3
+    # Check 4-state verdicts
+    verdicts = [v["verdict"] for v in data["criteria_verdicts"]]
+    valid_verdict_states = {"SUPPORTED", "UNCLEAR", "NOT_DEMONSTRATED", "CHECK_FAILED"}
+    assert all(v in valid_verdict_states for v in verdicts)
+    # Check that evidence is present for each
+    assert all(len(v["evidence"]) > 0 for v in data["criteria_verdicts"])
+    assert "summary" in data and len(data["summary"]) > 0
+
+def test_arbitrator_dossier_mock(client, valid_terms):
+    payload = {
+        "dispute_id": "dispute_test_99",
+        "terms": valid_terms,
+        "milestone": valid_terms["milestones"][0],
+        "submission": {
+            "commit_sha": "a1b2c3d4",
+            "notes": "Backend API complete with tests."
+        },
+        "rejection_reason": "API crashes on invalid passwords.",
+        "evidence": [
+            "Client: Login endpoint throws 500 when wrong password entered.",
+            "Freelancer: Standard unit tests pass with 200 OK."
+        ]
+    }
+    res = client.post("/ai/dispute/dossier", json=payload, headers=AUTH_HEADERS)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["dispute_id"] == "dispute_test_99"
+    assert len(data["executive_summary"]) > 0
+    assert 0 <= data["recommended_share_bps"] <= 10000
+    assert "claims_matrix" in data and len(data["claims_matrix"]) > 0
+    row = data["claims_matrix"][0]
+    assert "criterion" in row
+    assert "client_claim" in row
+    assert "freelancer_claim" in row
+    assert "factual_evidence" in row
+    assert 0 <= row["suggested_share_bps"] <= 10000
+    assert "timeline" in data and len(data["timeline"]) > 0
+    assert "unresolved_questions" in data and len(data["unresolved_questions"]) > 0
+
+def test_arbitrator_query_mock(client):
+    payload = {
+        "dispute_id": "dispute_test_99",
+        "question": "Did the tests pass during milestone submission?",
+        "context": {
+            "milestone": "Backend API",
+            "submission_commit": "a1b2c3d4"
+        }
+    }
+    res = client.post("/ai/dispute/query", json=payload, headers=AUTH_HEADERS)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["dispute_id"] == "dispute_test_99"
+    assert "tests" in data["question"].lower()
+    assert len(data["answer"]) > 0
+    assert "cited_evidence" in data
+    assert isinstance(data["cited_evidence"], list)
+    assert len(data["cited_evidence"]) > 0
+

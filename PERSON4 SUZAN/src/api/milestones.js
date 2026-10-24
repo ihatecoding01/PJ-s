@@ -4,10 +4,10 @@ import { apiFetch } from './client.js';
  * Submit milestone for review and trigger AI GitHub analysis
  * POST /agreements/:id/milestones/:idx/submit { commitSha, prUrl?, notes }
  */
-export async function submitMilestone(agreementId, idx, { commitSha, prUrl, notes }) {
+export async function submitMilestone(agreementId, idx, { commitSha, prUrl, notes, deliverableType, deliverableContent, assetUrl }) {
   return apiFetch(`/agreements/${agreementId}/milestones/${idx}/submit`, {
     method: 'POST',
-    body: JSON.stringify({ commitSha, prUrl, notes })
+    body: JSON.stringify({ commitSha, prUrl, notes, deliverableType, deliverableContent, assetUrl })
   });
 }
 

@@ -11,6 +11,19 @@ from app.models.github import (
 )
 from app.models.dispute import DisputeSummaryRequest, DisputeSummaryResponse, SubmissionInfo
 from app.models.plan import PlanFromBriefRequest, PlanFromBriefResponse
+from app.models.multimodal import (
+    VerdictEnum,
+    CriterionVerdict,
+    MultimodalVerifyRequest,
+    MultimodalVerifyResponse,
+)
+from app.models.dossier import (
+    ClaimEvidenceRow,
+    ArbitratorDossierRequest,
+    ArbitratorDossierResponse,
+    ArbitratorQueryRequest,
+    ArbitratorQueryResponse,
+)
 
 __all__ = [
     "ErrorDetail",
@@ -35,4 +48,13 @@ __all__ = [
     "DisputeSummaryRequest",
     "DisputeSummaryResponse",
     "SubmissionInfo",
+    "VerdictEnum",
+    "CriterionVerdict",
+    "MultimodalVerifyRequest",
+    "MultimodalVerifyResponse",
+    "ClaimEvidenceRow",
+    "ArbitratorDossierRequest",
+    "ArbitratorDossierResponse",
+    "ArbitratorQueryRequest",
+    "ArbitratorQueryResponse",
 ]

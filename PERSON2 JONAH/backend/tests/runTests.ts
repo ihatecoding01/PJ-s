@@ -307,6 +307,40 @@ async function main() {
       'POST /milestones/:id/submit analyzes repo via AI & records progress via Oracle'
     );
 
+    // Test Feature 3: Submit milestone 2 as non-code / multimodal deliverable
+    const milestone2Id = flApproveRes.data.data.milestones[1].id;
+    const submitNonCodeRes = await request(`/milestones/${milestone2Id}/submit`, {
+      method: 'POST',
+      headers: flAuthHeaders,
+      body: JSON.stringify({
+        deliverableType: 'DESIGN',
+        deliverableContent: 'Complete high-fidelity Figma components, interactive prototypes, and design tokens for desktop & mobile viewports.',
+        assetUrl: 'https://figma.com/file/fairwork-design-system-token-specs',
+        notes: 'Delivered all Figma screen flows and exportable SVGs for all core views.',
+      }),
+    });
+    assert(
+      submitNonCodeRes.status === 200 &&
+      submitNonCodeRes.data.data.milestone.status === 'SUBMITTED' &&
+      !!submitNonCodeRes.data.data.oracleTxHash,
+      'POST /milestones/:id/submit verifies multimodal deliverable via AI'
+    );
+    assert(
+      Array.isArray(submitNonCodeRes.data.data.criteriaVerdicts) &&
+      submitNonCodeRes.data.data.criteriaVerdicts.length > 0,
+      'Multimodal submission returns per-criterion 4-state verdicts'
+    );
+    assert(
+      ['SUPPORTED', 'UNCLEAR', 'NOT_DEMONSTRATED', 'CHECK_FAILED'].includes(
+        submitNonCodeRes.data.data.criteriaVerdicts[0].verdict
+      ),
+      'Criterion verdict adheres to 4-state objective classification'
+    );
+    assert(
+      !!submitNonCodeRes.data.data.criteriaVerdicts[0].evidence,
+      'Criterion verdict provides detailed evidence explanation'
+    );
+
     // Client reviews and approves milestone
     const reviewMilestoneRes = await request(`/milestones/${milestoneId}/review`, {
       method: 'POST',
@@ -358,6 +392,47 @@ async function main() {
     assert(
       aiDisputeRes.status === 200 && !!aiDisputeRes.data.data.oracleRecommendation,
       'POST /disputes/:id/ai-summary generates AI summary & oracle recommendation'
+    );
+
+    // Test Feature 4: AI Arbitrator Dossier & Evidence Cross-Examiner
+    const dossierRes = await request(`/disputes/${disputeId}/dossier`, {
+      headers: authHeaders,
+    });
+    assert(
+      dossierRes.status === 200 && !!dossierRes.data.data.executive_summary,
+      'GET /disputes/:id/dossier generates executive arbitrator briefing'
+    );
+    assert(
+      Array.isArray(dossierRes.data.data.claims_matrix) && dossierRes.data.data.claims_matrix.length > 0,
+      'Arbitrator dossier includes split Claims vs. Fact matrix'
+    );
+    assert(
+      dossierRes.data.data.claims_matrix.every(
+        (row: any) => row.client_claim && row.freelancer_claim && row.factual_evidence
+      ),
+      'Claims matrix rows contain client claim, freelancer defense, and objective evidence'
+    );
+    assert(
+      typeof dossierRes.data.data.recommended_share_bps === 'number' &&
+      dossierRes.data.data.recommended_share_bps >= 0,
+      'Arbitrator dossier provides pro-rated recommended share in basis points'
+    );
+
+    // Test Feature 4: Interactive Arbitrator Cross-Examiner Query
+    const queryRes = await request(`/disputes/${disputeId}/query`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        question: 'Did the automated tests pass prior to milestone rejection?',
+      }),
+    });
+    assert(
+      queryRes.status === 200 && !!queryRes.data.data.answer,
+      'POST /disputes/:id/query answers arbitrator questions'
+    );
+    assert(
+      Array.isArray(queryRes.data.data.cited_evidence) && queryRes.data.data.cited_evidence.length > 0,
+      'Arbitrator cross-examiner cites specific verifiable evidence'
     );
 
     // 8. Event Indexer & Timeline

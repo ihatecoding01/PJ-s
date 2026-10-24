@@ -167,4 +167,114 @@ export class DisputeService {
     }
     return dispute;
   }
+
+  static async getArbitratorDossier(disputeId: string) {
+    const dispute = await prisma.dispute.findUnique({
+      where: { id: disputeId },
+      include: {
+        agreement: {
+          include: {
+            milestones: {
+              include: {
+                progressReports: { orderBy: { createdAt: 'desc' }, take: 1 },
+              },
+            },
+            client: { select: { id: true, walletAddress: true, name: true } },
+            freelancer: { select: { id: true, walletAddress: true, name: true } },
+          },
+        },
+        evidences: {
+          include: {
+            uploadedBy: { select: { id: true, walletAddress: true, name: true } },
+          },
+        },
+      },
+    });
+
+    if (!dispute) {
+      throw new Error('Dispute not found');
+    }
+
+    let parsedTerms: any = {};
+    try {
+      parsedTerms = JSON.parse(dispute.agreement.termsJson);
+    } catch {
+      parsedTerms = { title: dispute.agreement.title };
+    }
+
+    const disputedMilestone =
+      dispute.agreement.milestones.find((m) => m.status === 'DISPUTED' || m.status === 'REJECTED' || m.status === 'SUBMITTED') ||
+      dispute.agreement.milestones[0];
+
+    const submissionInfo = {
+      commit_sha: disputedMilestone?.submissionCommitSha || undefined,
+      pr_url: disputedMilestone?.submissionRepoUrl || undefined,
+      notes: disputedMilestone?.submissionNotes || undefined,
+    };
+
+    const evidenceList = dispute.evidences.map(
+      (e) => `[${e.originalName}] (${e.uploadedBy?.name || 'Party'}): ${e.description || 'Uploaded file'} (hash: ${e.contentHash.substring(0, 8)})`
+    );
+
+    const dossier = await AiAdapter.getArbitratorDossier({
+      disputeId: dispute.id,
+      terms: parsedTerms,
+      milestone: disputedMilestone || { title: 'General Milestone' },
+      submission: submissionInfo,
+      rejectionReason: dispute.reason,
+      evidence: evidenceList,
+    });
+
+    return dossier;
+  }
+
+  static async queryArbitratorDossier(disputeId: string, question: string) {
+    const dispute = await prisma.dispute.findUnique({
+      where: { id: disputeId },
+      include: {
+        agreement: {
+          include: {
+            milestones: true,
+          },
+        },
+        evidences: true,
+      },
+    });
+
+    if (!dispute) {
+      throw new Error('Dispute not found');
+    }
+
+    let parsedTerms: any = {};
+    try {
+      parsedTerms = JSON.parse(dispute.agreement.termsJson);
+    } catch {}
+
+    const context = {
+      disputeReason: dispute.reason,
+      agreementTitle: dispute.agreement.title,
+      terms: parsedTerms,
+      milestones: dispute.agreement.milestones.map((m) => ({
+        index: m.milestoneIndex,
+        title: m.title,
+        status: m.status,
+        submissionNotes: m.submissionNotes,
+        submissionCommitSha: m.submissionCommitSha,
+      })),
+      evidenceCount: dispute.evidences.length,
+      evidences: dispute.evidences.map((e) => ({
+        name: e.originalName,
+        desc: e.description,
+        hash: e.contentHash,
+      })),
+    };
+
+    const result = await AiAdapter.queryArbitratorDossier({
+      disputeId,
+      question,
+      context,
+    });
+
+    return result;
+  }
 }

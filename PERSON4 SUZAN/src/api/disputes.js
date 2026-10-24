@@ -28,3 +28,22 @@ export async function getAiDisputeSummary(agreementId, idx) {
     method: 'POST'
   });
 }
+
+/**
+ * Get AI Arbitrator Executive Dossier with split Claims vs Fact matrix
+ * GET /disputes/:disputeId/dossier
+ */
+export async function getArbitratorDossier(disputeId) {
+  return apiFetch(`/disputes/${disputeId}/dossier`);
+}
+
+/**
+ * Ask the interactive Arbitrator Evidence Cross-Examiner
+ * POST /disputes/:disputeId/query { question }
+ */
+export async function queryArbitratorEvidence(disputeId, question) {
+  return apiFetch(`/disputes/${disputeId}/query`, {
+    method: 'POST',
+    body: JSON.stringify({ question })
+  });
+}

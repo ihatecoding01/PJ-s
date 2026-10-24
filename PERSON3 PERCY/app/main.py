@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
-from app.routers import health, draft, review, github, dispute
+from app.routers import health, draft, review, github, dispute, multimodal
 
 # Configure logging
 logging.basicConfig(
@@ -79,6 +79,7 @@ app.include_router(draft.router)
 app.include_router(review.router)
 app.include_router(github.router)
 app.include_router(dispute.router)
+app.include_router(multimodal.router)
 
 if __name__ == "__main__":
     import uvicorn

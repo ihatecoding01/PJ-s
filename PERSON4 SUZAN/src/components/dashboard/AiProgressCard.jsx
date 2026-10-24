@@ -11,7 +11,9 @@ import {
   FileCode,
   CheckSquare,
   AlertTriangle,
-  Info
+  Info,
+  HelpCircle,
+  MinusCircle
 } from 'lucide-react';
 import { formatBps } from '../../lib/formatters.js';
 
@@ -88,31 +90,67 @@ export default function AiProgressCard({ aiReport, requiredProgressBps = 8000 })
         </div>
       )}
 
-      {/* Criteria Breakdown */}
-      {aiReport.criteria_checklist && aiReport.criteria_checklist.length > 0 && (
+      {/* Criteria Breakdown & 4-State Verdicts */}
+      {(aiReport.criteria_verdicts || aiReport.criteriaVerdicts || aiReport.criteria_checklist) && (
         <div className="space-y-2 pt-2">
-          <h5 className="text-xs font-heading font-semibold uppercase tracking-wider text-ink/60">
-            Acceptance Criteria Verification
+          <h5 className="text-xs font-heading font-semibold uppercase tracking-wider text-ink/60 flex items-center justify-between">
+            <span>Acceptance Criteria Verification</span>
+            <span className="text-[10px] font-mono text-ink/40">4-State Objective Verdicts</span>
           </h5>
-          <div className="space-y-1.5">
-            {aiReport.criteria_checklist.map((item, idx) => (
-              <div
-                key={idx}
-                className="p-2.5 rounded-[8px] bg-white border border-gray flex items-start gap-2.5 text-xs"
-              >
-                {item.satisfied ? (
-                  <CheckCircle2 className="w-4 h-4 text-forest shrink-0 mt-0.5" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-coral shrink-0 mt-0.5" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <span className="font-heading font-semibold text-ink">{item.criterion}</span>
-                  {item.evidence && (
-                    <p className="text-[11px] text-ink/60 mt-0.5">{item.evidence}</p>
-                  )}
+          <div className="space-y-2">
+            {(aiReport.criteria_verdicts || aiReport.criteriaVerdicts || aiReport.criteria_checklist).map((item, idx) => {
+              const verdict = item.verdict || (item.satisfied ? 'SUPPORTED' : 'CHECK_FAILED');
+              const isSupported = verdict === 'SUPPORTED';
+              const isUnclear = verdict === 'UNCLEAR';
+              const isNotDemonstrated = verdict === 'NOT_DEMONSTRATED';
+              const isFailed = verdict === 'CHECK_FAILED';
+
+              const badgeColor = isSupported
+                ? 'bg-sage/70 border-forest/30 text-forest'
+                : isUnclear
+                ? 'bg-amber-50 border-amber-300 text-amber-800'
+                : isNotDemonstrated
+                ? 'bg-slate-100 border-slate-300 text-slate-700'
+                : 'bg-coral/20 border-coral/40 text-coral-900';
+
+              const VerdictIcon = isSupported
+                ? CheckCircle2
+                : isUnclear
+                ? HelpCircle
+                : isNotDemonstrated
+                ? MinusCircle
+                : XCircle;
+
+              const iconColor = isSupported
+                ? 'text-forest'
+                : isUnclear
+                ? 'text-amber-700'
+                : isNotDemonstrated
+                ? 'text-slate-600'
+                : 'text-coral';
+
+              return (
+                <div
+                  key={idx}
+                  className="p-3 rounded-[8px] bg-white border border-gray flex items-start gap-3 text-xs"
+                >
+                  <VerdictIcon className={`w-4 h-4 shrink-0 mt-0.5 ${iconColor}`} />
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="font-heading font-semibold text-ink">{item.criterion}</span>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full border font-heading font-bold uppercase tracking-wider ${badgeColor}`}
+                      >
+                        {verdict.replace('_', ' ')}
+                      </span>
+                    </div>
+                    {item.evidence && (
+                      <p className="text-[11px] text-ink/70 leading-relaxed font-sans">{item.evidence}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

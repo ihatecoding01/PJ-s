@@ -60,4 +60,26 @@ export class DisputeController {
       next(error);
     }
   }
+
+  static async getDossier(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const dossier = await DisputeService.getArbitratorDossier(req.params.id);
+      return sendSuccess(res, dossier, 200, 'Arbitrator dossier retrieved');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async queryDossier(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const question = req.body.question;
+      if (!question || typeof question !== 'string') {
+        return sendError(res, 'question string is required', 400);
+      }
+      const answer = await DisputeService.queryArbitratorDossier(req.params.id, question);
+      return sendSuccess(res, answer, 200, 'Arbitrator query answered');
+    } catch (error) {
+      next(error);
+    }
+  }
 }
