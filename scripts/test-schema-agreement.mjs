@@ -6,7 +6,7 @@ import { execSync } from 'child_process';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 
-const validTermsPath = path.join(rootDir, 'PERSON3 YASHDEEP', 'tests', 'fixtures', 'sample_terms.json');
+const validTermsPath = path.join(rootDir, 'PERSON3 PERCY', 'tests', 'fixtures', 'sample_terms.json');
 const validTerms = JSON.parse(fs.readFileSync(validTermsPath, 'utf8'));
 
 // Invalid terms document: invalid client address, missing milestones, negative penalty
@@ -47,35 +47,35 @@ try {
   console.log("✓ Suzan validator: INVALID terms REJECTED as expected:", e.message);
 }
 
-// 2. Test Dhruv's Backend Validator (agreementTermsSchema)
-console.log("\n--- Testing Dhruv's Backend Validator (agreementTermsSchema) ---");
-const dhruvModuleUrl = pathToFileURL(path.join(rootDir, 'PERSON2 DHRUV', 'backend', 'src', 'modules', 'agreements', 'agreement.schema.ts')).href;
-const { agreementTermsSchema } = await import(dhruvModuleUrl);
+// 2. Test Jonah's Backend Validator (agreementTermsSchema)
+console.log("\n--- Testing Jonah's Backend Validator (agreementTermsSchema) ---");
+const jonahModuleUrl = pathToFileURL(path.join(rootDir, 'PERSON2 JONAH', 'backend', 'src', 'modules', 'agreements', 'agreement.schema.ts')).href;
+const { agreementTermsSchema } = await import(jonahModuleUrl);
 
 const dhruvValidResult = agreementTermsSchema.safeParse(validTerms);
 const dhruvValidPass = dhruvValidResult.success;
 if (dhruvValidPass) {
-  console.log("✓ Dhruv validator: VALID terms ACCEPTED");
+  console.log("✓ Jonah validator: VALID terms ACCEPTED");
 } else {
-  console.error("✗ Dhruv validator rejected valid terms:", dhruvValidResult.error);
+  console.error("✗ Jonah validator rejected valid terms:", dhruvValidResult.error);
 }
 
 const dhruvInvalidResult = agreementTermsSchema.safeParse(invalidTerms);
 const dhruvInvalidPass = !dhruvInvalidResult.success;
 if (dhruvInvalidPass) {
-  console.log("✓ Dhruv validator: INVALID terms REJECTED as expected:", dhruvInvalidResult.error?.issues[0]?.message);
+  console.log("✓ Jonah validator: INVALID terms REJECTED as expected:", dhruvInvalidResult.error?.issues[0]?.message);
 } else {
-  console.error("✗ Dhruv validator ACCEPTED invalid terms when it should fail!");
+  console.error("✗ Jonah validator ACCEPTED invalid terms when it should fail!");
 }
 
-// 3. Test Yashdeep's Python Service Validator
-console.log("\n--- Testing Yashdeep's Python Validator (validate_agreement_terms & AgreementTerms) ---");
-const pyExecutable = path.join(rootDir, 'PERSON3 YASHDEEP', 'venv', 'Scripts', 'python.exe');
+// 3. Test Percy's Python Service Validator
+console.log("\n--- Testing Percy's Python Validator (validate_agreement_terms & AgreementTerms) ---");
+const pyExecutable = path.join(rootDir, 'PERSON3 PERCY', 'venv', 'Scripts', 'python.exe');
 
 const pyRunner = path.join(rootDir, 'scripts', 'test_py_terms.py');
 const pyRunnerCode = `
 import json, sys, os
-sys.path.insert(0, r"""${path.join(rootDir, 'PERSON3 YASHDEEP')}""")
+sys.path.insert(0, r"""${path.join(rootDir, 'PERSON3 PERCY')}""")
 from app.services.validator import validate_agreement_terms
 from app.models.terms import AgreementTerms
 
@@ -111,7 +111,7 @@ let yashdeepInvalidPass = false;
 
 try {
   const pyOutput = execSync(`"${pyExecutable}" "${pyRunner}"`, {
-    cwd: path.join(rootDir, 'PERSON3 YASHDEEP'),
+    cwd: path.join(rootDir, 'PERSON3 PERCY'),
     encoding: 'utf8'
   });
   yashdeepValidPass = pyOutput.includes("YASHDEEP_VALID:True");

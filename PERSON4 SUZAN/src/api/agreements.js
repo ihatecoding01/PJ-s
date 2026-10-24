@@ -82,3 +82,31 @@ export async function getPayments(id) {
 export async function getAlerts(id) {
   return apiFetch(`/agreements/${id}/alerts`);
 }
+
+/**
+ * Generate plan and draft agreement autonomously from a project brief
+ * POST /agreements/plan-from-brief
+ */
+export async function planFromBrief(data) {
+  return apiFetch('/agreements/plan-from-brief', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+/**
+ * Audit agreement terms for clarity, fairness, and pre-lock escrow risks
+ * POST /agreements/:id/audit or POST /agreements/audit
+ */
+export async function auditAgreement(id, terms) {
+  if (id) {
+    return apiFetch(`/agreements/${id}/audit`, {
+      method: 'POST',
+      body: terms ? JSON.stringify({ terms }) : undefined
+    });
+  }
+  return apiFetch('/agreements/audit', {
+    method: 'POST',
+    body: JSON.stringify({ terms })
+  });
+}

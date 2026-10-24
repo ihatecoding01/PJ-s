@@ -10,6 +10,7 @@ from app.models.github import (
     CriterionResult,
 )
 from app.models.dispute import DisputeSummaryRequest, DisputeSummaryResponse, SubmissionInfo
+from app.models.plan import PlanFromBriefRequest, PlanFromBriefResponse
 
 __all__ = [
     "ErrorDetail",
@@ -21,6 +22,8 @@ __all__ = [
     "GitHubRepoInfo",
     "DraftContractRequest",
     "DraftContractResponse",
+    "PlanFromBriefRequest",
+    "PlanFromBriefResponse",
     "ReviewContractRequest",
     "ReviewContractResponse",
     "ReviewFlag",

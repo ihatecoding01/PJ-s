@@ -18,6 +18,15 @@ export const draftAgreementRequestSchema = z
     };
   });
 
+export const planFromBriefRequestSchema = z.object({
+  brief: z.string().trim().min(5),
+  totalBudget: z.number().positive().optional(),
+  currency: z.string().optional(),
+  freelancerId: z.string().optional(),
+  freelancerAddress: z.string().optional(),
+  repoUrl: z.string().optional(),
+});
+
 export const milestoneTermSchema = z
   .object({
     milestoneIndex: z.number().int().nonnegative().optional(),

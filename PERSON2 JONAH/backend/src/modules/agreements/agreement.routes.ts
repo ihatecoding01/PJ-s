@@ -12,10 +12,13 @@ const router = Router();
 router.use(authenticate);
 
 router.post('/draft', AgreementController.draftAgreement);
+router.post('/plan-from-brief', AgreementController.planFromBrief);
+router.post('/audit', AgreementController.auditAgreement);
 router.get('/', AgreementController.listUserAgreements);
 router.get('/:id', AgreementController.getById);
 router.put('/:id', AgreementController.editAgreement);
 router.put('/:id/terms', AgreementController.editAgreement);
+router.post('/:id/audit', AgreementController.auditAgreement);
 router.post('/:id/approve', AgreementController.approveAgreement);
 router.post('/:id/approve-draft', AgreementController.approveAgreement);
 router.post('/:id/link', AgreementController.linkAgreement);

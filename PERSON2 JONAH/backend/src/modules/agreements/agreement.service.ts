@@ -40,9 +40,9 @@ export class AgreementService {
         orderBy: { createdAt: 'asc' },
         take: 20,
       });
-      threadContext = messages.map((m) => ({
-        senderId: m.senderId,
-        content: m.content,
+      threadContext = (messages as any[]).map((m: any) => ({
+        senderId: String(m.senderId),
+        content: String(m.content),
       }));
     }
 
@@ -127,6 +127,102 @@ export class AgreementService {
     });
 
     return agreement;
+  }
+
+  /**
+   * Generates a complete project plan and agreement draft from a high-level brief.
+   */
+  static async planFromBrief(
+    creatorId: string,
+    params: {
+      brief: string;
+      totalBudget?: number;
+      currency?: string;
+      freelancerId?: string;
+      freelancerAddress?: string;
+      repoUrl?: string;
+    }
+  ) {
+    const client = await prisma.user.findUnique({ where: { id: creatorId } });
+    if (!client) throw new Error('Client user not found');
+
+    let freelancerId = params.freelancerId;
+    if (!freelancerId && params.freelancerAddress) {
+      let formattedAddr = params.freelancerAddress;
+      try {
+        formattedAddr = ethers.getAddress(params.freelancerAddress.toLowerCase());
+      } catch {}
+      const existingUser = await prisma.user.findFirst({ where: { walletAddress: formattedAddr } });
+      if (existingUser) {
+        freelancerId = existingUser.id;
+      } else {
+        const newUser = await prisma.user.create({
+          data: {
+            walletAddress: formattedAddr,
+            nonce: Math.random().toString(36).substring(2),
+            role: 'FREELANCER',
+          },
+        });
+        freelancerId = newUser.id;
+      }
+    }
+
+    if (!freelancerId) {
+      const defaultFreelancer = await prisma.user.findFirst({
+        where: { role: { in: ['FREELANCER', 'BOTH'] }, id: { not: creatorId } },
+      });
+      freelancerId = defaultFreelancer?.id || creatorId;
+    }
+
+    const freelancer = await prisma.user.findUnique({ where: { id: freelancerId } });
+
+    // Call AI Adapter planFromBrief
+    const planResult = await AiAdapter.planFromBrief({
+      brief: params.brief,
+      totalBudget: params.totalBudget || 1.0,
+      currency: params.currency || 'ETH',
+      clientAddress: client.walletAddress,
+      freelancerAddress: freelancer?.walletAddress || '0x2222222222222222222222222222222222222222',
+      repoUrl: params.repoUrl || 'https://github.com/fairwork-test/project-repo',
+    });
+
+    const rawTerms = planResult.terms;
+    const terms = agreementTermsSchema.parse(rawTerms);
+
+    const agreement = await prisma.agreement.create({
+      data: {
+        clientId: creatorId,
+        freelancerId,
+        title: terms.title,
+        termsJson: JSON.stringify(terms),
+        status: 'DRAFT',
+        milestones: {
+          create: terms.milestones.map((m) => {
+            const deadline = new Date();
+            deadline.setDate(deadline.getDate() + (m.deadlineDays || 7));
+            return {
+              milestoneIndex: m.milestoneIndex,
+              title: m.title,
+              description: m.description,
+              amount: m.amount,
+              deadline,
+              status: 'PENDING',
+            };
+          }),
+        },
+      },
+      include: {
+        milestones: true,
+        client: { select: { id: true, walletAddress: true, name: true } },
+        freelancer: { select: { id: true, walletAddress: true, name: true } },
+      },
+    });
+
+    return {
+      agreement,
+      rationale: planResult.rationale,
+      suggestedTechStack: planResult.suggestedTechStack,
+    };
   }
 
   static async getById(id: string) {
@@ -379,5 +475,59 @@ export class AgreementService {
         milestones: true,
       },
     });
+  }
+
+  /**
+   * Audits agreement terms for clarity, fairness, and pre-lock escrow risks.
+   * Accepts either an agreement ID (auditing stored draft) or explicit terms (auditing unsaved draft).
+   */
+  static async auditAgreement(agreementId?: string, termsOverride?: any) {
+    let termsToAudit: any = termsOverride;
+
+    if (!termsToAudit && agreementId) {
+      const agreement = await prisma.agreement.findUnique({
+        where: { id: agreementId },
+        include: { milestones: true },
+      });
+
+      if (!agreement) {
+        const err: any = new Error('Agreement not found');
+        err.statusCode = 404;
+        err.code = 'NOT_FOUND';
+        throw err;
+      }
+
+      if (agreement.termsJson) {
+        try {
+          termsToAudit = typeof agreement.termsJson === 'string'
+            ? JSON.parse(agreement.termsJson)
+            : agreement.termsJson;
+        } catch {
+          termsToAudit = null;
+        }
+      }
+
+      if (!termsToAudit) {
+        termsToAudit = {
+          title: agreement.title,
+          milestones: (agreement.milestones || []).map((m: any) => ({
+            index: m.milestoneIndex,
+            title: m.title,
+            description: m.description,
+            amount: String(m.amount),
+            acceptanceCriteria: m.deliverables || [m.description || 'Deliverable verification'],
+          })),
+        };
+      }
+    }
+
+    if (!termsToAudit) {
+      const err: any = new Error('No agreement terms provided for audit');
+      err.statusCode = 400;
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    return await AiAdapter.reviewAgreement(termsToAudit);
   }
 }

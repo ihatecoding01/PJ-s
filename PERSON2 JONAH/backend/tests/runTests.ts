@@ -188,6 +188,64 @@ async function main() {
     const initialMilestones = draftRes.data.data.milestones;
     assert(initialMilestones.length >= 2, 'Agreement has generated milestones');
 
+    // Test Feature 1: Brief-to-Plan Generator
+    const planRes = await request('/agreements/plan-from-brief', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        brief: 'Build a decentralized cross-chain bridge interface with MetaMask signing and automated unit tests.',
+        totalBudget: 2.5,
+        currency: 'MATIC',
+        freelancerId: flUserId,
+      }),
+    });
+    assert(planRes.status === 201 && planRes.data.data.agreement.status === 'DRAFT', 'POST /agreements/plan-from-brief creates planned draft');
+    assert(planRes.data.data.agreement.milestones.length >= 2, 'Plan from brief generated multiple milestones');
+    assert(!!planRes.data.data.rationale, 'Plan from brief returns architectural rationale');
+
+    // Test Feature 2: Agreement Clarity Linter & Pre-Lock Risk Auditor
+    const auditRes = await request(`/agreements/${agreementId}/audit`, {
+      method: 'POST',
+      headers: authHeaders,
+    });
+    assert(auditRes.status === 200, 'POST /agreements/:id/audit returns 200 OK');
+    assert(typeof auditRes.data.data.fairness_score === 'number', 'Audit returns fairness_score');
+    assert(Array.isArray(auditRes.data.data.flags), 'Audit returns flags array');
+    assert(!!auditRes.data.data.summary, 'Audit returns high-level summary');
+
+    // Test Feature 2 with subjective clauses & high penalties
+    const subjectiveAuditRes = await request('/agreements/audit', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        terms: {
+          title: 'Subjective UI Test',
+          totalBudget: 1.0,
+          currency: 'ETH',
+          latePenaltyBpsPerDay: 600,
+          maxLatePenaltyBps: 6000,
+          milestones: [
+            {
+              title: 'Phase 1',
+              amount: 1.0,
+              acceptanceCriteria: ['Make clean code and nice UI'],
+            },
+          ],
+        },
+      }),
+    });
+    assert(subjectiveAuditRes.status === 200, 'POST /agreements/audit returns 200 OK on raw terms');
+    assert(subjectiveAuditRes.data.data.fairness_score < 70, 'Clarity linter marks vague terms with low score');
+    const subjectiveFlags = subjectiveAuditRes.data.data.flags;
+    assert(
+      subjectiveFlags.some((f: any) => f.suggested_rewrite && f.suggested_rewrite.includes('ESLint')),
+      'Clarity linter provides auto-rewrite for "clean code"'
+    );
+    assert(
+      subjectiveFlags.some((f: any) => f.severity === 'CRITICAL'),
+      'Risk auditor flags severe penalty rates as CRITICAL'
+    );
+
     // Approve as client first
     const clientApproveRes = await request(`/agreements/${agreementId}/approve`, {
       method: 'POST',

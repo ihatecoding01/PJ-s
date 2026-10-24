@@ -34,11 +34,14 @@ Check the agreement terms against these fairness criteria:
 Return strictly valid JSON with no markdown code fences:
 {
   "fairness_score": 85,
+  "summary": "Agreement has balanced milestones, but milestone 1 contains subjective criteria and slightly aggressive penalty terms.",
   "flags": [
     {
       "clause": "milestones[0].acceptanceCriteria[1]",
       "issue": "Criterion 'system should be fast' is unmeasurable.",
-      "suggestion": "Specify measurable metric, e.g. 'p95 API response time under 200ms on load test'."
+      "suggestion": "Specify measurable metric, e.g. 'p95 API response time under 200ms on load test'.",
+      "suggested_rewrite": "API response time p95 stays under 200ms under load benchmark of 100 concurrent requests",
+      "severity": "WARNING"
     }
   ]
 }

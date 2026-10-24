@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { AgreementService } from './agreement.service';
-import { draftAgreementRequestSchema, editAgreementSchema } from './agreement.schema';
+import { draftAgreementRequestSchema, editAgreementSchema, planFromBriefRequestSchema } from './agreement.schema';
 import { sendSuccess } from '../../utils/response';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { z } from 'zod';
@@ -23,6 +23,16 @@ export class AgreementController {
       const data = draftAgreementRequestSchema.parse(req.body);
       const agreement = await AgreementService.draftAgreement(req.user!.id, data);
       return sendSuccess(res, agreement, 201, 'Agreement draft generated');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async planFromBrief(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const data = planFromBriefRequestSchema.parse(req.body);
+      const result = await AgreementService.planFromBrief(req.user!.id, data);
+      return sendSuccess(res, result, 201, 'Autonomous plan and draft agreement created from brief');
     } catch (error) {
       next(error);
     }
@@ -70,6 +80,17 @@ export class AgreementController {
       const data = linkAgreementSchema.parse(req.body);
       const linked = await AgreementService.linkOnChain(req.params.id, req.user!.id, data);
       return sendSuccess(res, linked, 200, 'Agreement verified and linked to on-chain contract');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async auditAgreement(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const agreementId = req.params.id;
+      const terms = req.body?.terms;
+      const result = await AgreementService.auditAgreement(agreementId, terms);
+      return sendSuccess(res, result, 200, 'Agreement clarity and risk audit completed');
     } catch (error) {
       next(error);
     }

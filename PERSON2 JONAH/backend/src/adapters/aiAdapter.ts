@@ -207,14 +207,277 @@ export class AiAdapter {
   }
 
   /**
-   * Reviews an agreement draft for unfair terms or missing items.
+   * Autonomously decomposes a client brief into structured AgreementTerms.
    */
-  static async reviewAgreement(terms: any): Promise<any> {
+  static async planFromBrief(params: {
+    brief: string;
+    totalBudget?: number;
+    currency?: string;
+    clientAddress?: string;
+    freelancerAddress?: string;
+    repoUrl?: string;
+  }): Promise<{ terms: AgreementTerms; rationale?: string; suggestedTechStack?: string[] }> {
     if (env.AI_MOCK) {
+      const budget = params.totalBudget || 1.0;
+      const m1Budget = Math.round(budget * 0.4 * 100) / 100;
+      const m2Budget = Math.round((budget - m1Budget) * 100) / 100;
       return {
-        summary: 'Agreement terms are balanced and compliant with platform policies.',
-        flags: [],
-        score: 95,
+        terms: {
+          title: `Plan: ${params.brief.slice(0, 40)}`,
+          summary: `Autonomous milestone plan generated from project brief: '${params.brief}'.`,
+          description: `Autonomous milestone plan generated from project brief: '${params.brief}'.`,
+          totalBudget: budget,
+          totalAmount: String(budget),
+          currency: params.currency || 'ETH',
+          paymentMode: 'MILESTONE',
+          latePenaltyBpsPerDay: 100,
+          maxLatePenaltyBps: 3000,
+          reviewWindowDays: 5,
+          graceDays: 3,
+          maxRevisions: 2,
+          revisionPolicy: 'Up to 2 revision rounds per milestone within 5 days of submission.',
+          cancellationPolicy: 'Mutual consensus or Escrow arbitration upon formal dispute filing.',
+          client: (params.clientAddress || '0x1111111111111111111111111111111111111111').toLowerCase(),
+          freelancer: (params.freelancerAddress || '0x2222222222222222222222222222222222222222').toLowerCase(),
+          github: {
+            repoUrl: params.repoUrl || 'https://github.com/fairwork-test/project-repo',
+            branch: 'main',
+          },
+          milestones: [
+            {
+              milestoneIndex: 0,
+              index: 0,
+              title: 'Phase 1: Architecture, Core Schemas & Auth',
+              description: 'Establish repository foundation, database migrations, authentication endpoints, and unit test suite.',
+              amount: m1Budget,
+              deadlineDays: 7,
+              deliverables: ['Database Schema', 'Authentication Endpoints', 'Unit Test Suite'],
+              acceptanceCriteria: [
+                'Database schema migrations run cleanly with zero errors',
+                'Core authentication API endpoints return 200 OK with test assertions'
+              ],
+              requiredProgressBps: 8000,
+            },
+            {
+              milestoneIndex: 1,
+              index: 1,
+              title: 'Phase 2: Full System Integration & E2E Delivery',
+              description: 'Complete remaining application workflows, automated end-to-end testing, and production deployment configuration.',
+              amount: m2Budget,
+              deadlineDays: 14,
+              deliverables: ['E2E Test Suite', 'Production Build', 'Deployment Documentation'],
+              acceptanceCriteria: [
+                'All functional user workflows pass end-to-end integration tests',
+                'Production bundle builds with zero errors or unresolved dependencies'
+              ],
+              requiredProgressBps: 8500,
+            },
+          ],
+        },
+        rationale: 'Decomposed into 2 sequential phases to minimize counterparty risk and ensure clean milestone-based escrow delivery.',
+        suggestedTechStack: ['React 18', 'FastAPI / Node.js', 'Polygon / Ethereum', 'Tailwind CSS'],
+      };
+    }
+
+    try {
+      const response = await fetch(`${env.AI_SERVICE_URL}/ai/contract/plan-from-brief`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          brief: params.brief,
+          total_budget: params.totalBudget || 1.0,
+          currency: params.currency || 'ETH',
+          client_address: params.clientAddress || '0x1111111111111111111111111111111111111111',
+          freelancer_address: params.freelancerAddress || '0x2222222222222222222222222222222222222222',
+          repo_url: params.repoUrl || 'https://github.com/fairwork-test/project-repo',
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      if (!response.ok) {
+        const errJson = (await response.json().catch(() => null)) as any;
+        const message = errJson?.detail?.message || `AI Service error: ${response.statusText}`;
+        throw new Error(message);
+      }
+
+      const resData = (await response.json()) as any;
+      const terms = resData.terms;
+      const budgetNum = parseFloat(terms.totalAmount) || 1.0;
+
+      return {
+        terms: {
+          ...terms,
+          totalBudget: budgetNum,
+          summary: terms.description || terms.title,
+          revisionPolicy: `Up to ${terms.maxRevisions || 2} revision rounds per milestone.`,
+          cancellationPolicy: 'Mutual consensus or Escrow arbitration upon formal dispute filing.',
+          milestones: (terms.milestones || []).map((m: any, idx: number) => ({
+            ...m,
+            milestoneIndex: m.index ?? idx,
+            amount: parseFloat(m.amount) || 0.5,
+            deadlineDays: 7,
+            deliverables: m.acceptanceCriteria || [],
+          })),
+        },
+        rationale: resData.rationale,
+        suggestedTechStack: resData.suggested_tech_stack,
+      };
+    } catch (error: any) {
+      console.warn(`[AI Service Fallback] Calling mock planFromBrief due to error: ${error.message}`);
+      // Return deterministic fallback
+      const budget = params.totalBudget || 1.0;
+      return {
+        terms: {
+          title: `Plan: ${params.brief.slice(0, 40)}`,
+          summary: `Autonomous milestone plan generated from project brief: '${params.brief}'.`,
+          description: `Autonomous milestone plan generated from project brief: '${params.brief}'.`,
+          totalBudget: budget,
+          totalAmount: String(budget),
+          currency: params.currency || 'ETH',
+          paymentMode: 'MILESTONE',
+          latePenaltyBpsPerDay: 100,
+          maxLatePenaltyBps: 3000,
+          reviewWindowDays: 5,
+          graceDays: 3,
+          maxRevisions: 2,
+          revisionPolicy: 'Up to 2 revision rounds per milestone within 5 days of submission.',
+          cancellationPolicy: 'Mutual consensus or Escrow arbitration upon formal dispute filing.',
+          client: (params.clientAddress || '0x1111111111111111111111111111111111111111').toLowerCase(),
+          freelancer: (params.freelancerAddress || '0x2222222222222222222222222222222222222222').toLowerCase(),
+          github: {
+            repoUrl: params.repoUrl || 'https://github.com/fairwork-test/project-repo',
+            branch: 'main',
+          },
+          milestones: [
+            {
+              milestoneIndex: 0,
+              index: 0,
+              title: 'Phase 1: Architecture, Core Schemas & Auth',
+              description: 'Establish repository foundation, database migrations, authentication endpoints, and unit test suite.',
+              amount: Math.round(budget * 0.4 * 100) / 100,
+              deadlineDays: 7,
+              deliverables: ['Database Schema', 'Authentication Endpoints'],
+              acceptanceCriteria: [
+                'Database schema migrations run cleanly with zero errors',
+                'Core authentication API endpoints return 200 OK with test assertions'
+              ],
+              requiredProgressBps: 8000,
+            },
+            {
+              milestoneIndex: 1,
+              index: 1,
+              title: 'Phase 2: Full System Integration & E2E Delivery',
+              description: 'Complete remaining application workflows and automated end-to-end testing.',
+              amount: Math.round(budget * 0.6 * 100) / 100,
+              deadlineDays: 14,
+              deliverables: ['E2E Test Suite', 'Production Build'],
+              acceptanceCriteria: [
+                'All functional user workflows pass end-to-end integration tests',
+                'Production bundle builds with zero errors'
+              ],
+              requiredProgressBps: 8500,
+            },
+          ],
+        },
+        rationale: 'Decomposed into 2 sequential phases to minimize counterparty risk.',
+        suggestedTechStack: ['React 18', 'Node.js', 'Polygon', 'Tailwind CSS'],
+      };
+    }
+  }
+
+  /**
+   * Reviews an agreement draft for unfair terms, ambiguity, or missing items.
+   */
+  static async reviewAgreement(terms: any): Promise<{
+    fairness_score: number;
+    summary: string;
+    flags: Array<{
+      clause: string;
+      issue: string;
+      suggestion: string;
+      suggested_rewrite?: string;
+      severity: string;
+    }>;
+  }> {
+    if (env.AI_MOCK) {
+      const flags: Array<{
+        clause: string;
+        issue: string;
+        suggestion: string;
+        suggested_rewrite?: string;
+        severity: string;
+      }> = [];
+
+      const penaltyPerDay = terms?.latePenaltyBpsPerDay ?? 100;
+      const maxPenalty = terms?.maxLatePenaltyBps ?? 3000;
+
+      if (penaltyPerDay > 500) {
+        flags.push({
+          clause: 'latePenaltyBpsPerDay',
+          issue: `Daily late penalty rate (${penaltyPerDay} bps / ${penaltyPerDay / 100}% per day) is unusually harsh.`,
+          suggestion: 'Cap daily penalty at 100-200 bps (1-2% per day).',
+          suggested_rewrite: '100',
+          severity: 'CRITICAL',
+        });
+      }
+
+      if (maxPenalty > 5000) {
+        flags.push({
+          clause: 'maxLatePenaltyBps',
+          issue: `Maximum penalty cap (${maxPenalty} bps / ${maxPenalty / 100}%) allows forfeiture of more than half agreement value.`,
+          suggestion: 'Cap maximum cumulative penalty at 2000-3000 bps (20-30%).',
+          suggested_rewrite: '3000',
+          severity: 'CRITICAL',
+        });
+      }
+
+      const vagueDict: Record<string, string> = {
+        'smooth': 'maintains 60fps frame rate without noticeable stutter',
+        'clean code': 'passes ESLint/Pylint with zero errors and TypeScript strict mode enabled',
+        'fast': 'p95 API response time stays under 250ms under a 50 concurrent user benchmark',
+        'high quality': 'achieves >80% automated unit test branch coverage',
+        'good quality': 'achieves >80% automated unit test branch coverage',
+        'nice ui': 'implements responsive layout supporting 375px mobile and 1440px desktop breakpoints',
+        'well written': 'fully documented with JSDoc/type definitions and passes static linter',
+        'high performance': 'loads in under 1.5 seconds on a standard 4G connection',
+        'satisfactory': 'fulfills all listed acceptance test suites with 100% pass rate',
+      };
+
+      const milestones = terms?.milestones || [];
+      milestones.forEach((m: any, idx: number) => {
+        const criteria = m.acceptanceCriteria || m.deliverables || [];
+        criteria.forEach((c: string, cIdx: number) => {
+          const lower = String(c).toLowerCase();
+          for (const [vagueWord, rewritePhrase] of Object.entries(vagueDict)) {
+            if (lower.includes(vagueWord)) {
+              const regex = new RegExp(vagueWord, 'gi');
+              flags.push({
+                clause: `milestones[${idx}].acceptanceCriteria[${cIdx}]`,
+                issue: `Subjective phrasing detected: '${vagueWord}'.`,
+                suggestion: 'Replace with measurable objective criteria.',
+                suggested_rewrite: String(c).replace(regex, rewritePhrase),
+                severity: 'WARNING',
+              });
+            }
+          }
+        });
+      });
+
+      let deductions = 0;
+      for (const f of flags) {
+        if (f.severity === 'CRITICAL') deductions += 15;
+        else if (f.severity === 'WARNING') deductions += 9;
+        else deductions += 3;
+      }
+      const score = Math.max(20, Math.min(100, 98 - deductions));
+      const summary = flags.length > 0
+        ? `Clarity audit flagged ${flags.length} issue(s). Fairness score is ${score}/100.`
+        : 'Agreement terms are balanced, unambiguous, and compliant with platform policies.';
+
+      return {
+        fairness_score: score,
+        summary,
+        flags,
       };
     }
 
@@ -232,13 +495,18 @@ export class AiAdapter {
         throw new Error(message);
       }
 
-      return await response.json();
+      const data = (await response.json()) as any;
+      return {
+        fairness_score: data.fairness_score ?? data.score ?? 85,
+        summary: data.summary || 'Agreement review completed.',
+        flags: data.flags || [],
+      };
     } catch (err: any) {
       console.warn(`[AI Service Fallback] Calling mock AI review due to error: ${err.message}`);
       return {
+        fairness_score: 90,
         summary: 'Agreement review completed via fallback.',
         flags: [],
-        score: 90,
       };
     }
   }

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getAgreement, updateAgreementTerms, approveDraft } from '../api/agreements.js';
+import { getAgreement, updateAgreementTerms, approveDraft, planFromBrief, auditAgreement } from '../api/agreements.js';
 import { useWallet } from '../context/WalletContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import { Card, Button, Badge, AmountDisplay } from '../components/ui/index.js';
+import { Card, Button, Badge, AmountDisplay, Modal, Input, Textarea } from '../components/ui/index.js';
 import AddressChip from '../components/ui/AddressChip.jsx';
 import { canonicalHash } from '../lib/canonicalHash.js';
 import {
@@ -18,8 +18,12 @@ import {
   Github,
   Coins,
   Shield,
+  ShieldCheck,
   Layers,
-  Sparkles
+  Sparkles,
+  Cpu,
+  RefreshCw,
+  Check
 } from 'lucide-react';
 
 export default function DraftPage({ agreementId, onProceedToWizard }) {
@@ -32,6 +36,20 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Feature 1: Brief-to-Plan Generator state
+  const [isBriefModalOpen, setIsBriefModalOpen] = useState(false);
+  const [briefText, setBriefText] = useState('');
+  const [briefBudget, setBriefBudget] = useState('1.5');
+  const [briefCurrency, setBriefCurrency] = useState('ETH');
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const [planRationale, setPlanRationale] = useState('');
+  const [suggestedTechStack, setSuggestedTechStack] = useState([]);
+
+  // Feature 2: Agreement Clarity Linter & Pre-Lock Risk Auditor state
+  const [isAuditing, setIsAuditing] = useState(false);
+  const [auditResult, setAuditResult] = useState(null);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
   const fetchAgreementData = async () => {
     if (!agreementId) {
@@ -69,16 +87,97 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
 
   if (!agreement || !terms) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-5">
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-6">
         <div className="w-16 h-16 mx-auto rounded-card bg-sage flex items-center justify-center text-forest">
           <FileText className="w-8 h-8" />
         </div>
         <div className="space-y-2">
           <h2 className="text-2xl font-heading font-bold text-ink">No Draft Selected</h2>
           <p className="text-sm text-ink/60 max-w-md mx-auto">
-            You can generate a draft agreement from any AI chat consultation or view pending drafts in your agreements list.
+            You can generate a draft agreement from any AI chat consultation, or use the Brief-to-Plan Generator to autonomously decompose a project goal.
           </p>
         </div>
+
+        <div className="pt-2 flex justify-center">
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => setIsBriefModalOpen(true)}
+            icon={Sparkles}
+          >
+            Generate Plan from AI Brief
+          </Button>
+        </div>
+
+        {/* Modal on empty state */}
+        <Modal
+          isOpen={isBriefModalOpen}
+          onClose={() => setIsBriefModalOpen(false)}
+          title="Autonomous Brief-to-Plan Generator"
+          subtitle="Provide a high-level goal and let AI decompose it into verifiable milestones."
+          maxWidth="max-w-xl"
+        >
+          <form onSubmit={handleGenerateFromBrief} className="space-y-4 text-left">
+            <Textarea
+              label="Project Goal / Brief"
+              placeholder="e.g. Build an on-chain NFT ticketing dApp with QR verification, organizer dashboard, and Polygon smart contract escrow..."
+              value={briefText}
+              onChange={(e) => setBriefText(e.target.value)}
+              rows={4}
+              required
+              helperText="Describe what you want built. The AI will calculate milestones with testable criteria."
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Total Budget"
+                type="number"
+                step="0.01"
+                value={briefBudget}
+                onChange={(e) => setBriefBudget(e.target.value)}
+                placeholder="1.5"
+                required
+              />
+              <div>
+                <label className="block text-xs font-semibold text-ink uppercase tracking-wider mb-1.5 font-heading">
+                  Currency
+                </label>
+                <select
+                  value={briefCurrency}
+                  onChange={(e) => setBriefCurrency(e.target.value)}
+                  className="w-full bg-white text-ink border border-gray rounded-[10px] px-3.5 py-2.5 text-sm focus:outline-none focus:border-forest"
+                >
+                  <option value="ETH">ETH</option>
+                  <option value="MATIC">MATIC (Polygon)</option>
+                  <option value="USDC">USDC</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="p-3 bg-sage/30 rounded-card border border-forest/10 text-xs text-ink/70 space-y-1">
+              <p className="font-semibold text-forest">💡 Pro Tip:</p>
+              <p>The AI will calculate milestone amounts, establish sequential delivery dates, and formulate concrete GitHub verification criteria.</p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsBriefModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={isGeneratingPlan}
+                icon={Sparkles}
+              >
+                Generate Autonomous Plan
+              </Button>
+            </div>
+          </form>
+        </Modal>
       </div>
     );
   }
@@ -146,6 +245,131 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
     setHasUnsavedChanges(true);
   };
 
+  const handleCriterionChange = (mIdx, cIdx, val) => {
+    const updatedMs = [...terms.milestones];
+    const m = { ...updatedMs[mIdx] };
+    const crits = [...(m.acceptanceCriteria || m.deliverables || [])];
+    crits[cIdx] = val;
+    m.acceptanceCriteria = crits;
+    m.deliverables = crits;
+    updatedMs[mIdx] = m;
+    setTerms(prev => ({ ...prev, milestones: updatedMs }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleAddCriterion = (mIdx) => {
+    const updatedMs = [...terms.milestones];
+    const m = { ...updatedMs[mIdx] };
+    const crits = [...(m.acceptanceCriteria || m.deliverables || []), 'New testable deliverable specification'];
+    m.acceptanceCriteria = crits;
+    m.deliverables = crits;
+    updatedMs[mIdx] = m;
+    setTerms(prev => ({ ...prev, milestones: updatedMs }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleRemoveCriterion = (mIdx, cIdx) => {
+    const updatedMs = [...terms.milestones];
+    const m = { ...updatedMs[mIdx] };
+    const crits = (m.acceptanceCriteria || m.deliverables || []).filter((_, i) => i !== cIdx);
+    if (crits.length === 0) {
+      toast.warning('Each milestone must have at least one acceptance criterion');
+      return;
+    }
+    m.acceptanceCriteria = crits;
+    m.deliverables = crits;
+    updatedMs[mIdx] = m;
+    setTerms(prev => ({ ...prev, milestones: updatedMs }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleRunAudit = async (customTerms = null) => {
+    try {
+      setIsAuditing(true);
+      const termsToAudit = customTerms || terms;
+      const res = await auditAgreement(agreement?.id, termsToAudit);
+      const data = res.data || res;
+      setAuditResult(data);
+      setIsAuditModalOpen(true);
+      if (data.fairness_score >= 80) {
+        toast.success(`Clarity Audit: High score ${data.fairness_score}/100!`);
+      } else if (data.fairness_score >= 60) {
+        toast.info(`Clarity Audit: Score ${data.fairness_score}/100 with recommendations.`);
+      } else {
+        toast.warning(`Clarity Audit: Score ${data.fairness_score}/100. Critical issues detected.`);
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to complete clarity audit');
+    } finally {
+      setIsAuditing(false);
+    }
+  };
+
+  const handleApplyRewrite = (flag) => {
+    if (!flag || !flag.suggested_rewrite) return;
+
+    // Check if it's a milestone criterion: e.g. milestones[0].acceptanceCriteria[1]
+    const mMatch = flag.clause.match(/milestones\[(\d+)\]\.acceptanceCriteria\[(\d+)\]/);
+    if (mMatch) {
+      const mIdx = parseInt(mMatch[1], 10);
+      const cIdx = parseInt(mMatch[2], 10);
+
+      const updatedMs = [...terms.milestones];
+      const m = { ...updatedMs[mIdx] };
+      const crits = [...(m.acceptanceCriteria || m.deliverables || [])];
+      crits[cIdx] = flag.suggested_rewrite;
+      m.acceptanceCriteria = crits;
+      m.deliverables = crits;
+      updatedMs[mIdx] = m;
+
+      setTerms(prev => ({ ...prev, milestones: updatedMs }));
+      setHasUnsavedChanges(true);
+      toast.success(`Applied objective rewrite to Milestone ${mIdx + 1} criterion!`);
+    } else if (flag.clause === 'latePenaltyBpsPerDay') {
+      const val = parseInt(flag.suggested_rewrite, 10) || 100;
+      setTerms(prev => ({ ...prev, latePenaltyBpsPerDay: val }));
+      setHasUnsavedChanges(true);
+      toast.success('Updated daily late penalty to standard rate');
+    } else if (flag.clause === 'maxLatePenaltyBps') {
+      const val = parseInt(flag.suggested_rewrite, 10) || 3000;
+      setTerms(prev => ({ ...prev, maxLatePenaltyBps: val }));
+      setHasUnsavedChanges(true);
+      toast.success('Updated max late penalty cap');
+    } else if (flag.clause === 'github.repoUrl') {
+      setTerms(prev => ({
+        ...prev,
+        github: { ...prev.github, repoUrl: flag.suggested_rewrite }
+      }));
+      setHasUnsavedChanges(true);
+      toast.success('Updated GitHub repository URL');
+    } else if (flag.clause === 'reviewWindowDays') {
+      const val = parseInt(flag.suggested_rewrite, 10) || 5;
+      setTerms(prev => ({ ...prev, reviewWindowDays: val }));
+      setHasUnsavedChanges(true);
+      toast.success('Updated review window');
+    }
+
+    // Remove this flag from active auditResult and re-calculate score
+    if (auditResult && auditResult.flags) {
+      const updatedFlags = auditResult.flags.filter(f => f !== flag);
+      let deductions = 0;
+      for (const f of updatedFlags) {
+        if (f.severity === 'CRITICAL') deductions += 15;
+        else if (f.severity === 'WARNING') deductions += 9;
+        else deductions += 3;
+      }
+      const newScore = Math.max(20, Math.min(100, 98 - deductions));
+      setAuditResult(prev => ({
+        ...prev,
+        fairness_score: newScore,
+        flags: updatedFlags,
+        summary: updatedFlags.length === 0
+          ? 'All flagged ambiguities resolved! Contract terms are balanced and ready for escrow lock.'
+          : `Clarity audit updated: ${updatedFlags.length} remaining recommendation(s). Score: ${newScore}/100.`
+      }));
+    }
+  };
+
   const handleSaveTerms = async () => {
     try {
       setIsSaving(true);
@@ -180,6 +404,39 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
     }
   };
 
+  const handleGenerateFromBrief = async (e) => {
+    if (e) e.preventDefault();
+    if (!briefText.trim()) {
+      toast.warning('Please enter a project brief or goal');
+      return;
+    }
+    try {
+      setIsGeneratingPlan(true);
+      toast.info('Autonomous AI is analyzing project brief & synthesizing milestone plan...');
+      const res = await planFromBrief({
+        brief: briefText.trim(),
+        totalBudget: parseFloat(briefBudget) || 1.0,
+        currency: briefCurrency || 'ETH',
+        clientAddress: address || '0x1111111111111111111111111111111111111111',
+      });
+      const createdAg = res.agreement || res.data?.agreement || res;
+      setAgreement(createdAg);
+      const parsedTerms = typeof createdAg.termsJson === 'string'
+        ? JSON.parse(createdAg.termsJson)
+        : (createdAg.terms || createdAg.termsJson);
+      setTerms(parsedTerms);
+      setPlanRationale(res.rationale || res.data?.rationale || '');
+      setSuggestedTechStack(res.suggestedTechStack || res.data?.suggestedTechStack || []);
+      setIsBriefModalOpen(false);
+      setHasUnsavedChanges(false);
+      toast.success('Milestone plan autonomously generated!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to generate plan from brief');
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-8 py-8 space-y-8 animate-fade-in">
       {/* Title & Status Header */}
@@ -198,7 +455,42 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="secondary"
+            onClick={() => setIsBriefModalOpen(true)}
+            icon={Sparkles}
+          >
+            New Plan from Brief
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={() => handleRunAudit()}
+            loading={isAuditing}
+            icon={Shield}
+          >
+            Audit Agreement
+          </Button>
+
+          {auditResult && (
+            <button
+              type="button"
+              onClick={() => setIsAuditModalOpen(true)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-heading font-bold border transition-all ${
+                auditResult.fairness_score >= 80
+                  ? 'bg-sage text-forest border-forest/30 hover:bg-sage-light'
+                  : auditResult.fairness_score >= 60
+                  ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
+                  : 'bg-coral/20 text-coral border-coral hover:bg-coral/30'
+              }`}
+              title="Click to view Clarity Linter details"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Clarity: {auditResult.fairness_score}/100</span>
+            </button>
+          )}
+
           {bothApproved ? (
             <Button
               variant="primary"
@@ -232,6 +524,85 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
           )}
         </div>
       </div>
+
+      {/* Autonomous Planning Rationale Banner */}
+      {planRationale && (
+        <div className="p-4 rounded-card bg-sage/40 border border-forest/20 flex flex-col gap-2 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-forest font-heading font-semibold text-sm">
+              <Sparkles className="w-4 h-4 text-forest" />
+              <span>Autonomous AI Planning Rationale</span>
+            </div>
+            <span className="text-[11px] font-mono bg-forest/10 text-forest px-2 py-0.5 rounded-full font-bold">
+              Feature 1 Active
+            </span>
+          </div>
+          <p className="text-xs text-ink/80">{planRationale}</p>
+          {suggestedTechStack && suggestedTechStack.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[11px] font-mono text-ink/60 mr-1 flex items-center gap-1">
+                <Cpu className="w-3 h-3" /> Recommended Stack:
+              </span>
+              {suggestedTechStack.map((tech, idx) => (
+                <span key={idx} className="px-2 py-0.5 text-[10px] font-mono bg-white border border-gray rounded-full text-ink">
+                  {tech}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Agreement Clarity & Pre-Lock Risk Auditor Summary Banner */}
+      {auditResult && (
+        <div className={`p-4 rounded-card border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fade-in ${
+          auditResult.fairness_score >= 80
+            ? 'bg-sage-light/60 border-forest/20'
+            : auditResult.fairness_score >= 60
+            ? 'bg-amber-50 border-amber-200'
+            : 'bg-coral/10 border-coral/30'
+        }`}>
+          <div className="flex items-start gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-heading font-bold text-sm ${
+              auditResult.fairness_score >= 80
+                ? 'bg-sage text-forest'
+                : auditResult.fairness_score >= 60
+                ? 'bg-amber-200 text-amber-900'
+                : 'bg-coral/30 text-coral'
+            }`}>
+              {auditResult.fairness_score}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-heading font-bold text-sm text-ink">
+                  Pre-Lock Clarity & Risk Score: {auditResult.fairness_score}/100
+                </span>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
+                  auditResult.fairness_score >= 80
+                    ? 'bg-forest/10 text-forest'
+                    : auditResult.fairness_score >= 60
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-coral/20 text-coral'
+                }`}>
+                  {auditResult.fairness_score >= 80 ? 'Balanced Terms' : auditResult.fairness_score >= 60 ? 'Moderate Ambiguity' : 'Dispute Risk Detected'}
+                </span>
+              </div>
+              <p className="text-xs text-ink/80 mt-0.5">{auditResult.summary}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setIsAuditModalOpen(true)}
+              icon={ShieldCheck}
+            >
+              {auditResult.flags?.length > 0 ? `Inspect ${auditResult.flags.length} Flag(s) & 1-Click Fixes` : 'View Audit Details'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Approval Status & Edit Reset Warning */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -575,6 +946,72 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
                   className="w-full bg-ivory border border-gray rounded-[8px] px-3 py-1.5 text-xs text-ink"
                 />
               </div>
+
+              {/* Acceptance Criteria (Verified via Git / CI) */}
+              <div className="space-y-2 pt-2 border-t border-gray/50">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-heading font-semibold text-ink/70 uppercase tracking-wider block">
+                    Acceptance Criteria (Verified via Git / CI)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleAddCriterion(idx)}
+                    className="text-[11px] font-medium text-forest hover:underline flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" /> Add Criterion
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {(m.acceptanceCriteria || m.deliverables || []).map((crit, cIdx) => {
+                    const flagForThis = auditResult?.flags?.find(
+                      f => f.clause === `milestones[${idx}].acceptanceCriteria[${cIdx}]`
+                    );
+                    return (
+                      <div key={cIdx} className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-mono text-ink/40 w-4 text-right">{cIdx + 1}.</span>
+                          <input
+                            type="text"
+                            value={crit}
+                            onChange={(e) => handleCriterionChange(idx, cIdx, e.target.value)}
+                            className={`flex-1 bg-ivory border rounded-[8px] px-3 py-1.5 text-xs text-ink transition-colors ${
+                              flagForThis ? 'border-amber-400 bg-amber-50/40' : 'border-gray'
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCriterion(idx, cIdx)}
+                            className="p-1 text-ink/40 hover:text-coral transition-colors"
+                            title="Remove criterion"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        {flagForThis && (
+                          <div className="ml-6 p-2 rounded-card bg-amber-50 border border-amber-200 text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              <span>{flagForThis.issue}</span>
+                            </div>
+                            {flagForThis.suggested_rewrite && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleApplyRewrite(flagForThis)}
+                                icon={Sparkles}
+                                className="text-[11px] py-1 px-2.5 h-auto text-forest hover:bg-forest hover:text-ivory font-semibold"
+                              >
+                                1-Click Fix
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -626,6 +1063,258 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
           )}
         </div>
       </div>
+
+      {/* Autonomous Brief-to-Plan Generator Modal */}
+      <Modal
+        isOpen={isBriefModalOpen}
+        onClose={() => setIsBriefModalOpen(false)}
+        title="Autonomous Brief-to-Plan Generator"
+        subtitle="Provide a high-level goal and let AI decompose it into verifiable milestones."
+        maxWidth="max-w-xl"
+      >
+        <form onSubmit={handleGenerateFromBrief} className="space-y-4">
+          <Textarea
+            label="Project Goal / Brief"
+            placeholder="e.g. Build an on-chain NFT ticketing dApp with QR verification, organizer dashboard, and Polygon smart contract escrow..."
+            value={briefText}
+            onChange={(e) => setBriefText(e.target.value)}
+            rows={4}
+            required
+            helperText="Describe what you want built. The AI will calculate milestones with testable criteria."
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Total Budget"
+              type="number"
+              step="0.01"
+              value={briefBudget}
+              onChange={(e) => setBriefBudget(e.target.value)}
+              placeholder="1.5"
+              required
+            />
+            <div>
+              <label className="block text-xs font-semibold text-ink uppercase tracking-wider mb-1.5 font-heading">
+                Currency
+              </label>
+              <select
+                value={briefCurrency}
+                onChange={(e) => setBriefCurrency(e.target.value)}
+                className="w-full bg-white text-ink border border-gray rounded-[10px] px-3.5 py-2.5 text-sm focus:outline-none focus:border-forest"
+              >
+                <option value="ETH">ETH</option>
+                <option value="MATIC">MATIC (Polygon)</option>
+                <option value="USDC">USDC</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="p-3 bg-sage/30 rounded-card border border-forest/10 text-xs text-ink/70 space-y-1">
+            <p className="font-semibold text-forest">💡 Pro Tip:</p>
+            <p>The AI will calculate milestone amounts, establish sequential delivery dates, and formulate concrete GitHub verification criteria.</p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsBriefModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={isGeneratingPlan}
+              icon={Sparkles}
+            >
+              Generate Autonomous Plan
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Agreement Clarity Linter & Pre-Lock Risk Auditor Modal */}
+      <Modal
+        isOpen={isAuditModalOpen}
+        onClose={() => setIsAuditModalOpen(false)}
+        title="Agreement Clarity Linter & Risk Auditor"
+        subtitle="Pre-lock automated analysis ensuring objective criteria, balanced penalties, and dispute prevention."
+        maxWidth="max-w-2xl"
+      >
+        <div className="space-y-6">
+          {auditResult ? (
+            <>
+              {/* Score Header Card */}
+              <div className={`p-5 rounded-card border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+                auditResult.fairness_score >= 80
+                  ? 'bg-sage-light/70 border-forest/30'
+                  : auditResult.fairness_score >= 60
+                  ? 'bg-amber-50 border-amber-300'
+                  : 'bg-coral/10 border-coral/40'
+              }`}>
+                <div className="flex items-center gap-4">
+                  <div className={`w-14 h-14 rounded-full flex flex-col items-center justify-center font-heading font-black text-xl border-2 ${
+                    auditResult.fairness_score >= 80
+                      ? 'bg-sage text-forest border-forest/30'
+                      : auditResult.fairness_score >= 60
+                      ? 'bg-amber-200 text-amber-900 border-amber-400'
+                      : 'bg-coral/30 text-coral border-coral'
+                  }`}>
+                    {auditResult.fairness_score}
+                    <span className="text-[9px] font-normal opacity-70">/100</span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-heading font-bold text-base text-ink">
+                        {auditResult.fairness_score >= 80
+                          ? 'High Clarity & Fairness'
+                          : auditResult.fairness_score >= 60
+                          ? 'Moderate Ambiguity & Risk'
+                          : 'High Dispute Risk Detected'}
+                      </span>
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
+                        auditResult.fairness_score >= 80
+                          ? 'bg-forest/10 text-forest'
+                          : auditResult.fairness_score >= 60
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-coral/20 text-coral'
+                      }`}>
+                        {auditResult.flags?.length || 0} Flag(s)
+                      </span>
+                    </div>
+                    <p className="text-xs text-ink/80 mt-1 leading-relaxed">
+                      {auditResult.summary}
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => handleRunAudit()}
+                  loading={isAuditing}
+                  icon={RefreshCw}
+                  className="shrink-0"
+                >
+                  Re-evaluate
+                </Button>
+              </div>
+
+              {/* Flags List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-heading font-semibold uppercase tracking-wider text-ink/70">
+                    Audit Recommendations & Auto-Rewrites
+                  </h4>
+                  <span className="text-[11px] font-mono text-ink/50">
+                    {auditResult.flags?.length || 0} items identified
+                  </span>
+                </div>
+
+                {!auditResult.flags || auditResult.flags.length === 0 ? (
+                  <div className="p-6 text-center rounded-card bg-sage/30 border border-forest/20 space-y-2">
+                    <CheckCircle2 className="w-8 h-8 mx-auto text-forest" />
+                    <p className="font-heading font-bold text-sm text-forest">
+                      Exemplary Agreement Terms!
+                    </p>
+                    <p className="text-xs text-ink/70 max-w-sm mx-auto">
+                      All criteria are measurable against git commits, payment amounts are balanced, and late penalty terms comply with platform escrow guidelines.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                    {auditResult.flags.map((flag, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-3.5 rounded-card border transition-all ${
+                          flag.severity === 'CRITICAL'
+                            ? 'bg-coral/10 border-coral/30'
+                            : flag.severity === 'WARNING'
+                            ? 'bg-amber-50/70 border-amber-200'
+                            : 'bg-sage/20 border-forest/15'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
+                              flag.severity === 'CRITICAL'
+                                ? 'bg-coral/20 text-coral'
+                                : flag.severity === 'WARNING'
+                                ? 'bg-amber-200 text-amber-900'
+                                : 'bg-forest/10 text-forest'
+                            }`}>
+                              {flag.severity || 'WARNING'}
+                            </span>
+                            <span className="font-mono text-xs text-ink/60 font-semibold">
+                              {flag.clause}
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-ink font-medium mt-1.5">{flag.issue}</p>
+                        <p className="text-xs text-ink/70 mt-0.5">{flag.suggestion}</p>
+
+                        {/* 1-Click Drop-in Suggested Rewrite Box */}
+                        {flag.suggested_rewrite && (
+                          <div className="mt-2.5 p-2.5 rounded-[8px] bg-white border border-gray flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="space-y-0.5 text-xs">
+                              <span className="text-[10px] font-mono text-forest uppercase font-bold flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-forest" /> 1-Click Measurable Replacement:
+                              </span>
+                              <p className="font-mono text-xs text-ink bg-sage/20 px-2 py-1 rounded border border-forest/15 select-all">
+                                {flag.suggested_rewrite}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={() => handleApplyRewrite(flag)}
+                              icon={Sparkles}
+                              className="shrink-0 text-xs py-1.5 px-3"
+                            >
+                              Apply Rewrite
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="p-8 text-center space-y-4">
+              <div className="w-12 h-12 mx-auto rounded-full bg-sage flex items-center justify-center text-forest">
+                <Shield className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-heading font-bold text-base text-ink">Ready to Audit</h4>
+                <p className="text-xs text-ink/60 max-w-sm mx-auto">
+                  Click below to scan for ambiguous criteria, disproportionate penalties, and front-loaded payment structures.
+                </p>
+              </div>
+              <Button
+                variant="primary"
+                onClick={() => handleRunAudit()}
+                loading={isAuditing}
+                icon={ShieldCheck}
+              >
+                Scan Agreement Draft
+              </Button>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray">
+            <Button
+              variant="secondary"
+              onClick={() => setIsAuditModalOpen(false)}
+            >
+              Done
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

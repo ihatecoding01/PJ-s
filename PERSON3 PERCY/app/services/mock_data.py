@@ -85,28 +85,40 @@ def get_mock_review_response(req: ReviewContractRequest) -> ReviewContractRespon
         flags.append(ReviewFlag(
             clause="latePenaltyBpsPerDay",
             issue="Daily late penalty exceeds standard rate (300+ bps / 3% per day).",
-            suggestion="Reduce daily penalty to 100-200 bps to prevent disproportionate forfeitures."
+            suggestion="Reduce daily penalty to 100-200 bps to prevent disproportionate forfeitures.",
+            suggested_rewrite="100",
+            severity="CRITICAL" if terms.latePenaltyBpsPerDay > 500 else "WARNING"
         ))
-        score -= 10
+        score -= 15 if terms.latePenaltyBpsPerDay > 500 else 10
     
     if terms.reviewWindowDays < 3:
         flags.append(ReviewFlag(
             clause="reviewWindowDays",
             issue="Client review window is unusually short (less than 3 days).",
-            suggestion="Increase review window to 5 days to allow thorough verification."
+            suggestion="Increase review window to 5 days to allow thorough verification.",
+            suggested_rewrite="5",
+            severity="WARNING"
         ))
-        score -= 5
+        score -= 8
 
     if not flags:
         flags.append(ReviewFlag(
             clause="general",
             issue="No severe imbalances detected in contract terms.",
-            suggestion="Ensure acceptance criteria tests are maintained in repository CI."
+            suggestion="Ensure acceptance criteria tests are maintained in repository CI.",
+            suggested_rewrite=None,
+            severity="INFO"
         ))
 
+    final_score = max(score, 50)
+    summary = (
+        f"Mock contract review generated {len(flags)} recommendation(s) with fairness score {final_score}/100."
+    )
+
     return ReviewContractResponse(
-        fairness_score=max(score, 50),
-        flags=flags
+        fairness_score=final_score,
+        flags=flags,
+        summary=summary
     )
 
 def get_mock_github_analyze_response(req: GithubAnalyzeRequest) -> GithubAnalyzeResponse:
@@ -153,4 +165,78 @@ def get_mock_dispute_summary_response(req: DisputeSummaryRequest) -> DisputeSumm
             "Evidence confirms substantial completion of primary endpoints and schemas. "
             "However, minor secondary criteria lacked end-to-end integration tests as noted in client evidence."
         )
+    )
+
+def get_mock_plan_from_brief(req: Any) -> Any:
+    from app.models.plan import PlanFromBriefResponse
+    from app.models.terms import AgreementTerms
+    
+    now = datetime.now(timezone.utc)
+    client = (getattr(req, "client_address", None) or "0x1111111111111111111111111111111111111111").lower()
+    freelancer = (getattr(req, "freelancer_address", None) or "0x2222222222222222222222222222222222222222").lower()
+    total_budget = float(getattr(req, "total_budget", 1.0) or 1.0)
+    currency = getattr(req, "currency", "ETH") or "ETH"
+    brief = getattr(req, "brief", "Decentralized application project")
+    repo = getattr(req, "repo_url", "https://github.com/fairwork-test/project-repo") or "https://github.com/fairwork-test/project-repo"
+
+    m1_amount = round(total_budget * 0.4, 4)
+    m2_amount = round(total_budget - m1_amount, 4)
+
+    deadline_1 = (now + timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    deadline_2 = (now + timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    terms_dict = {
+        "schemaVersion": "1.0",
+        "title": f"Plan: {brief[:50]}...",
+        "description": f"Autonomous milestone plan generated from project brief: '{brief}'.",
+        "client": client,
+        "freelancer": freelancer,
+        "currency": currency,
+        "totalAmount": str(total_budget),
+        "paymentMode": "MILESTONE",
+        "latePenaltyBpsPerDay": 100,
+        "maxLatePenaltyBps": 3000,
+        "reviewWindowDays": 5,
+        "graceDays": 3,
+        "maxRevisions": 2,
+        "github": {
+            "repoUrl": repo,
+            "branch": "main"
+        },
+        "milestones": [
+            {
+                "index": 0,
+                "title": "Phase 1: Architecture, Core Schemas & Auth",
+                "description": "Establish repository foundation, database migrations, authentication endpoints, and unit test suite.",
+                "amount": str(m1_amount),
+                "deadline": deadline_1,
+                "requiredProgressBps": 8000,
+                "acceptanceCriteria": [
+                    "Database schema migrations run cleanly with zero errors",
+                    "Core authentication API endpoints return 200 OK with test assertions",
+                    "Initial project structure committed to repository main branch"
+                ]
+            },
+            {
+                "index": 1,
+                "title": "Phase 2: Full System Integration & E2E Delivery",
+                "description": "Complete remaining application workflows, automated end-to-end testing, and production deployment configuration.",
+                "amount": str(m2_amount),
+                "deadline": deadline_2,
+                "requiredProgressBps": 8500,
+                "acceptanceCriteria": [
+                    "All functional user workflows pass end-to-end integration tests",
+                    "Production bundle builds with zero errors or unresolved dependencies",
+                    "Comprehensive deployment documentation and API spec provided"
+                ]
+            }
+        ],
+        "createdAt": now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    }
+
+    validated_terms = AgreementTerms.model_validate(terms_dict)
+    return PlanFromBriefResponse(
+        terms=validated_terms,
+        rationale="Decomposed into 2 sequential phases (Architecture & Foundation -> Full Delivery) to optimize milestone escrow release and verify core functionality first.",
+        suggested_tech_stack=["React 18", "FastAPI / Node.js", "Polygon / Ethereum", "Tailwind CSS", "Prisma / SQLAlchemy"]
     )

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
@@ -30,4 +31,7 @@ class AgreementTerms(BaseModel):
     maxRevisions: int = Field(default=2, ge=0, description="Maximum number of review revisions")
     github: GitHubRepoInfo = Field(..., description="GitHub repository configuration")
     milestones: List[MilestoneTerms] = Field(..., min_length=1, description="Milestone breakdowns")
-    createdAt: str = Field(..., description="ISO-8601 creation timestamp")
+    createdAt: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        description="ISO-8601 creation timestamp"
+    )

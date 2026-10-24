@@ -42,6 +42,60 @@ def test_review_contract_mock(client, valid_terms):
     assert 0 <= data["fairness_score"] <= 100
     assert "flags" in data
 
+def test_clarity_linter_and_risk_auditor_mock(client):
+    payload = {
+        "terms": {
+            "schemaVersion": "1.0",
+            "title": "Website Design",
+            "description": "Design test",
+            "client": "0x1111111111111111111111111111111111111111",
+            "freelancer": "0x2222222222222222222222222222222222222222",
+            "currency": "ETH",
+            "totalAmount": "1.0",
+            "paymentMode": "MILESTONE",
+            "latePenaltyBpsPerDay": 600,
+            "maxLatePenaltyBps": 6000,
+            "reviewWindowDays": 5,
+            "graceDays": 3,
+            "maxRevisions": 2,
+            "github": {"repoUrl": "https://github.com/example/repo", "branch": "main"},
+            "milestones": [
+                {
+                    "index": 0,
+                    "title": "Frontend",
+                    "description": "Build UI",
+                    "amount": "1.0",
+                    "deadline": "2026-11-01T00:00:00Z",
+                    "requiredProgressBps": 8000,
+                    "acceptanceCriteria": ["Make clean code and nice UI"]
+                }
+            ]
+        }
+    }
+    res = client.post("/ai/contract/review", json=payload, headers=AUTH_HEADERS)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["fairness_score"] < 70
+    assert "summary" in data and len(data["summary"]) > 0
+    flags = data["flags"]
+    assert len(flags) >= 3
+
+    # Check for suggested rewrites on vague criteria
+    criteria_flags = [f for f in flags if "acceptanceCriteria" in f["clause"]]
+    assert len(criteria_flags) >= 2
+    rewrites = [f["suggested_rewrite"] for f in criteria_flags if f.get("suggested_rewrite")]
+    assert len(rewrites) >= 2
+    # Check that clean code rewrite and nice ui rewrite are present
+    assert any("ESLint" in r or "Pylint" in r for r in rewrites)
+    assert any("responsive layout" in r for r in rewrites)
+
+    # Check penalty flags
+    critical_flags = [f for f in flags if f.get("severity") == "CRITICAL"]
+    assert len(critical_flags) >= 2
+    penalty_clauses = [f["clause"] for f in critical_flags]
+    assert "latePenaltyBpsPerDay" in penalty_clauses
+    assert "maxLatePenaltyBps" in penalty_clauses
+
 def test_github_analyze_mock(client):
     payload = {
         "repo_url": "https://github.com/fairwork-test/escrow-demo",
@@ -108,3 +162,24 @@ def test_validation_error_format(client):
     err = res.json()
     assert err["error"]["code"] == "VALIDATION_ERROR"
     assert "message" in err["error"]
+
+def test_plan_from_brief_mock(client):
+    payload = {
+        "brief": "Build a decentralized crowdfunding dApp on Polygon with milestone payouts.",
+        "total_budget": 3.0,
+        "currency": "MATIC",
+        "client_address": "0x1111111111111111111111111111111111111111",
+        "freelancer_address": "0x2222222222222222222222222222222222222222"
+    }
+    res = client.post("/ai/contract/plan-from-brief", json=payload, headers=AUTH_HEADERS)
+    assert res.status_code == 200
+    data = res.json()
+    assert "terms" in data
+    assert "rationale" in data
+    assert "suggested_tech_stack" in data
+    assert data["terms"]["totalAmount"] == "3.0"
+    assert data["terms"]["currency"] == "MATIC"
+    assert len(data["terms"]["milestones"]) == 2
+    # Check that milestone amounts sum to totalAmount
+    total_ms = sum(float(m["amount"]) for m in data["terms"]["milestones"])
+    assert total_ms == 3.0
