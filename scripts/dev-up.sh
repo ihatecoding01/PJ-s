@@ -10,7 +10,7 @@ echo "===================================================="
 
 # 1. Start Hardhat Node
 echo -e "\n[1/4] Starting Hardhat Node on port 8545..."
-npm --prefix "PERSON1 YASH NAIK/contracts" run chain &
+npm run chain &
 CHAIN_PID=$!
 
 echo "Waiting for Hardhat node on :8545..."

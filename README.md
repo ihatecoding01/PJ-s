@@ -53,6 +53,8 @@ flowchart TD
 
 ## 🚀 One-Command Quick Start
 
+> 📖 **Complete Documentation**: For an in-depth walkthrough covering multi-terminal setup, environment variables, wallet importing, and automated test suites, see the [Full Setup Guide](docs/SETUP_GUIDE.md).
+
 ### Prerequisites
 - Node.js (v18+) & `npm`
 - Python 3.10+ (with `uvicorn` and `pip`)

@@ -11,7 +11,7 @@ $rootDir = (Get-Item $PSScriptRoot).Parent.FullName
 
 # 1. Start Hardhat Node
 Write-Host "`n[1/4] Starting Hardhat Node on port 8545..." -ForegroundColor Yellow
-$chainJob = Start-Process powershell -ArgumentList "-NoExit", "-Command", "npm --prefix 'PERSON1 YASH NAIK/contracts' run chain" -WorkingDirectory $rootDir -PassThru
+$chainJob = Start-Process powershell -ArgumentList "-NoExit", "-Command", "npm run chain" -WorkingDirectory $rootDir -PassThru
 
 # Wait for Hardhat Node
 $nodeReady = $false
