@@ -11,6 +11,7 @@ router.get('/posts/:id/proposals', CommunityController.getProposalsForPost);
 
 // Protected routes: require wallet authentication
 router.post('/posts', authenticate, CommunityController.createPost);
+router.get('/posts/:id/recommended-talent', authenticate, CommunityController.getRecommendedTalent);
 router.post('/posts/:id/proposals', authenticate, CommunityController.submitProposal);
 
 // Threads & Messages (require authentication)

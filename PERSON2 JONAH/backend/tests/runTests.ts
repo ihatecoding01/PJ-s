@@ -2,6 +2,7 @@ import { createApp } from '../src/app';
 import { ethers } from 'ethers';
 import fs from 'fs';
 import path from 'path';
+import { prisma } from '../src/lib/prisma';
 
 // Helper to make fetch requests against in-memory express server
 let server: any;
@@ -138,6 +139,42 @@ async function main() {
       Authorization: `Bearer ${flVerifyRes.data.data.token}`,
     };
     const flUserId = flVerifyRes.data.data.user.id;
+
+    // Update freelancer profile to have matching skills
+    await request('/users/profile', {
+      method: 'PUT',
+      headers: flAuthHeaders,
+      body: JSON.stringify({
+        name: 'Alice Web3 Dev',
+        skills: 'React, TypeScript, Web3, Solidity',
+        githubUsername: 'alice-eth',
+      }),
+    });
+
+    // Test Feature 5: AI Talent Matcher with Explainable Ranking & Soulbound Tokens
+    const talentRes = await request(`/community/posts/${postId}/recommended-talent`, {
+      headers: authHeaders,
+    });
+    assert(
+      talentRes.status === 200 && Array.isArray(talentRes.data.data),
+      'GET /community/posts/:id/recommended-talent returns recommendations array'
+    );
+    assert(talentRes.data.data.length > 0, 'Talent matcher found active candidates');
+    const matchedDev = talentRes.data.data.find((c: any) => c.userId === flUserId) || talentRes.data.data[0];
+    assert(
+      typeof matchedDev.matchScore === 'number' && matchedDev.matchScore >= 50,
+      'Talent match score is high for matching skills'
+    );
+    assert(
+      Array.isArray(matchedDev.matchReasoning) && matchedDev.matchReasoning.length > 0,
+      'Talent matcher returns explainable bullet points'
+    );
+    assert(
+      matchedDev.matchReasoning.some(
+        (r: string) => r.toLowerCase().includes('skill') || r.toLowerCase().includes('react')
+      ),
+      'Reasoning mentions matched skills'
+    );
 
     // Submit proposal as freelancer
     const proposalRes = await request(`/community/posts/${postId}/proposals`, {
@@ -462,11 +499,152 @@ async function main() {
     );
 
     // 10. Alerts & Deadline Watcher
-    console.log('\n10. Testing Alerts & Deadline Watcher');
+    console.log('\n10. Testing Alerts & In-Flight Health Telemetry');
     const alertsRes = await request('/alerts', {
       headers: authHeaders,
     });
     assert(alertsRes.status === 200 && Array.isArray(alertsRes.data.data), 'GET /alerts lists active alerts');
+
+    // Test Feature 6: In-Flight Milestone Health & Delay Risk Predictor
+    const healthRes = await request(`/milestones/${milestone2Id}/health`, {
+      headers: authHeaders,
+    });
+    assert(
+      healthRes.status === 200 && !!healthRes.data.data.healthStatus,
+      'GET /milestones/:id/health computes in-flight health telemetry'
+    );
+    assert(
+      ['ON_TRACK', 'AT_RISK', 'CRITICAL_DELAY', 'COMPLETED'].includes(healthRes.data.data.healthStatus),
+      'Milestone health status is valid enum'
+    );
+    assert(
+      typeof healthRes.data.data.timeProgressRatio === 'number',
+      'Milestone health returns time progress ratio'
+    );
+
+    // Create a delayed milestone test to verify predictive alert generation
+    const delayedMilestone = await prisma.milestone.create({
+      data: {
+        agreementId,
+        milestoneIndex: 99,
+        title: 'Delayed Core Engine',
+        description: 'Predictive health test milestone',
+        amount: 500,
+        createdAt: new Date(Date.now() - 10 * 86400000), // created 10 days ago
+        deadline: new Date(Date.now() + 1 * 86400000), // 1 day left (>90% elapsed)
+        status: 'PENDING',
+      },
+    });
+
+    const evalRes = await request(`/milestones/${delayedMilestone.id}/health`, {
+      headers: authHeaders,
+    });
+    assert(
+      evalRes.status === 200 && evalRes.data.data.healthStatus === 'CRITICAL_DELAY',
+      'Predictive health telemetry flags stalling milestones as CRITICAL_DELAY'
+    );
+
+    const predictiveAlertsRes = await request('/alerts', { headers: authHeaders });
+    assert(
+      predictiveAlertsRes.data.data.some((a: any) => a.type === 'PREDICTED_CRITICAL_DELAY'),
+      'In-flight health predictor logs early warning PREDICTED_CRITICAL_DELAY alert before deadline breach'
+    );
+
+    // Test Feature 7: Scope Creep & Change Request Detector
+    console.log('\nTesting Feature 7: Scope Creep & Change Request Detector');
+    const scopeCreepRes = await request(`/milestones/${milestoneId}/check-scope`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        rejectionReason: 'The deliverable works, but please also add Apple Pay integration and an admin analytics dashboard.',
+      }),
+    });
+    assert(
+      scopeCreepRes.status === 200 && scopeCreepRes.data.data.classification === 'SCOPE_CREEP',
+      'POST /milestones/:id/check-scope detects out-of-scope feature requests as SCOPE_CREEP'
+    );
+    assert(
+      scopeCreepRes.data.data.suggestedAmendment &&
+      scopeCreepRes.data.data.suggestedAmendment.suggestedAdditionalDays > 0,
+      'Scope creep analysis proposes on-chain amendment budget and timeline extension'
+    );
+
+    const defectFixRes = await request(`/milestones/${milestoneId}/check-scope`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        rejectionReason: 'The login page crashes on invalid email format and automated unit tests fail on branch verification.',
+      }),
+    });
+    assert(
+      defectFixRes.status === 200 && defectFixRes.data.data.classification === 'DEFECT_FIX',
+      'POST /milestones/:id/check-scope classifies bug reports as DEFECT_FIX'
+    );
+    assert(
+      defectFixRes.data.data.suggestedAmendment === null,
+      'Defect fix classification does not recommend additional budget amendment'
+    );
+
+    // Test Feature 8: Multilingual Negotiation Assistant (Hinglish/Hindi to Canonical English Agreement)
+    console.log('\nTesting Feature 8: Multilingual Negotiation Assistant');
+    const hinglishThreadRes = await request('/community/threads', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        postId,
+        recipientId: flUserId,
+        subject: 'Regional Multilingual Negotiation Demo',
+      }),
+    });
+    const hinglishThreadId = hinglishThreadRes.data.data.id;
+
+    await request(`/community/threads/${hinglishThreadId}/messages`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        content: 'Bhai requirement sun: Pehle phase mein smart contract deploy karna hai Polygon Amoy pe. Budget 1.2 ETH. Deadline 5 din mein.',
+      }),
+    });
+
+    await request(`/community/threads/${hinglishThreadId}/messages`, {
+      method: 'POST',
+      headers: flAuthHeaders,
+      body: JSON.stringify({
+        content: 'Haan bhai theek hai. 1.2 ETH lock karo escrow mein, main 5 din mein Amoy pe contract deploy karke tests pass karwa dunga.',
+      }),
+    });
+
+    const multilingualDraftRes = await request('/agreements/draft', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        threadId: hinglishThreadId,
+        postId,
+        freelancerId: flUserId,
+      }),
+    });
+    assert(
+      multilingualDraftRes.status === 201 && !!multilingualDraftRes.data.data.id,
+      'POST /agreements/draft synthesizes draft from Hinglish conversation thread'
+    );
+    const parsedDraftTerms = JSON.parse(multilingualDraftRes.data.data.termsJson);
+    assert(
+      parsedDraftTerms.currency === 'ETH' || parsedDraftTerms.currency === 'MATIC',
+      'Multilingual draft normalizes currency to canonical token'
+    );
+    assert(
+      parseFloat(parsedDraftTerms.totalAmount) === 1.2 || parsedDraftTerms.totalBudget === 1.2,
+      'Multilingual assistant extracts exact 1.2 ETH budget from Hinglish context'
+    );
+    assert(
+      parsedDraftTerms.milestones && parsedDraftTerms.milestones.length >= 2,
+      'Multilingual draft generates sequential milestones'
+    );
+    assert(
+      !parsedDraftTerms.milestones[0].title.toLowerCase().includes('bhai') &&
+      !parsedDraftTerms.milestones[0].title.toLowerCase().includes('pehle'),
+      'Multilingual assistant translates informal Hindi/Hinglish titles into canonical English'
+    );
 
     console.log(`\n🎉 All ${passedTests}/${totalTests} integration tests PASSED successfully!\n`);
   } catch (error: any) {

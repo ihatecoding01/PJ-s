@@ -97,12 +97,121 @@ export class DeadlineWatcherService {
             }
           }
         }
+
+        // 4. In-flight milestone health & predictive delay risk check
+        if (m.status === 'PENDING') {
+          const health = await this.evaluateMilestoneHealth(m.id);
+          if (health.healthStatus !== 'ON_TRACK') {
+            newAlertsCount++;
+          }
+        }
       }
     } catch (err: any) {
       console.error('[DeadlineWatcher] Error during deadline scan:', err.message);
     }
 
     return newAlertsCount;
+  }
+
+  /**
+   * Scans an active milestone to predict in-flight delay risk before deadlines breach.
+   * Evaluates elapsed time ratio, commit delivery status, and thread communication silence.
+   */
+  static async evaluateMilestoneHealth(milestoneId: string): Promise<{
+    milestoneId: string;
+    healthStatus: 'ON_TRACK' | 'AT_RISK' | 'CRITICAL_DELAY' | 'COMPLETED';
+    timeProgressRatio: number;
+    hoursSinceLastMessage: number;
+    daysRemaining: number;
+  }> {
+    const milestone = await prisma.milestone.findUnique({
+      where: { id: milestoneId },
+      include: {
+        agreement: {
+          include: {
+            thread: {
+              include: {
+                messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!milestone) {
+      throw new Error('Milestone not found');
+    }
+
+    if (milestone.status === 'APPROVED' || milestone.status === 'SUBMITTED') {
+      return {
+        milestoneId,
+        healthStatus: 'COMPLETED',
+        timeProgressRatio: 1.0,
+        hoursSinceLastMessage: 0,
+        daysRemaining: 0,
+      };
+    }
+
+    const now = Date.now();
+    const deadlineTime = new Date(milestone.deadline).getTime();
+    const createdAtTime = new Date(milestone.createdAt).getTime();
+    const totalDuration = Math.max(1000, deadlineTime - createdAtTime);
+    const timeElapsed = Math.max(0, now - createdAtTime);
+    const timeProgressRatio = Math.min(timeElapsed / totalDuration, 1.0);
+    const daysRemaining = Math.max(0, Math.round((deadlineTime - now) / 86400000));
+
+    const lastMsg = milestone.agreement.thread?.messages?.[0];
+    const lastMsgTime = lastMsg ? new Date(lastMsg.createdAt).getTime() : createdAtTime;
+    const hoursSinceLastMessage = Math.max(0, (now - lastMsgTime) / (1000 * 3600));
+
+    let healthStatus: 'ON_TRACK' | 'AT_RISK' | 'CRITICAL_DELAY' = 'ON_TRACK';
+
+    if (timeProgressRatio > 0.85 && !milestone.submissionCommitSha) {
+      healthStatus = 'CRITICAL_DELAY';
+    } else if (
+      (timeProgressRatio > 0.5 && !milestone.submissionCommitSha && hoursSinceLastMessage > 48) ||
+      (timeProgressRatio > 0.7 && !milestone.submissionCommitSha)
+    ) {
+      healthStatus = 'AT_RISK';
+    }
+
+    // Persist health status in milestone record
+    await prisma.milestone.update({
+      where: { id: milestoneId },
+      data: { healthStatus },
+    });
+
+    // Create proactive alert if at risk or critical delay
+    if (healthStatus !== 'ON_TRACK') {
+      const existingAlert = await prisma.alert.findFirst({
+        where: {
+          milestoneId: milestone.id,
+          type: `PREDICTED_${healthStatus}`,
+          resolved: false,
+        },
+      });
+
+      if (!existingAlert) {
+        await prisma.alert.create({
+          data: {
+            agreementId: milestone.agreementId,
+            milestoneId: milestone.id,
+            type: `PREDICTED_${healthStatus}`,
+            severity: healthStatus === 'CRITICAL_DELAY' ? 'CRITICAL' : 'WARNING',
+            message: `Predictive Telemetry: Milestone #${milestone.milestoneIndex + 1} ('${milestone.title}') is ${healthStatus}. Velocity is low with ${daysRemaining} day(s) remaining.`,
+          },
+        });
+      }
+    }
+
+    return {
+      milestoneId,
+      healthStatus,
+      timeProgressRatio,
+      hoursSinceLastMessage,
+      daysRemaining,
+    };
   }
 
   static startWatcher(intervalMs = 60000) {

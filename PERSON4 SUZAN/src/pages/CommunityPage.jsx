@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { getPosts, getProposals } from '../api/posts.js';
+import { getPosts, getProposals, getRecommendedTalent } from '../api/posts.js';
 import { mockStore, DEMO_ACCOUNTS } from '../mock/mockStore.js';
 import PostCard from '../components/community/PostCard.jsx';
 import CreatePostModal from '../components/community/CreatePostModal.jsx';
 import ProposalModal from '../components/community/ProposalModal.jsx';
 import { Card, Button, Badge, Modal, AmountDisplay, EmptyState } from '../components/ui/index.js';
 import AddressChip from '../components/ui/AddressChip.jsx';
-import { Search, Plus, Filter, MessageSquare, Send, Sparkles, Briefcase } from 'lucide-react';
+import { Search, Plus, Filter, MessageSquare, Send, Sparkles, Briefcase, Award, Bot, CheckCircle2 } from 'lucide-react';
 import { createThread } from '../api/threads.js';
 import { useWallet } from '../context/WalletContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -29,6 +29,8 @@ export default function CommunityPage({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [postProposals, setPostProposals] = useState([]);
+  const [recommendedTalent, setRecommendedTalent] = useState([]);
+  const [isTalentLoading, setIsTalentLoading] = useState(false);
   const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
 
   useEffect(() => {
@@ -80,6 +82,16 @@ export default function CommunityPage({
       setPostProposals(props || []);
     } catch {
       setPostProposals([]);
+    }
+
+    try {
+      setIsTalentLoading(true);
+      const talent = await getRecommendedTalent(post.id);
+      setRecommendedTalent(talent || []);
+    } catch {
+      setRecommendedTalent([]);
+    } finally {
+      setIsTalentLoading(false);
     }
   };
 
@@ -249,6 +261,81 @@ export default function CommunityPage({
                   ))}
                 </div>
               )}
+
+              {/* AI Talent Matcher & Soulbound Reputation */}
+              <div className="p-4 rounded-card bg-sage/40 border border-forest/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-forest" />
+                    <h4 className="font-heading font-bold text-xs uppercase tracking-wider text-ink">
+                      AI Recommended Talent (Explainable Ranking & Soulbound Badges)
+                    </h4>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white text-forest border border-forest/20 font-mono">
+                    ERC-5192 Badges
+                  </span>
+                </div>
+
+                {isTalentLoading ? (
+                  <p className="text-xs text-ink/60 italic">Evaluating matching developer profiles & on-chain reputation...</p>
+                ) : recommendedTalent.length === 0 ? (
+                  <p className="text-xs text-ink/60">No candidate profiles evaluated yet for this post.</p>
+                ) : (
+                  <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                    {recommendedTalent.slice(0, 3).map((candidate) => (
+                      <div
+                        key={candidate.userId}
+                        className="p-3 rounded-[8px] bg-white border border-gray space-y-1.5 text-xs shadow-sm"
+                      >
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="font-heading font-bold text-ink">{candidate.name}</span>
+                            <span className="font-mono text-[10px] text-ink/50">
+                              {candidate.walletAddress.slice(0, 6)}...{candidate.walletAddress.slice(-4)}
+                            </span>
+                            {candidate.githubUsername && (
+                              <span className="text-[10px] font-mono text-forest bg-sage px-1.5 py-0.5 rounded">
+                                @{candidate.githubUsername}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {candidate.verifiedBadgesCount > 0 && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-semibold flex items-center gap-1">
+                                <Award className="w-3 h-3 text-amber-600" />
+                                {candidate.verifiedBadgesCount} SBT Badge{candidate.verifiedBadgesCount > 1 ? 's' : ''}
+                              </span>
+                            )}
+                            <span className="text-[11px] font-mono font-bold text-forest bg-sage px-2 py-0.5 rounded-full border border-forest/20">
+                              {candidate.matchScore}% Match
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Explainable Reasoning Bullets */}
+                        {candidate.matchReasoning && candidate.matchReasoning.length > 0 && (
+                          <ul className="text-[11px] text-ink/70 space-y-0.5 list-disc list-inside">
+                            {candidate.matchReasoning.map((reason, rIdx) => (
+                              <li key={rIdx}>{reason}</li>
+                            ))}
+                          </ul>
+                        )}
+
+                        <div className="pt-1 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleStartChatFromDetail(candidate.walletAddress, selectedPost.id)}
+                            className="text-[11px] font-heading font-semibold text-forest hover:underline inline-flex items-center gap-1"
+                          >
+                            <MessageSquare className="w-3 h-3" /> Connect & Negotiate &rarr;
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Actions */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-gray">

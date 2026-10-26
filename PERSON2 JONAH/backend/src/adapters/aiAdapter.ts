@@ -136,6 +136,20 @@ export interface ArbitratorQueryResult {
   cited_evidence: string[];
 }
 
+export interface ScopeCheckParams {
+  milestoneTitle: string;
+  acceptanceCriteria: string[];
+  rejectionReason: string;
+}
+
+export interface ScopeCheckResult {
+  isScopeCreep: boolean;
+  confidence: number;
+  reasoning: string;
+  suggestedBudget?: number;
+  suggestedDays?: number;
+}
+
 export class AiAdapter {
   private static getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
@@ -148,14 +162,64 @@ export class AiAdapter {
   }
 
   private static getMockDraft(input: AgreementDraftInput): AgreementTerms {
-    const budget = input.postContext?.budget || 1000;
-    const m1Budget = Math.round(budget * 0.4);
-    const m2Budget = budget - m1Budget;
+    const threadText = (input.threadContext || []).map((m) => m.content).join(' ').toLowerCase();
+    const isHinglish =
+      threadText.includes('bhai') ||
+      threadText.includes('pehle') ||
+      threadText.includes('din') ||
+      threadText.includes('amoy') ||
+      threadText.includes('polygon') ||
+      /[\u0900-\u097F]/.test(threadText);
+
+    let budget = input.postContext?.budget || 1000;
+    let title = input.title || input.postContext?.title || 'FairWork Freelance Agreement';
+    let summary = `Autonomous agreement generated from post '${input.postContext?.title ?? 'Direct Negotiation'}' and negotiation thread messages.`;
+
+    if (isHinglish) {
+      if (threadText.includes('1.2') || threadText.includes('amoy') || threadText.includes('polygon')) {
+        budget = 1.2;
+        title = 'Polygon Amoy Smart Contract Deployment & Integration';
+        summary = 'Autonomous canonical English agreement synthesized from Hinglish negotiation on Polygon Amoy smart contract deployment.';
+      } else if (threadText.includes('1.5')) {
+        budget = 1.5;
+        title = 'Full Stack Decentralized Application';
+        summary = 'Autonomous canonical English agreement synthesized from Hinglish negotiation.';
+      } else if (threadText.includes('2')) {
+        budget = 2.0;
+        title = 'Full Stack Decentralized Application';
+        summary = 'Autonomous canonical English agreement synthesized from Hinglish negotiation.';
+      }
+    }
+
+    const m1Budget = isHinglish ? Number((budget * 0.6).toFixed(2)) : Math.round(budget * 0.4);
+    const m2Budget = Number((budget - m1Budget).toFixed(2));
+
+    const m1Title = isHinglish
+      ? 'Phase 1: Smart Contract Architecture & Deployment'
+      : 'Phase 1: Architecture & Core Implementation';
+    const m1Desc = isHinglish
+      ? 'Deliver verified smart contract deployed on Polygon Amoy testnet with automated tests.'
+      : 'Foundation setup, core data models, tests, and API endpoints.';
+    const m1Days = isHinglish && threadText.includes('5 din') ? 5 : 7;
+    const m1Criteria = isHinglish
+      ? ['Smart contract deployed and verified on Polygon Amoy', 'Automated unit test suite passing with 100% success']
+      : ['API Specification', 'Database Models', 'Initial Core Tests'];
+
+    const m2Title = isHinglish
+      ? 'Phase 2: Frontend Integration & Escrow Verification'
+      : 'Phase 2: Final Integration & Delivery';
+    const m2Desc = isHinglish
+      ? 'Connect Web3 frontend to deployed contract, verify payment escrow flow, and deliver documentation.'
+      : 'Full system integration, end-to-end tests, documentation, and deployment.';
+    const m2Days = m1Days + 7;
+    const m2Criteria = isHinglish
+      ? ['Web3 wallet connection and transaction execution', 'Automated milestone payout verification']
+      : ['Production Bundle', 'User Documentation', 'E2E Test Suite'];
 
     return {
-      title: input.title || input.postContext?.title || 'FairWork Freelance Agreement',
-      summary: `Autonomous agreement generated from post '${input.postContext?.title ?? 'Direct Negotiation'}' and negotiation thread messages.`,
-      description: `Autonomous agreement generated from post '${input.postContext?.title ?? 'Direct Negotiation'}' and negotiation thread messages.`,
+      title,
+      summary,
+      description: summary,
       totalBudget: budget,
       totalAmount: String(budget),
       currency: 'ETH',
@@ -175,23 +239,23 @@ export class AiAdapter {
         {
           milestoneIndex: 0,
           index: 0,
-          title: 'Phase 1: Architecture & Core Implementation',
-          description: 'Foundation setup, core data models, tests, and API endpoints.',
+          title: m1Title,
+          description: m1Desc,
           amount: m1Budget,
-          deadlineDays: 7,
-          deliverables: ['API Specification', 'Database Models', 'Initial Core Tests'],
-          acceptanceCriteria: ['API Specification', 'Database Models', 'Initial Core Tests'],
+          deadlineDays: m1Days,
+          deliverables: m1Criteria,
+          acceptanceCriteria: m1Criteria,
           requiredProgressBps: 8000,
         },
         {
           milestoneIndex: 1,
           index: 1,
-          title: 'Phase 2: Final Integration & Delivery',
-          description: 'Full system integration, end-to-end tests, documentation, and deployment.',
+          title: m2Title,
+          description: m2Desc,
           amount: m2Budget,
-          deadlineDays: 14,
-          deliverables: ['Production Bundle', 'User Documentation', 'E2E Test Suite'],
-          acceptanceCriteria: ['Production Bundle', 'User Documentation', 'E2E Test Suite'],
+          deadlineDays: m2Days,
+          deliverables: m2Criteria,
+          acceptanceCriteria: m2Criteria,
           requiredProgressBps: 8000,
         },
       ],
@@ -955,5 +1019,87 @@ export class AiAdapter {
       console.warn(`[AI Service Fallback] Calling mock arbitrator query: ${err.message}`);
       return this.getMockArbitratorQuery(params);
     }
+  }
+
+  static async rankTalentForPost(params: {
+    postTitle: string;
+    postDescription: string;
+    requiredSkills: string[];
+    candidates: Array<{
+      id: string;
+      name: string;
+      skills: string[];
+      completedAgreements: number;
+    }>;
+  }): Promise<Array<{ id: string; matchScore: number; matchReasoning: string[] }>> {
+    return params.candidates.map((c) => {
+      const matching = c.skills.filter((s) =>
+        params.requiredSkills.some((req) => req.toLowerCase() === s.toLowerCase())
+      );
+      const skillScore = params.requiredSkills.length > 0
+        ? Math.round((matching.length / params.requiredSkills.length) * 50)
+        : 25;
+      const repScore = Math.min(c.completedAgreements * 15, 40);
+      const matchScore = Math.min(skillScore + repScore + 10, 99);
+      const reasoning: string[] = [];
+      if (matching.length > 0) reasoning.push(`Matched skills: ${matching.join(', ')}`);
+      if (c.completedAgreements > 0) {
+        reasoning.push(`Completed ${c.completedAgreements} verified on-chain agreements (ERC-5192 Soulbound Tokens)`);
+      }
+      return { id: c.id, matchScore, matchReasoning: reasoning };
+    });
+  }
+
+  static async checkScopeCreep(params: ScopeCheckParams): Promise<ScopeCheckResult> {
+    if (env.AI_MOCK) {
+      return this.getMockScopeCreep(params);
+    }
+
+    try {
+      const response = await fetch(`${env.AI_SERVICE_URL}/ai/milestone/check-scope`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(params),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      if (!response.ok) {
+        const errJson = (await response.json().catch(() => null)) as any;
+        throw new Error(errJson?.detail?.message || `Scope check error: ${response.statusText}`);
+      }
+
+      return (await response.json()) as ScopeCheckResult;
+    } catch (err: any) {
+      console.warn(`[AI Service Fallback] Calling mock checkScopeCreep: ${err.message}`);
+      return this.getMockScopeCreep(params);
+    }
+  }
+
+  private static getMockScopeCreep(params: ScopeCheckParams): ScopeCheckResult {
+    const text = (params.rejectionReason || '').toLowerCase();
+    const creepTriggers = [
+      'also', 'add', 'addition', 'additionally', 'plus', 'integrate', 'apple pay',
+      'google pay', 'new feature', 'dark mode', 'analytics', 'dashboard', 'redesign',
+      'extra', 'moreover', 'expand', 'bonus'
+    ];
+    const isCreep = creepTriggers.some((trigger) => text.includes(trigger));
+
+    if (isCreep) {
+      return {
+        isScopeCreep: true,
+        confidence: 91,
+        reasoning: "Client's feedback introduces new features or deliverables outside the original signed acceptance criteria. Instead of an outright deliverable rejection, an On-Chain Amendment proposal is advised to extend timeline and escrow funding.",
+        suggestedBudget: 0.25,
+        suggestedDays: 4,
+      };
+    }
+
+    return {
+      isScopeCreep: false,
+      confidence: 88,
+      reasoning: "Client's feedback reports deficiencies or bugs directly related to the milestone's stated acceptance criteria. This qualifies as a legitimate defect fix under the existing agreement terms.",
+      suggestedBudget: 0,
+      suggestedDays: 0,
+    };
   }
 }

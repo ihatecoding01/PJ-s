@@ -281,6 +281,23 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* Quick Load Multilingual & Hinglish Negotiation Demo */}
+              <div className="px-3.5 py-1.5 bg-sage/20 border-t border-gray flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 text-ink/70 text-[11px]">
+                  <Sparkles className="w-3.5 h-3.5 text-forest" />
+                  <span>Multilingual Assistant:</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputText("Bhai requirement sun: Pehle phase mein smart contract deploy karna hai Polygon Amoy pe. Budget 1.2 ETH. Deadline 5 din mein.");
+                  }}
+                  className="text-[11px] text-forest hover:text-forest/80 font-heading font-semibold underline decoration-dotted"
+                >
+                  Load Hinglish Negotiation Demo
+                </button>
+              </div>
+
               {/* Message Input Bar */}
               <form onSubmit={handleSendMessage} className="p-3 border-t border-gray bg-white flex items-center gap-2">
                 <input
@@ -331,6 +348,7 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
               </div>
               <ul className="text-xs text-ink/80 space-y-2 list-disc list-inside">
                 <li>Analyzes recent message exchange to formulate concrete milestone deliverables.</li>
+                <li><strong>Multilingual Synthesis:</strong> Interprets Hindi, Marathi & Hinglish chats and normalizes into canonical English terms.</li>
                 <li>Assigns standard 5-day client review window with automated fallback protection.</li>
                 <li>Applies calibrated 1% / day late penalty (capped at 30%) with grace period.</li>
                 <li>Computes canonical Keccak-256 hash for immutable verification before chain creation.</li>

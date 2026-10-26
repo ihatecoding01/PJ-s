@@ -18,3 +18,18 @@ export async function submitMilestone(agreementId, idx, { commitSha, prUrl, note
 export async function getMilestoneProgress(agreementId, idx) {
   return apiFetch(`/agreements/${agreementId}/milestones/${idx}/progress`);
 }
+
+/**
+ * Analyze rejection feedback for scope creep vs defect fix
+ * POST /milestones/:id/check-scope
+ */
+export async function checkMilestoneScope(identifier, rejectionReason, idx) {
+  const url = idx !== undefined
+    ? `/agreements/${identifier}/milestones/${idx}/check-scope`
+    : `/milestones/${identifier}/check-scope`;
+  return apiFetch(url, {
+    method: 'POST',
+    body: JSON.stringify({ rejectionReason })
+  });
+}
+

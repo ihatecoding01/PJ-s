@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { CommunityService } from './community.service';
+import { TalentMatcherService } from './talentMatcher.service';
 import {
   createPostSchema,
   searchPostQuerySchema,
@@ -56,6 +57,15 @@ export class CommunityController {
     try {
       const proposals = await CommunityService.getProposalsForPost(req.params.id);
       return sendSuccess(res, proposals);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getRecommendedTalent(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const recommendations = await TalentMatcherService.matchFreelancersForPost(req.params.id);
+      return sendSuccess(res, recommendations, 200, 'Recommended talent ranked successfully');
     } catch (error) {
       next(error);
     }

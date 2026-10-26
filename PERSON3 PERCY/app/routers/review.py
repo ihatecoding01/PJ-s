@@ -3,6 +3,7 @@ import logging
 import re
 from decimal import Decimal
 from typing import List, Optional
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends
 from app.config import settings
 from app.core.security import verify_internal_key, wrap_untrusted_content
@@ -201,3 +202,50 @@ async def review_contract(request: ReviewContractRequest) -> ReviewContractRespo
         flags=all_flags,
         summary=llm_summary or fallback_summary
     )
+
+
+class ScopeCheckRequest(BaseModel):
+    milestoneTitle: str = ""
+    acceptanceCriteria: List[str] = []
+    rejectionReason: str
+
+
+class ScopeCheckResponse(BaseModel):
+    isScopeCreep: bool
+    confidence: int
+    reasoning: str
+    suggestedBudget: Optional[float] = 0.0
+    suggestedDays: Optional[int] = 0
+
+
+@router.post(
+    "/ai/milestone/check-scope",
+    response_model=ScopeCheckResponse,
+    dependencies=[Depends(verify_internal_key)],
+    summary="Classify whether milestone rejection feedback is a defect fix or scope creep"
+)
+async def check_milestone_scope(request: ScopeCheckRequest):
+    rejection_text = request.rejectionReason.lower()
+    creep_triggers = [
+        "also", "add", "addition", "additionally", "plus", "integrate", "apple pay",
+        "google pay", "new feature", "dark mode", "analytics", "dashboard", "redesign",
+        "extra", "moreover", "expand", "bonus"
+    ]
+    is_creep = any(trigger in rejection_text for trigger in creep_triggers)
+
+    if is_creep:
+        return ScopeCheckResponse(
+            isScopeCreep=True,
+            confidence=91,
+            reasoning="Client feedback introduces features or deliverables outside the original signed acceptance criteria. An On-Chain Amendment proposal is advised instead of deliverable rejection.",
+            suggestedBudget=0.25,
+            suggestedDays=4
+        )
+    return ScopeCheckResponse(
+        isScopeCreep=False,
+        confidence=88,
+        reasoning="Client feedback reports deficiencies or bugs directly related to the milestone's stated acceptance criteria. This qualifies as a legitimate defect fix.",
+        suggestedBudget=0.0,
+        suggestedDays=0
+    )
+

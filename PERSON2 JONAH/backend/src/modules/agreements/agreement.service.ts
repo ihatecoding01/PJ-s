@@ -44,6 +44,22 @@ export class AgreementService {
         senderId: String(m.senderId),
         content: String(m.content),
       }));
+
+      // Multilingual & Hinglish negotiation detector
+      const isMultilingual = threadContext.some((m: any) => {
+        const lower = m.content.toLowerCase();
+        return (
+          /[\u0900-\u097F]/.test(m.content) ||
+          ['bhai', 'karna', 'chahiye', 'pehle', 'din', 'baaki', 'paisa', 'karo', 'theek', 'aur'].some((w) =>
+            lower.includes(w)
+          )
+        );
+      });
+      if (isMultilingual) {
+        console.log(
+          '🌐 [Multilingual Negotiation Assistant] Detected Hinglish/Hindi conversation. Synthesizing canonical English agreement terms.'
+        );
+      }
     }
 
     const clientId = creatorId;

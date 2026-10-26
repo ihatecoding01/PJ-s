@@ -31,6 +31,7 @@ router.get('/:id/alerts', AlertController.listAlerts);
 
 // Milestone sub-routes
 router.post('/:id/milestones/:idx/submit', MilestoneController.submitMilestone);
+router.post('/:id/milestones/:idx/check-scope', MilestoneController.checkScope);
 router.get('/:id/milestones/:idx/progress', MilestoneController.getById);
 
 // Dispute sub-routes

@@ -29,7 +29,9 @@ import {
   Scale,
   Sparkles,
   Lock,
-  GitCommit
+  GitCommit,
+  Activity,
+  AlertCircle
 } from 'lucide-react';
 
 export default function MilestoneCard({
@@ -180,6 +182,25 @@ export default function MilestoneCard({
               <Badge status={milestone.status} size="sm">
                 {milestone.status}
               </Badge>
+              {milestone.healthStatus && milestone.status !== 'Approved' && milestone.status !== 'Paid' && (
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-heading font-semibold border flex items-center gap-1 ${
+                    milestone.healthStatus === 'CRITICAL_DELAY'
+                      ? 'bg-coral/20 border-coral/40 text-coral-900'
+                      : milestone.healthStatus === 'AT_RISK'
+                      ? 'bg-amber-50 border-amber-300 text-amber-800'
+                      : 'bg-sage/70 border-forest/30 text-forest'
+                  }`}
+                  title="In-flight predictive health telemetry"
+                >
+                  <Activity className="w-3 h-3" />
+                  {milestone.healthStatus === 'CRITICAL_DELAY'
+                    ? 'Critical Delay Risk'
+                    : milestone.healthStatus === 'AT_RISK'
+                    ? 'At Risk (Stalled)'
+                    : 'On Track'}
+                </span>
+              )}
             </div>
             <p className="text-xs text-ink/70 mt-0.5 line-clamp-1">
               {termsMilestone?.description || 'Milestone deliverable specification'}

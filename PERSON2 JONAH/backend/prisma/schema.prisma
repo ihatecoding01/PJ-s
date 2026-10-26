@@ -145,6 +145,7 @@ model Milestone {
   deadline            DateTime
   reviewWindowSeconds Int              @default(259200) // 3 days review window in seconds
   status              String           @default("PENDING") // PENDING, SUBMITTED, IN_REVIEW, APPROVED, REJECTED, DISPUTED
+  healthStatus        String           @default("ON_TRACK") // ON_TRACK, AT_RISK, CRITICAL_DELAY
   submissionRepoUrl   String?
   submissionCommitSha String?
   submissionNotes     String?

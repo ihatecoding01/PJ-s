@@ -119,3 +119,18 @@ export async function createProposal(postId, proposalData) {
   });
   return normalizeProposal(data);
 }
+
+/**
+ * Get AI recommended talent with explainable ranking & Soulbound reputation
+ * GET /community/posts/:id/recommended-talent
+ */
+export async function getRecommendedTalent(postId) {
+  try {
+    const data = await apiFetch(`/community/posts/${postId}/recommended-talent`);
+    return Array.isArray(data) ? data : (data?.recommendations || data?.data || []);
+  } catch (err) {
+    console.warn('Failed to fetch recommended talent:', err);
+    return [];
+  }
+}
+
