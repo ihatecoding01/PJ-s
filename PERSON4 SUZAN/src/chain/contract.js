@@ -15,6 +15,7 @@ export const SUPPORTED_NETWORKS = {
   31337: {
     chainId: '0x7a69',
     name: 'Hardhat Local',
+    contractAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
     rpcUrls: ['http://127.0.0.1:8545'],
     nativeCurrency: {
       name: 'ETH',
@@ -27,6 +28,7 @@ export const SUPPORTED_NETWORKS = {
   11155111: {
     chainId: '0xaa36a7',
     name: 'Sepolia Testnet',
+    contractAddress: '0xc1C0415872eA86DfdA31615B9Ad94d795974CA1e',
     rpcUrls: [
       'https://rpc.sepolia.org',
       'https://ethereum-sepolia-rpc.publicnode.com'
@@ -42,6 +44,7 @@ export const SUPPORTED_NETWORKS = {
   80002: {
     chainId: '0x13882',
     name: 'Polygon Amoy Testnet',
+    contractAddress: '0xc1C0415872eA86DfdA31615B9Ad94d795974CA1e',
     rpcUrls: ['https://rpc-amoy.polygon.technology'],
     nativeCurrency: {
       name: 'MATIC',
@@ -52,39 +55,26 @@ export const SUPPORTED_NETWORKS = {
   }
 };
 
-let cachedConfig = null;
-
 /**
- * Fetch smart contract configuration from backend.
+ * Fetch smart contract configuration for current or target chainId.
  */
-export async function fetchContractConfig() {
-  if (cachedConfig) {
-    return cachedConfig;
+export async function fetchContractConfig(targetChainId) {
+  let currentChainId = targetChainId;
+  if (!currentChainId && typeof window !== 'undefined' && window.ethereum?.chainId) {
+    try {
+      currentChainId = parseInt(window.ethereum.chainId, 16);
+    } catch {}
+  }
+  if (!currentChainId || isNaN(Number(currentChainId))) {
+    currentChainId = Number(import.meta.env.VITE_CHAIN_ID || 11155111);
   }
 
-  try {
-    const res = await getConfig();
-
-    if (res && res.contractAddress) {
-      cachedConfig = res;
-      return cachedConfig;
-    }
-  } catch (err) {
-    console.warn(
-      'Could not fetch remote config, using defaults:',
-      err
-    );
-  }
-
-  cachedConfig = {
-    chainId: Number(import.meta.env.VITE_CHAIN_ID || 11155111),
-    contractAddress:
-      import.meta.env.VITE_CONTRACT_ADDRESS ||
-      '0xc1C0415872eA86DfdA31615B9Ad94d795974CA1e',
+  const net = SUPPORTED_NETWORKS[currentChainId];
+  return {
+    chainId: currentChainId,
+    contractAddress: net?.contractAddress || import.meta.env.VITE_CONTRACT_ADDRESS || '0xc1C0415872eA86DfdA31615B9Ad94d795974CA1e',
     abi: FAIRWORK_ABI
   };
-
-  return cachedConfig;
 }
 
 /**
@@ -102,9 +92,15 @@ export function getProvider() {
  * Get fallback JSON-RPC provider.
  */
 export function getFallbackProvider() {
-  const chainId = Number(
-    import.meta.env.VITE_CHAIN_ID || 11155111
-  );
+  let chainId = 11155111;
+  if (typeof window !== 'undefined' && window.ethereum?.chainId) {
+    try {
+      chainId = parseInt(window.ethereum.chainId, 16);
+    } catch {}
+  }
+  if (!chainId || isNaN(Number(chainId))) {
+    chainId = Number(import.meta.env.VITE_CHAIN_ID || 11155111);
+  }
 
   if (chainId === 31337) {
     return new JsonRpcProvider('http://127.0.0.1:8545');
@@ -124,23 +120,23 @@ export async function getContractWithSigner() {
   const cfg = await fetchContractConfig();
   const provider = getProvider();
 
-  if (provider && window.ethereum?.selectedAddress) {
+  // 1. Prefer active browser MetaMask signer if available
+  if (provider) {
     try {
       const signer = await provider.getSigner();
-
-      return new Contract(
-        cfg.contractAddress,
-        cfg.abi || FAIRWORK_ABI,
-        signer
-      );
+      if (signer) {
+        return new Contract(
+          cfg.contractAddress,
+          cfg.abi || FAIRWORK_ABI,
+          signer
+        );
+      }
     } catch (err) {
-      console.warn(
-        'MetaMask signer unavailable:',
-        err
-      );
+      console.warn('MetaMask active signer not ready, trying stored account:', err);
     }
   }
 
+  // 2. Demo persona fallback with local private key (for local simulation/Hardhat)
   const savedAddr = (
     localStorage.getItem('fairwork_user_address') || ''
   ).toLowerCase();
@@ -177,8 +173,7 @@ export async function getContractWithSigner() {
   }
 
   throw new Error(
-    'MetaMask or Web3 wallet is not installed. ' +
-    'Please use a demo account or install MetaMask.'
+    'MetaMask or Web3 wallet is not connected. Please connect MetaMask to Sepolia Testnet.'
   );
 }
 

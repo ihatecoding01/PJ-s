@@ -36,6 +36,7 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [availableDrafts, setAvailableDrafts] = useState([]);
 
   // Feature 1: Brief-to-Plan Generator state
   const [isBriefModalOpen, setIsBriefModalOpen] = useState(false);
@@ -51,17 +52,48 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
   const [auditResult, setAuditResult] = useState(null);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
-  const fetchAgreementData = async () => {
-    if (!agreementId) {
-      setIsLoading(false);
-      return;
-    }
+  const fetchAgreementData = async (targetId = agreementId) => {
     try {
       setIsLoading(true);
-      const data = await getAgreement(agreementId);
-      setAgreement(data);
-      setTerms(JSON.parse(JSON.stringify(data.terms)));
-      setHasUnsavedChanges(false);
+      let data = null;
+      if (targetId) {
+        data = await getAgreement(targetId);
+      }
+
+      // Fetch user agreements to identify all available drafts
+      let all = [];
+      try {
+        all = await getAgreements();
+      } catch {}
+
+      const allList = Array.isArray(all) ? all : [];
+      const draftsList = allList.filter((a) => {
+        const s = String(a.status || '').toUpperCase();
+        return s === 'DRAFT' || s === 'CLIENT_APPROVED' || s === 'FREELANCER_APPROVED';
+      });
+      setAvailableDrafts(draftsList.length > 0 ? draftsList : allList);
+
+      if (!data && draftsList.length > 0) {
+        // Pick matching draft or most recently created
+        data = draftsList.find(d => d.id === targetId || d.agreementId === targetId) || draftsList[0];
+      } else if (!data && allList.length > 0) {
+        data = allList[0];
+      }
+
+      if (data) {
+        let parsed = data.terms;
+        if (!parsed && data.termsJson) {
+          try {
+            parsed = JSON.parse(data.termsJson);
+          } catch {}
+        }
+        if (parsed) {
+          setAgreement(data);
+          setTerms(typeof parsed === 'string' ? JSON.parse(parsed) : JSON.parse(JSON.stringify(parsed)));
+          setHasUnsavedChanges(false);
+          return;
+        }
+      }
     } catch (err) {
       console.warn('Could not load draft:', err);
     } finally {
@@ -70,35 +102,32 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
   };
 
   useEffect(() => {
-    if (agreementId) {
-      fetchAgreementData();
-    } else {
-      setIsLoading(false);
-    }
+    fetchAgreementData(agreementId);
   }, [agreementId]);
 
   if (isLoading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-16 text-center text-ink/60">
-        Loading agreement draft...
+      <div className="max-w-6xl mx-auto px-4 py-16 text-center text-ink/60 space-y-3">
+        <div className="w-8 h-8 mx-auto border-2 border-forest border-t-transparent rounded-full animate-spin" />
+        <p className="font-heading font-medium text-sm">Loading escrow agreement draft...</p>
       </div>
     );
   }
 
   if (!agreement || !terms) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-6">
+      <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6">
         <div className="w-16 h-16 mx-auto rounded-card bg-sage flex items-center justify-center text-forest">
           <FileText className="w-8 h-8" />
         </div>
         <div className="space-y-2">
           <h2 className="text-2xl font-heading font-bold text-ink">No Draft Selected</h2>
           <p className="text-sm text-ink/60 max-w-md mx-auto">
-            You can generate a draft agreement from any AI chat consultation, or use the Brief-to-Plan Generator to autonomously decompose a project goal.
+            You can generate a draft agreement from any AI chat consultation, accept a community proposal, or use the Brief-to-Plan Generator below.
           </p>
         </div>
 
-        <div className="pt-2 flex justify-center">
+        <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
           <Button
             variant="primary"
             size="lg"
@@ -107,7 +136,43 @@ export default function DraftPage({ agreementId, onProceedToWizard }) {
           >
             Generate Plan from AI Brief
           </Button>
+
+          {availableDrafts.length > 0 && (
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => fetchAgreementData()}
+              icon={RefreshCw}
+            >
+              Refresh Drafts
+            </Button>
+          )}
         </div>
+
+        {availableDrafts.length > 0 && (
+          <div className="max-w-lg mx-auto space-y-3 text-left pt-4">
+            <h4 className="text-xs font-heading font-semibold text-ink/70 uppercase tracking-wider text-center">
+              Available Pending Drafts ({availableDrafts.length})
+            </h4>
+            <div className="space-y-2">
+              {availableDrafts.map((d) => (
+                <div
+                  key={d.id}
+                  className="p-3.5 bg-white border border-gray hover:border-forest rounded-card flex items-center justify-between gap-3 transition-all cursor-pointer shadow-xs"
+                  onClick={() => fetchAgreementData(d.id)}
+                >
+                  <div>
+                    <div className="font-heading font-bold text-xs text-ink">{d.title || 'Escrow Agreement Draft'}</div>
+                    <div className="text-[10px] text-ink/50 font-mono mt-0.5">ID: {d.id} · Status: {d.status}</div>
+                  </div>
+                  <Button variant="outline" size="sm" className="text-xs py-1 px-3">
+                    Load Draft
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Modal on empty state */}
         <Modal
