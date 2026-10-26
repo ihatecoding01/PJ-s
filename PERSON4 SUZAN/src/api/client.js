@@ -187,6 +187,92 @@ async function handleMockRequest(endpoint, options = {}) {
     return newProp;
   }
 
+  if (path.match(/^\/posts\/[^/]+\/proposals\/[^/]+\/accept$/) && method === 'POST') {
+    const parts = path.split('/');
+    const proposalId = parts[parts.length - 2];
+
+    let foundProp = null;
+    let foundPostId = null;
+    for (const [pId, list] of Object.entries(mockStore.data.proposals || {})) {
+      const idx = (list || []).findIndex(item => item.id === proposalId);
+      if (idx !== -1) {
+        list[idx].status = 'ACCEPTED';
+        foundProp = list[idx];
+        foundPostId = pId;
+        break;
+      }
+    }
+    mockStore.save();
+
+    const post = mockStore.data.posts.find(p => p.id === foundPostId);
+    const draftId = `ag-${Date.now()}`;
+    const terms = {
+      schemaVersion: '1.0',
+      title: post ? post.title : 'Web3 Smart Contract & Frontend Development',
+      description: post ? post.description : 'Agreement created from accepted proposal.',
+      client: currentAddress,
+      freelancer: foundProp?.author || DEMO_ACCOUNTS.FREELANCER.address,
+      currency: 'ETH',
+      totalAmount: foundProp?.price ? String(parseFloat(foundProp.price) || 1.0) : '1.0',
+      paymentMode: 'MILESTONE',
+      latePenaltyBpsPerDay: 100,
+      maxLatePenaltyBps: 3000,
+      reviewWindowDays: 5,
+      graceDays: 3,
+      maxRevisions: 2,
+      github: {
+        repoUrl: 'https://github.com/fairwork-platform/project-escrow',
+        branch: 'main'
+      },
+      milestones: [
+        {
+          index: 0,
+          title: 'Milestone 1: Core Setup & Architecture',
+          description: 'Implementation setup and preliminary contract/code integration.',
+          amount: '0.4',
+          deadline: new Date(Date.now() + 7 * 86400000).toISOString(),
+          requiredProgressBps: 8000,
+          acceptanceCriteria: ['Setup complete', 'Initial integration verified']
+        },
+        {
+          index: 1,
+          title: 'Milestone 2: Final Verification & Delivery',
+          description: 'Complete project deliverables and acceptance tests.',
+          amount: '0.6',
+          deadline: new Date(Date.now() + 14 * 86400000).toISOString(),
+          requiredProgressBps: 9000,
+          acceptanceCriteria: ['All deliverables approved', 'Production deployment']
+        }
+      ],
+      createdAt: new Date().toISOString()
+    };
+
+    const newAgreement = {
+      id: draftId,
+      onchainId: null,
+      txHash: null,
+      status: 'Draft',
+      terms,
+      termsHash: canonicalHash(terms),
+      clientApproved: true,
+      freelancerApproved: false,
+      milestones: terms.milestones.map(m => ({
+        ...m,
+        status: 'PENDING'
+      })),
+      createdAt: new Date().toISOString()
+    };
+
+    mockStore.data.agreements.unshift(newAgreement);
+    mockStore.save();
+
+    return {
+      proposal: foundProp,
+      agreementId: draftId,
+      agreement: newAgreement
+    };
+  }
+
   // 4. Threads & Messages
   if (path === '/threads' && method === 'GET') {
     const userThreads = mockStore.data.threads.filter(t => {
@@ -439,8 +525,10 @@ async function handleMockRequest(endpoint, options = {}) {
     if (!ag) throw new ApiError(404, 'NOT_FOUND', 'Agreement not found');
 
     ag.onchainId = Number(body.onchainId);
+    ag.onChainAgreementId = String(body.onchainId);
     ag.txHash = body.txHash;
-    ag.status = 'Active';
+    ag.onChainTxHash = body.txHash;
+    ag.status = body.status || 'Active';
 
     if (!mockStore.data.timeline[id]) mockStore.data.timeline[id] = [];
     mockStore.data.timeline[id].push({
@@ -602,17 +690,27 @@ async function handleMockRequest(endpoint, options = {}) {
     const ag = mockStore.data.agreements.find(a => a.id === agId);
     if (!ag) throw new ApiError(404, 'NOT_FOUND', 'Agreement not found');
 
+    const defaultArbs = [
+      DEMO_ACCOUNTS.ARBITRATOR_1.address,
+      DEMO_ACCOUNTS.ARBITRATOR_2.address,
+      DEMO_ACCOUNTS.ARBITRATOR_3.address
+    ];
+
+    if (!ag.disputes) ag.disputes = {};
     if (!ag.disputes[idx]) {
       ag.disputes[idx] = {
+        id: `disp-${agId}-${idx}`,
         idx,
-        status: 'Active',
-        evidence: [],
-        arbitrators: [
-          DEMO_ACCOUNTS.ARBITRATOR_1.address,
-          DEMO_ACCOUNTS.ARBITRATOR_2.address,
-          DEMO_ACCOUNTS.ARBITRATOR_3.address
-        ],
+        agreementId: agId,
+        agreementTitle: ag.terms?.title || ag.title || 'Smart Escrow Agreement',
+        reason: body.text || `Dispute raised on Milestone #${idx + 1}`,
+        status: 'OPEN',
+        votingDeadline: Date.now() + 3 * 86400 * 1000,
+        votingEndTimestamp: Date.now() + 3 * 86400 * 1000,
+        selectedArbitrators: defaultArbs,
+        arbitrators: defaultArbs,
         votes: {},
+        evidence: [],
         resolved: false,
         aiSummary: null
       };
@@ -636,7 +734,7 @@ async function handleMockRequest(endpoint, options = {}) {
       type: 'EVIDENCE_SUBMITTED',
       title: `Dispute Evidence Submitted on Milestone ${idx + 1}`,
       actor: currentAddress,
-      actorRole: currentAddress === ag.terms.client.toLowerCase() ? 'Client' : 'Freelancer',
+      actorRole: currentAddress === ag.terms?.client?.toLowerCase() ? 'Client' : 'Freelancer',
       txHash: null,
       timestamp: new Date().toISOString(),
       details: body.text.substring(0, 100) + '...'
@@ -651,27 +749,81 @@ async function handleMockRequest(endpoint, options = {}) {
     const agId = parts[2];
     const idx = parseInt(parts[4], 10);
     const ag = mockStore.data.agreements.find(a => a.id === agId);
-    return ag?.disputes[idx] || null;
+    return ag?.disputes?.[idx] || null;
   }
 
-  if (path.match(/^\/agreements\/[^/]+\/milestones\/\d+\/ai-summary$/) && method === 'POST') {
+  if (path.match(/^\/agreements\/[^/]+\/disputes$/) && method === 'GET') {
     const parts = path.split('/');
     const agId = parts[2];
-    const idx = parseInt(parts[4], 10);
     const ag = mockStore.data.agreements.find(a => a.id === agId);
-    if (!ag) throw new ApiError(404, 'NOT_FOUND', 'Agreement not found');
+    if (!ag) return [];
+    return Object.values(ag.disputes || {});
+  }
 
+  if (path === '/disputes' && method === 'GET') {
+    const list = [];
+    for (const ag of mockStore.data.agreements) {
+      if (ag.disputes) {
+        const arr = Array.isArray(ag.disputes) ? ag.disputes : Object.values(ag.disputes);
+        for (const d of arr) {
+          list.push({
+            ...d,
+            agreementId: ag.id,
+            agreementTitle: ag.terms?.title || ag.title || 'Smart Escrow Agreement',
+            agreement: ag
+          });
+        }
+      }
+    }
+    return list;
+  }
+
+  if (path.match(/^\/disputes\/[^/]+$/) && method === 'GET') {
+    const dispId = path.split('/')[2];
+    for (const ag of mockStore.data.agreements) {
+      if (ag.disputes) {
+        const arr = Array.isArray(ag.disputes) ? ag.disputes : Object.values(ag.disputes);
+        const found = arr.find(d => d.id === dispId || `disp-${ag.id}-${d.idx}` === dispId);
+        if (found) return found;
+      }
+    }
+    throw new ApiError(404, 'NOT_FOUND', 'Dispute not found');
+  }
+
+  if ((path.match(/^\/agreements\/[^/]+\/milestones\/\d+\/ai-summary$/) || path.match(/^\/disputes\/[^/]+\/ai-summary$/)) && method === 'POST') {
     const summaryData = {
       summary: 'Freelancer delivered 85% of core frontend functionality. Minor mobile responsive layout issues were contested by the client.',
       recommended_freelancer_share_bps: 7500, // 75%
+      recommendedShareBps: 7500,
       reasoning: 'The smart contract and core UI logic were delivered accurately on GitHub. Visual polish gaps warrant a 25% compensation adjustment in favor of the client.',
+      confidence: 0.94,
       advisoryNote: 'Advisory only. The 3 selected arbitrators cast binding votes.'
     };
 
-    if (ag.disputes[idx]) {
-      ag.disputes[idx].aiSummary = summaryData;
+    if (path.includes('/milestones/')) {
+      const parts = path.split('/');
+      const agId = parts[2];
+      const idx = parseInt(parts[4], 10);
+      const ag = mockStore.data.agreements.find(a => a.id === agId);
+      if (ag?.disputes?.[idx]) {
+        ag.disputes[idx].aiSummary = summaryData;
+        mockStore.save();
+      }
+    } else {
+      const dispId = path.split('/')[2];
+      for (const ag of mockStore.data.agreements) {
+        if (ag.disputes) {
+          const arr = Array.isArray(ag.disputes) ? ag.disputes : Object.values(ag.disputes);
+          const found = arr.find(d => d.id === dispId || `disp-${ag.id}-${d.idx}` === dispId);
+          if (found) {
+            found.aiSummary = summaryData;
+            mockStore.save();
+            break;
+          }
+        }
+      }
     }
-    mockStore.save();
+
     return summaryData;
   }
 

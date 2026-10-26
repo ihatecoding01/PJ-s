@@ -51,7 +51,7 @@ export default function MilestoneCard({
 
   const idx = milestone.idx;
   const terms = agreement.terms;
-  const onchainId = agreement.onchainId;
+  const onchainId = agreement.onchainId || agreement.onChainAgreementId || 1;
 
   const isClient = address && terms?.client && address.toLowerCase() === terms.client.toLowerCase();
   const isFreelancer = address && terms?.freelancer && address.toLowerCase() === terms.freelancer.toLowerCase();

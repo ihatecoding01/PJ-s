@@ -170,6 +170,20 @@ export class EventIndexerService {
     }
 
     // 7. Chain events
+    if (agreement.onChainTxHash) {
+      const hasCreationEvent = agreement.chainEvents.some(e => e.transactionHash === agreement.onChainTxHash);
+      if (!hasCreationEvent) {
+        timeline.push({
+          id: `lifecycle-chain-link-${agreement.id}`,
+          timestamp: agreement.lockedAt || agreement.createdAt,
+          type: 'CHAIN_EVENT',
+          title: 'Agreement Deployed & Linked On-Chain',
+          description: `Contract Escrow Agreement #${agreement.onChainAgreementId || 1} initialized. Tx: ${agreement.onChainTxHash}`,
+          metadata: { txHash: agreement.onChainTxHash, onChainAgreementId: agreement.onChainAgreementId },
+        });
+      }
+    }
+
     for (const ev of agreement.chainEvents) {
       timeline.push({
         id: `chain-event-${ev.id}`,

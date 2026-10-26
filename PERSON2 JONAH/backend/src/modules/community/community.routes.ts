@@ -13,6 +13,7 @@ router.get('/posts/:id/proposals', CommunityController.getProposalsForPost);
 router.post('/posts', authenticate, CommunityController.createPost);
 router.get('/posts/:id/recommended-talent', authenticate, CommunityController.getRecommendedTalent);
 router.post('/posts/:id/proposals', authenticate, CommunityController.submitProposal);
+router.post('/proposals/:id/accept', authenticate, CommunityController.acceptProposal);
 
 // Threads & Messages (require authentication)
 router.post('/threads', authenticate, CommunityController.createThread);

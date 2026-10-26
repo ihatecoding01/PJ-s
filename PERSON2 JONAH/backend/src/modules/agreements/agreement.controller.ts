@@ -11,10 +11,12 @@ const linkAgreementSchema = z
     onchainId: z.union([z.string(), z.number()]).optional(),
     transactionHash: z.string().optional(),
     txHash: z.string().optional(),
+    status: z.string().optional(),
   })
   .transform((data) => ({
     onChainAgreementId: String(data.onChainAgreementId ?? data.onchainId ?? ''),
     transactionHash: data.transactionHash || data.txHash,
+    status: data.status,
   }));
 
 export class AgreementController {
@@ -68,7 +70,8 @@ export class AgreementController {
 
   static async approveAgreement(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const approved = await AgreementService.approveAgreement(req.params.id, req.user!.id);
+      const mutualLock = Boolean(req.body?.mutualLock || req.query?.mutualLock);
+      const approved = await AgreementService.approveAgreement(req.params.id, req.user!.id, mutualLock);
       return sendSuccess(res, approved, 200, 'Agreement approval recorded');
     } catch (error) {
       next(error);

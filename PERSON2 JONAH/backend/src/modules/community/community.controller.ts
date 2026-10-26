@@ -71,6 +71,16 @@ export class CommunityController {
     }
   }
 
+  static async acceptProposal(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await CommunityService.acceptProposal(req.params.id, req.user!.id);
+      return sendSuccess(res, result, 200, 'Proposal accepted and escrow agreement draft generated');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+
   // Threads & Messages
   static async createThread(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {

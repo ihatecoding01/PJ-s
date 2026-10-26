@@ -51,12 +51,16 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated, onCrea
         .map(s => s.trim())
         .filter(Boolean);
 
+      const numMatch = budget.match(/[\d.]+/);
+      const parsedBudget = numMatch ? parseFloat(numMatch[0]) : 1.0;
+
       const postData = {
         type,
         title: title.trim(),
         description: description.trim(),
-        budget: (budget.includes('ETH') || budget.includes('MATIC')) ? budget.replace('MATIC', 'ETH').trim() : `${budget.trim()} ETH`,
+        budget: parsedBudget,
         skills,
+        tags: skills,
         // Include type-specific fields
         ...(isJob
           ? {
@@ -127,7 +131,7 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated, onCrea
           </div>
         </div>
 
-        {/* ─── JOB (Client) Fields ─────────────────────────────── */}
+        {/* ΓöÇΓöÇΓöÇ JOB (Client) Fields ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
         {isJob ? (
           <>
             {/* Job Title */}
@@ -150,7 +154,7 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated, onCrea
                 type="text"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
-                placeholder="e.g. 0.5 – 1.0 ETH"
+                placeholder="e.g. 0.5 ΓÇô 1.0 ETH"
                 className={inputMono}
                 required
               />
@@ -209,7 +213,7 @@ export default function CreatePostModal({ isOpen, onClose, onPostCreated, onCrea
             </div>
           </>
         ) : (
-          /* ─── SERVICE (Freelancer) Fields ───────────────────── */
+          /* ΓöÇΓöÇΓöÇ SERVICE (Freelancer) Fields ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
           <>
             {/* Service Title */}
             <div>

@@ -26,7 +26,7 @@ export class PaymentService {
     const paymentEvents = await prisma.chainEvent.findMany({
       where: {
         agreementId: agreement.id,
-        eventName: { in: ['FundsDeposited', 'MilestoneApproved', 'DisputeResolved'] },
+        eventName: { in: ['AgreementFunded', 'FundsDeposited', 'MilestoneApproved', 'MilestonePaid', 'MilestoneRefunded', 'DisputeResolved'] },
       },
       orderBy: { timestamp: 'desc' },
     });
