@@ -378,6 +378,70 @@ contract FairWork is ReentrancyGuard, Ownable, Pausable {
         emit AgreementCreated(id, msg.sender, p.freelancer, p.termsHash, p.termsURI);
     }
 
+    function createAgreement(
+        address freelancer,
+        bytes32 termsHash,
+        string calldata termsURI,
+        PaymentMode mode,
+        uint16 latePenaltyBpsPerDay,
+        uint16 maxLatePenaltyBps,
+        uint32 reviewWindow,
+        uint32 graceWindow,
+        uint8 maxRevisions,
+        uint256[] calldata amounts,
+        uint64[] calldata deadlines,
+        uint16[] calldata requiredProgressBps,
+        bytes32[] calldata criteriaHashes
+    ) external whenNotPaused returns (uint256 id) {
+        if (freelancer == address(0)) revert ErrInvalidFreelancer();
+        if (freelancer == msg.sender) revert ErrClientIsFreelancer();
+        if (amounts.length == 0) revert ErrNoMilestones();
+        if (
+            amounts.length != deadlines.length ||
+            amounts.length != requiredProgressBps.length ||
+            amounts.length != criteriaHashes.length
+        ) revert ErrArrayMismatch();
+        if (mode == PaymentMode.LUMP_SUM && amounts.length != 1)
+            revert ErrLumpSumSingle();
+        if (maxLatePenaltyBps > 10000) revert ErrMaxPenaltyExceeded();
+
+        uint256 total;
+        for (uint256 i; i < amounts.length; ) {
+            if (amounts[i] == 0) revert ErrZeroAmount();
+            if (requiredProgressBps[i] > 10000) revert ErrBpsExceeded();
+            if (i == 0) {
+                if (deadlines[i] <= block.timestamp) revert ErrDeadlinePast();
+            } else {
+                if (deadlines[i] <= deadlines[i - 1]) revert ErrDeadlineOrder();
+            }
+            total += amounts[i];
+            unchecked { ++i; }
+        }
+
+        id = ++_agreementCount;
+
+        _agreements[id] = Agreement({
+            id: id,
+            client: msg.sender,
+            freelancer: freelancer,
+            termsHash: termsHash,
+            termsURI: termsURI,
+            mode: mode,
+            status: AgreementStatus.Draft,
+            totalAmount: total,
+            latePenaltyBpsPerDay: latePenaltyBpsPerDay,
+            maxLatePenaltyBps: maxLatePenaltyBps,
+            reviewWindow: reviewWindow,
+            graceWindow: graceWindow,
+            maxRevisions: maxRevisions,
+            createdAt: uint64(block.timestamp)
+        });
+
+        _pushMilestones(id, amounts, deadlines, requiredProgressBps, criteriaHashes);
+
+        emit AgreementCreated(id, msg.sender, freelancer, termsHash, termsURI);
+    }
+
     function _pushMilestones(
         uint256 id,
         uint256[] calldata amounts,

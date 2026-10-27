@@ -4,14 +4,14 @@
   "description": "FairWork smart contracts - Milestone-based freelance escrow",
   "main": "index.js",
   "scripts": {
-    "compile": "hardhat compile",
-    "test": "hardhat test",
-    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
-    "deploy:amoy": "hardhat run scripts/deploy.js --network polygonAmoy",
-    "seed": "hardhat run scripts/seed.js --network localhost",
-    "seed:sepolia": "hardhat run scripts/seed-sepolia.js --network sepolia",
-    "node": "hardhat node",
-    "chain": "hardhat node"
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "deploy:local": "npx hardhat run scripts/deploy.js --network localhost",
+    "deploy:amoy": "npx hardhat run scripts/deploy.js --network polygonAmoy",
+    "seed": "npx hardhat run scripts/seed.js --network localhost",
+    "seed:sepolia": "npx hardhat run scripts/seed-sepolia.js --network sepolia",
+    "node": "npx hardhat node",
+    "chain": "npx hardhat node"
   },
   "keywords": [
     "solidity",

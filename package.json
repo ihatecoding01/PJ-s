@@ -16,7 +16,7 @@
     "build": "npm --prefix \"PERSON4 SUZAN\" run build",
     "build:frontend": "npm --prefix \"PERSON4 SUZAN\" run build",
     "frontend": "npm --prefix \"PERSON4 SUZAN\" run dev",
-    "dev": "concurrently -k -p \"[{name}]\" -n \"CHAIN,AI,API,WEB\" -c \"yellow,magenta,blue,green\" \"npm run chain\" \"npm run ai\" \"npm run backend\" \"npm run frontend\"",
+    "dev": "node scripts/dev.js",
     "test:contracts": "npm --prefix \"PERSON1 SCARLET/contracts\" test",
     "test:backend": "npm --prefix \"PERSON2 JONAH/backend\" test",
     "test:ai": "powershell -Command \"& 'PERSON3 PERCY/venv/Scripts/pytest.exe' 'PERSON3 PERCY/tests'\"",
