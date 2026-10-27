@@ -2,11 +2,14 @@
 
 /**
  * FairWork Unified Development Stack Orchestrator
- * Cross-platform runner that installs dependencies, starts EVM Hardhat node,
- * deploys smart contracts, seeds demo personas, and launches AI, Backend, and Frontend.
+ * Cross-platform runner that installs dependencies, starts EVM Hardhat node with
+ * a friendly JSON-RPC + Web Browser Gateway, deploys smart contracts,
+ * seeds demo personas, and launches AI, Backend, and Frontend.
  */
 
 import { spawn, execSync } from 'child_process';
+import http from 'http';
+import net from 'net';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -15,6 +18,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const isWin = process.platform === 'win32';
+
+// Ports
+const EVM_GATEWAY_PORT = 8545;
+const HARDHAT_INTERNAL_PORT = 8546;
 
 // ANSI color formatting
 const c = {
@@ -35,6 +42,7 @@ function log(tag, msg, color = c.reset) {
 }
 
 const processes = [];
+let gatewayServer = null;
 
 function registerProcess(proc, name) {
   processes.push({ proc, name });
@@ -47,10 +55,12 @@ function registerProcess(proc, name) {
 
 function cleanup() {
   log('SHUTDOWN', 'Stopping all FairWork services...', c.yellow);
+  if (gatewayServer) {
+    try { gatewayServer.close(); } catch {}
+  }
   for (const { proc, name } of processes) {
     try {
       if (isWin && proc.pid) {
-        // Force kill process tree on Windows
         execSync(`taskkill /pid ${proc.pid} /T /F`, { stdio: 'ignore' });
       } else {
         proc.kill('SIGTERM');
@@ -63,6 +73,9 @@ function cleanup() {
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
 process.on('exit', () => {
+  if (gatewayServer) {
+    try { gatewayServer.close(); } catch {}
+  }
   for (const { proc } of processes) {
     try { proc.kill(); } catch {}
   }
@@ -104,6 +117,213 @@ function pipeOutput(proc, name, color) {
   });
 }
 
+/**
+ * HTML UI for GET requests to port 8545 (EVM node status & tx explorer)
+ */
+function renderDashboardHtml(proxyPort) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FairWork Local EVM Node (:8545)</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0B132B; color: #E0E1DD; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 24px; }
+    .card { background: #1C2541; border: 1px solid #3A506B; border-radius: 16px; padding: 32px; max-width: 620px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
+    .badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+    .badge-dot { width: 8px; height: 8px; background: #10B981; border-radius: 50%; box-shadow: 0 0 10px #10B981; }
+    h1 { margin: 0 0 8px 0; font-size: 24px; color: #fff; }
+    p.desc { color: #8D99AE; font-size: 14px; line-height: 1.5; margin: 0 0 20px 0; }
+    .grid { background: #0F172A; border-radius: 10px; padding: 16px; margin-bottom: 24px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+    .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1E293B; word-break: break-all; }
+    .row:last-child { border-bottom: none; }
+    .label { color: #64748B; min-width: 130px; }
+    .val { color: #38BDF8; font-weight: 600; text-align: right; }
+    .btn { display: inline-block; width: 100%; text-align: center; background: #10B981; color: #064E3B; font-weight: 700; padding: 14px 20px; border-radius: 10px; text-decoration: none; transition: transform 0.1s, background 0.2s; font-size: 15px; }
+    .btn:hover { background: #34D399; transform: translateY(-1px); }
+    .notice { margin-top: 20px; font-size: 12px; color: #64748B; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge"><div class="badge-dot"></div> Local EVM Node Operational</div>
+    <h1>FairWork Local Blockchain Node</h1>
+    <p class="desc">
+      You have reached the JSON-RPC Ethereum endpoint on port ${proxyPort}. This port is active and processing automated JSON-RPC 2.0 transactions for MetaMask, Ethers.js, and Smart Contracts.
+    </p>
+    <div class="grid">
+      <div class="row"><span class="label">Network</span><span class="val">Hardhat Localhost</span></div>
+      <div class="row"><span class="label">Chain ID</span><span class="val">31337 (0x7a69)</span></div>
+      <div class="row"><span class="label">JSON-RPC URL</span><span class="val">http://127.0.0.1:${proxyPort}</span></div>
+      <div class="row"><span class="label">Contract</span><span class="val">0x5FbDB2315678afecb367f032d93F642f64180aa3</span></div>
+      <div class="row"><span class="label">Status</span><span class="val" style="color:#10B981;">Ready & Listening</span></div>
+    </div>
+    <a href="http://localhost:5173" class="btn">🚀 Open FairWork Web App (http://localhost:5173)</a>
+    <div class="notice">FairWork Smart Gateway • Listening on 127.0.0.1:${proxyPort}</div>
+  </div>
+</body>
+</html>`;
+}
+
+function renderTxHtml(txHash, tx, receipt) {
+  const isFound = Boolean(tx || receipt);
+  const statusSuccess = receipt?.status === '0x1' || receipt?.status === 1;
+  const statusText = !isFound ? 'Pending or Not Found' : (statusSuccess ? 'Success (Confirmed)' : 'Reverted');
+  const statusColor = !isFound ? '#F59E0B' : (statusSuccess ? '#10B981' : '#EF4444');
+  const blockNum = receipt?.blockNumber ? parseInt(receipt.blockNumber, 16) : 'Pending';
+  const fromAddr = tx?.from || 'Unknown';
+  const toAddr = tx?.to || 'Unknown';
+  const ethVal = tx?.value ? `${(parseInt(tx.value, 16) / 1e18).toFixed(4)} ETH` : '0 ETH';
+  const gasUsed = receipt?.gasUsed ? parseInt(receipt.gasUsed, 16).toLocaleString() : 'Pending';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Transaction Details | FairWork Local Explorer</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0B132B; color: #E0E1DD; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 24px; }
+    .card { background: #1C2541; border: 1px solid #3A506B; border-radius: 16px; padding: 32px; max-width: 680px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
+    .badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+    h1 { margin: 0 0 8px 0; font-size: 22px; color: #fff; }
+    .grid { background: #0F172A; border-radius: 10px; padding: 16px; margin: 20px 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .row { display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-bottom: 1px solid #1E293B; word-break: break-all; }
+    .row:last-child { border-bottom: none; }
+    .label { color: #64748B; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .val { color: #E2E8F0; font-weight: 600; }
+    .btn { display: inline-block; width: 100%; text-align: center; background: #3B82F6; color: #fff; font-weight: 700; padding: 12px 20px; border-radius: 10px; text-decoration: none; margin-top: 10px; }
+    .btn:hover { background: #2563EB; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">Local Block Explorer</div>
+    <h1>Transaction Verified On-Chain</h1>
+    <div class="grid">
+      <div class="row"><span class="label">Transaction Hash</span><span class="val">${txHash}</span></div>
+      <div class="row"><span class="label">Status</span><span class="val" style="color:${statusColor}">${statusText}</span></div>
+      <div class="row"><span class="label">Block Number</span><span class="val">${blockNum}</span></div>
+      <div class="row"><span class="label">From</span><span class="val">${fromAddr}</span></div>
+      <div class="row"><span class="label">To</span><span class="val">${toAddr}</span></div>
+      <div class="row"><span class="label">Value</span><span class="val">${ethVal}</span></div>
+      <div class="row"><span class="label">Gas Used</span><span class="val">${gasUsed}</span></div>
+    </div>
+    <a href="http://localhost:5173" class="btn">🚀 Return to FairWork App</a>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Creates the Smart EVM Gateway on proxyPort (8545) that proxies to Hardhat on targetPort (8546)
+ * and answers HTTP GET requests with an HTML Dashboard instead of a raw JSON Parse Error.
+ */
+function startEvmGateway(proxyPort = EVM_GATEWAY_PORT, targetPort = HARDHAT_INTERNAL_PORT) {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer(async (req, res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, HEAD');
+      res.setHeader('Access-Control-Allow-Headers', '*');
+
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        return res.end();
+      }
+
+      // Handle GET / HEAD browser requests
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
+        const isJson = req.headers.accept?.includes('application/json');
+
+        // Block Explorer path: /tx/:hash
+        if (url.pathname.startsWith('/tx/')) {
+          const txHash = url.pathname.replace('/tx/', '').split('/')[0].trim();
+          let tx = null;
+          let receipt = null;
+          try {
+            const txRes = await fetch(`http://127.0.0.1:${targetPort}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getTransactionByHash', params: [txHash], id: 1 })
+            });
+            const txJson = await txRes.json();
+            tx = txJson.result;
+
+            const recRes = await fetch(`http://127.0.0.1:${targetPort}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getTransactionReceipt', params: [txHash], id: 2 })
+            });
+            const recJson = await recRes.json();
+            receipt = recJson.result;
+          } catch {}
+
+          if (isJson) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ tx, receipt }));
+          }
+
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          return res.end(renderTxHtml(txHash, tx, receipt));
+        }
+
+        // Standard Status / Health
+        if (isJson) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({
+            status: 'ok',
+            service: 'FairWork Local EVM Node (Gateway)',
+            chainId: 31337,
+            network: 'Hardhat Localhost',
+            rpcUrl: `http://127.0.0.1:${proxyPort}`,
+            contractAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3'
+          }));
+        }
+
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        return res.end(renderDashboardHtml(proxyPort));
+      }
+
+      // Forward JSON-RPC POST request to Hardhat target port
+      const proxyReq = http.request({
+        hostname: '127.0.0.1',
+        port: targetPort,
+        path: req.url,
+        method: req.method,
+        headers: req.headers
+      }, (proxyRes) => {
+        res.writeHead(proxyRes.statusCode, proxyRes.headers);
+        proxyRes.pipe(res, { end: true });
+      });
+
+      proxyReq.on('error', (err) => {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          jsonrpc: '2.0',
+          id: null,
+          error: { code: -32603, message: `Hardhat node unreachable on :${targetPort}: ${err.message}` }
+        }));
+      });
+
+      req.pipe(proxyReq, { end: true });
+    });
+
+    server.on('upgrade', (req, socket, head) => {
+      const proxySocket = net.connect(targetPort, '127.0.0.1', () => {
+        proxySocket.pipe(socket);
+        socket.pipe(proxySocket);
+      });
+      proxySocket.on('error', () => socket.destroy());
+      socket.on('error', () => proxySocket.destroy());
+    });
+
+    server.listen(proxyPort, '0.0.0.0', () => resolve(server));
+    server.on('error', reject);
+  });
+}
+
 async function main() {
   console.log(`\n${c.cyan}${c.bold}====================================================`);
   console.log(`        FAIRWORK UNIFIED DEVELOPMENT STACK          `);
@@ -127,18 +347,18 @@ async function main() {
     }
   }
 
-  // --- Step 1: EVM Hardhat Node (:8545) ---
-  log('CHAIN', 'Checking Hardhat node on http://127.0.0.1:8545...', c.yellow);
-  const chainReady = await checkUrl('http://127.0.0.1:8545', {
+  // --- Step 1: EVM Hardhat Node (:8545 Gateway -> :8546 Hardhat) ---
+  log('CHAIN', `Checking Hardhat node on http://127.0.0.1:${EVM_GATEWAY_PORT}...`, c.yellow);
+  const chainAlreadyActive = await checkUrl(`http://127.0.0.1:${EVM_GATEWAY_PORT}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ jsonrpc: '2.0', method: 'net_version', params: [], id: 1 })
   });
 
-  if (!chainReady) {
-    log('CHAIN', 'Spawning local Hardhat EVM Node...', c.yellow);
+  if (!chainAlreadyActive) {
+    log('CHAIN', `Spawning Hardhat Node on internal port :${HARDHAT_INTERNAL_PORT}...`, c.yellow);
     const contractsDir = path.join(rootDir, 'PERSON1 SCARLET', 'contracts');
-    const chainProc = spawn('npx', ['hardhat', 'node'], {
+    const chainProc = spawn('npx', ['hardhat', 'node', '--port', String(HARDHAT_INTERNAL_PORT)], {
       cwd: contractsDir,
       shell: true,
       stdio: ['ignore', 'pipe', 'pipe']
@@ -146,18 +366,24 @@ async function main() {
     registerProcess(chainProc, 'CHAIN');
     pipeOutput(chainProc, 'CHAIN', c.yellow);
 
-    const ready = await waitForUrl('http://127.0.0.1:8545', 'CHAIN', 30, {
+    const internalReady = await waitForUrl(`http://127.0.0.1:${HARDHAT_INTERNAL_PORT}`, 'CHAIN', 30, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', method: 'net_version', params: [], id: 1 })
     });
 
-    if (!ready) {
-      log('CHAIN', 'Hardhat node failed to respond on :8545 within 30s.', c.red);
+    if (!internalReady) {
+      log('CHAIN', `Hardhat node failed to respond on internal port :${HARDHAT_INTERNAL_PORT} within 30s.`, c.red);
       cleanup();
     }
+
+    log('CHAIN', `Starting Smart EVM Gateway on http://127.0.0.1:${EVM_GATEWAY_PORT}...`, c.cyan);
+    gatewayServer = await startEvmGateway(EVM_GATEWAY_PORT, HARDHAT_INTERNAL_PORT);
+  } else {
+    log('CHAIN', `Hardhat node is already active on :${EVM_GATEWAY_PORT}. Utilizing existing node.`, c.green);
   }
-  log('CHAIN', '✓ Hardhat EVM node is healthy on :8545 (Chain ID: 31337)', c.green);
+
+  log('CHAIN', `✓ Hardhat EVM node is healthy on :${EVM_GATEWAY_PORT} (Chain ID: 31337)`, c.green);
 
   // Deploy contracts & run platform setup
   log('CONTRACTS', 'Deploying FairWork.sol to local EVM node...', c.cyan);
@@ -207,7 +433,6 @@ async function main() {
 
   if (!backendReady) {
     const backendDir = path.join(rootDir, 'PERSON2 JONAH', 'backend');
-    // Ensure sqlite database is pushed
     try {
       execSync('npx prisma db push --skip-generate', { cwd: backendDir, stdio: 'ignore', shell: true });
     } catch {}
@@ -250,10 +475,10 @@ async function main() {
   console.log(`\n${c.cyan}${c.bold}====================================================`);
   console.log(`      ALL FAIRWORK SERVICES RUNNING IN HARMONY      `);
   console.log(`====================================================${c.reset}`);
-  console.log(` ${c.bold}1. EVM Node:${c.reset}    http://127.0.0.1:8545 (Chain ID: 31337)`);
-  console.log(` ${c.bold}2. AI Engine:${c.reset}   http://localhost:8000/docs`);
-  console.log(` ${c.bold}3. Backend API:${c.reset} http://localhost:4000/api/health`);
-  console.log(` ${c.bold}4. Web Client:${c.reset}  http://localhost:5173`);
+  console.log(` ${c.bold}1. Web Client:${c.reset}  ${c.green}${c.bold}http://localhost:5173${c.reset}  👈 ${c.bold}(OPEN IN BROWSER)${c.reset}`);
+  console.log(` ${c.bold}2. Backend API:${c.reset} http://localhost:4000/api/health`);
+  console.log(` ${c.bold}3. AI Engine:${c.reset}   http://localhost:8000/docs`);
+  console.log(` ${c.bold}4. EVM Node:${c.reset}    http://127.0.0.1:${EVM_GATEWAY_PORT} (Chain ID: 31337 — JSON-RPC / Mini Explorer)`);
   console.log(`${c.dim}Press Ctrl+C at any time to gracefully terminate all services.${c.reset}\n`);
 
   // Keep event loop alive

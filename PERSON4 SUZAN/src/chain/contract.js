@@ -35,7 +35,7 @@ export const SUPPORTED_NETWORKS = {
       symbol: 'ETH',
       decimals: 18
     },
-    blockExplorerUrls: ['http://localhost:8545']
+    blockExplorerUrls: ['http://127.0.0.1:8545']
   },
 
   11155111: {

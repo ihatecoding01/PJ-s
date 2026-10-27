@@ -24,12 +24,15 @@ This document is the definitive step-by-step guide to installing, configuring, a
 
 ## 🏛 Architecture & Ports
 
-| Service | Directory | Tech Stack | Port | Health Check URL |
+| Service | Directory | Tech Stack | Port | Health Check / Endpoint |
 | :--- | :--- | :--- | :---: | :--- |
-| **Local EVM Node** | `PERSON1 SCARLET/contracts` | Hardhat / Solidity | `8545` | `http://127.0.0.1:8545` |
+| **Local EVM Node** | `PERSON1 SCARLET/contracts` | Hardhat / Solidity | `8545` | `http://127.0.0.1:8545` *(JSON-RPC / Web Dashboard)* |
 | **AI Engine** | `PERSON3 PERCY` | Python / FastAPI / Uvicorn | `8000` | `http://localhost:8000/health` |
 | **Backend API & Oracle** | `PERSON2 JONAH/backend` | Node.js / Express / Prisma | `4000` | `http://localhost:4000/api/health` |
-| **Frontend UI** | `PERSON4 SUZAN` | React / Vite / Tailwind | `5173` | `http://localhost:5173` |
+| **Frontend UI (Open in Browser)** | `PERSON4 SUZAN` | React / Vite / Tailwind | `5173` | `http://localhost:5173` |
+
+> [!NOTE]
+> **EVM Node vs. Web App**: Port `8545` is the Ethereum JSON-RPC 2.0 protocol endpoint for MetaMask and smart contract calls (using `POST` requests). To use the FairWork application, open the **Web Client at `http://localhost:5173`**. When running via `.\scripts\dev-up.ps1` or `npm run dev`, port `8545` includes a built-in Smart Gateway that displays an interactive node status dashboard and local transaction explorer when opened in a browser.
 
 ---
 
@@ -355,6 +358,11 @@ flowchart LR
 ---
 
 ## ❓ Troubleshooting & FAQs
+
+### Q: Browser shows `{"error":{"code":-32700,"message":"Parse error: Unexpected end of JSON input"}}` on port 8545
+**Explanation**: Port `8545` is an Ethereum JSON-RPC 2.0 endpoint designed for MetaMask and EVM contracts, which communicate via `POST` requests containing JSON payloads. When you navigate to port 8545 directly in a web browser without the unified orchestrator, your browser issues an empty `GET` request, which standard EVM nodes reject because there is no JSON body to parse.
+- **Fix**: With our updated `.\scripts\dev-up.ps1` (or `npm run dev`), port 8545 features an automated Smart Gateway that detects browser `GET` requests and displays an interactive EVM Node Dashboard and Local Transaction Explorer!
+- **Where to go**: The actual FairWork Web Application is located at **`http://localhost:5173`**.
 
 ### Q: Port 8545 or 4000 is already in use
 **Fix**: Terminate lingering Node processes:
