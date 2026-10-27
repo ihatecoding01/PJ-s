@@ -110,6 +110,15 @@ export class CommunityController {
     }
   }
 
+  static async getMessages(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const messages = await CommunityService.getMessages(req.params.id, req.user!.id);
+      return sendSuccess(res, messages);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async sendMessage(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const data = sendMessageSchema.parse(req.body);

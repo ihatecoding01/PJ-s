@@ -208,6 +208,17 @@ async function main() {
     });
     assert(msgRes.status === 201 && !!msgRes.data.data.id, 'POST /community/threads/:id/messages sends message');
 
+    const getMsgsRes = await request(`/community/threads/${threadId}/messages`, {
+      headers: authHeaders,
+    });
+    assert(getMsgsRes.status === 200 && Array.isArray(getMsgsRes.data.data), 'GET /community/threads/:id/messages returns message array');
+    assert(getMsgsRes.data.data.length >= 1, 'GET /community/threads/:id/messages includes sent message');
+
+    const getRootMsgsRes = await request(`/threads/${threadId}/messages`, {
+      headers: authHeaders,
+    });
+    assert(getRootMsgsRes.status === 200 && Array.isArray(getRootMsgsRes.data.data), 'GET /threads/:id/messages alias returns 200 OK');
+
     // 5. Agreement Drafting, Editing, Approval, and Locking
     console.log('\n5. Testing Agreement Drafting & Canonical Hashing');
     const draftRes = await request('/agreements/draft', {

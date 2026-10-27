@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getThreads, getMessages, sendMessage } from '../api/threads.js';
+import { getThreads, getMessages, sendMessage, createThread } from '../api/threads.js';
 import { draftAgreement } from '../api/agreements.js';
 import { useWallet } from '../context/WalletContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -61,6 +61,27 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
       }
     } catch {
       // ignore
+    } finally {
+      setIsLoadingThreads(false);
+    }
+  };
+
+  const handleStartDemoThread = async () => {
+    try {
+      setIsLoadingThreads(true);
+      const other = DEMO_ACCOUNTS.FREELANCER.address;
+      const newThread = await createThread({
+        otherAddress: other,
+        recipientId: other,
+        subject: 'Consultation: Web3 Escrow Contract'
+      });
+      await loadThreadsList();
+      if (newThread?.id) {
+        setSelectedThreadId(newThread.id);
+      }
+      toast.success('Started consultation thread');
+    } catch (err) {
+      toast.error(err.message || 'Could not start thread');
     } finally {
       setIsLoadingThreads(false);
     }
@@ -173,8 +194,16 @@ export default function ChatPage({ activeThreadId, onOpenDraftReview }) {
             {isLoadingThreads ? (
               <div className="p-4 text-center text-xs text-ink/50">Loading conversations...</div>
             ) : threads.length === 0 ? (
-              <div className="p-6 text-center text-xs text-ink/50">
-                No active chat threads. Start a chat from a community project proposal.
+              <div className="p-5 text-center text-xs text-ink/60 space-y-3">
+                <p>No active chat threads yet.</p>
+                <Button
+                  size="xs"
+                  variant="secondary"
+                  onClick={handleStartDemoThread}
+                  className="w-full justify-center"
+                >
+                  Start Demo Consultation
+                </Button>
               </div>
             ) : (
               threads.map(t => {

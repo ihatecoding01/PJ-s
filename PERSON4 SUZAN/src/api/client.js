@@ -42,6 +42,9 @@ export async function apiFetch(endpoint, options = {}) {
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
+      if (response.status === 401 && token) {
+        localStorage.removeItem('fairwork_jwt');
+      }
       const code = data?.error?.code || `HTTP_${response.status}`;
       const message = data?.error?.message || response.statusText || 'Request failed';
       throw new ApiError(response.status, code, message);

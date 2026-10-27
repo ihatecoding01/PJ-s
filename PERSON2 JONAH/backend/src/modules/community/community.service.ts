@@ -300,6 +300,24 @@ export class CommunityService {
     return thread;
   }
 
+  static async getMessages(threadId: string, userId: string) {
+    const thread = await prisma.thread.findUnique({
+      where: { id: threadId },
+    });
+
+    if (!thread) {
+      throw new Error('Thread not found');
+    }
+
+    return prisma.message.findMany({
+      where: { threadId },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        sender: { select: { id: true, walletAddress: true, name: true } },
+      },
+    });
+  }
+
   static async sendMessage(
     threadId: string,
     senderId: string,

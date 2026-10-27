@@ -56,7 +56,18 @@ export function WalletProvider({ children }) {
     if (savedAddr && savedJwt) {
       setAddress(savedAddr.toLowerCase());
       setJwt(savedJwt);
-      getMe().then(u => setUser(u)).catch(() => {});
+      getMe().then(u => setUser(u)).catch((err) => {
+        if (err?.status === 401) {
+          localStorage.removeItem('fairwork_jwt');
+          setJwt(null);
+          if (!isMock) {
+            const demoClient = DEMO_ACCOUNTS.CLIENT;
+            if (demoClient.privateKey) {
+              connectWithDemoAccount('CLIENT').catch(() => {});
+            }
+          }
+        }
+      });
     } else if (isMock) {
       // Auto-load demo client in mock mode if empty
       const demoClient = DEMO_ACCOUNTS.CLIENT;

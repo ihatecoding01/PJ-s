@@ -19,6 +19,7 @@ router.post('/proposals/:id/accept', authenticate, CommunityController.acceptPro
 router.post('/threads', authenticate, CommunityController.createThread);
 router.get('/threads', authenticate, CommunityController.listThreads);
 router.get('/threads/:id', authenticate, CommunityController.getThreadById);
+router.get('/threads/:id/messages', authenticate, CommunityController.getMessages);
 router.post('/threads/:id/messages', authenticate, CommunityController.sendMessage);
 
 export default router;

@@ -27,7 +27,15 @@ export function normalizeMessage(m) {
  * GET /threads
  */
 export async function getThreads() {
-  return apiFetch('/threads');
+  const data = await apiFetch('/threads');
+  if (Array.isArray(data)) {
+    return data.map(t => ({
+      ...t,
+      lastMessage: t.lastMessage || t.messages?.[0]?.content || '',
+      updatedAt: t.updatedAt || t.messages?.[0]?.createdAt || t.createdAt
+    }));
+  }
+  return [];
 }
 
 /**
@@ -52,6 +60,7 @@ export async function createThread({ otherAddress, recipientId, subject, postId 
  * GET /threads/:id/messages
  */
 export async function getMessages(threadId) {
+  if (!threadId) return [];
   const data = await apiFetch(`/threads/${threadId}/messages`);
   if (Array.isArray(data)) {
     return data.map(normalizeMessage);
