@@ -43,3 +43,26 @@ export async function authenticate(
     return sendError(res, `Invalid or expired token: ${error.message}`, 401, null, 'TOKEN_EXPIRED');
   }
 }
+
+export async function optionalAuthenticate(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<any> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+    });
+    if (user) {
+      req.user = user;
+    }
+  } catch {}
+  next();
+}

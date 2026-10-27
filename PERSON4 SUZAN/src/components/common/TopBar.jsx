@@ -56,6 +56,15 @@ export default function TopBar({
   useEffect(() => {
     let isMounted = true;
     async function loadAlerts() {
+      const token = localStorage.getItem('fairwork_jwt');
+      if (!isMock && !token && !address) {
+        if (isMounted) {
+          setAlerts([]);
+          setUnreadAlertsCount(0);
+        }
+        return;
+      }
+
       try {
         const data = await apiFetch('/alerts?resolved=false');
         if (isMounted && data) {
@@ -65,6 +74,10 @@ export default function TopBar({
         }
       } catch (err) {
         // Fallback silently if alerts unavailable
+        if (isMounted) {
+          setAlerts([]);
+          setUnreadAlertsCount(0);
+        }
       }
     }
     loadAlerts();
@@ -73,7 +86,7 @@ export default function TopBar({
       isMounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [address, isMock]);
 
   // Click outside listener for dropdowns
   useEffect(() => {

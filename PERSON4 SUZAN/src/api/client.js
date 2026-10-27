@@ -3,7 +3,13 @@ import { canonicalHash } from '../lib/canonicalHash.js';
 import abiJson from '../chain/abi.json';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
+
+export function isMockMode() {
+  const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('fairwork_app_mode') : null;
+  if (saved === 'demo') return true;
+  if (saved === 'live') return false;
+  return import.meta.env.VITE_USE_MOCK === 'true';
+}
 
 /**
  * Normalized API error
@@ -20,7 +26,7 @@ export class ApiError extends Error {
  * Universal fetch wrapper
  */
 export async function apiFetch(endpoint, options = {}) {
-  if (USE_MOCK) {
+  if (isMockMode()) {
     return handleMockRequest(endpoint, options);
   }
 
@@ -615,6 +621,31 @@ async function handleMockRequest(endpoint, options = {}) {
       });
     }
     return alerts;
+  }
+
+  if (path === '/alerts' && method === 'GET') {
+    const list = [];
+    for (const ag of (mockStore.data.agreements || [])) {
+      if (ag.status === 'Draft' && (!ag.clientApproved || !ag.freelancerApproved)) {
+        list.push({
+          id: `alert-draft-${ag.id}`,
+          type: 'INFO',
+          message: `Draft agreement "${ag.terms?.title || ag.title || 'Escrow'}" is awaiting approvals.`,
+          resolved: false,
+          createdAt: new Date().toISOString()
+        });
+      }
+      if (ag.status === 'Disputed') {
+        list.push({
+          id: `alert-disp-${ag.id}`,
+          type: 'CRITICAL',
+          message: `Dispute raised on milestone for agreement "${ag.terms?.title || ag.title || 'Escrow'}".`,
+          resolved: false,
+          createdAt: new Date().toISOString()
+        });
+      }
+    }
+    return list;
   }
 
   // 6. Milestones
