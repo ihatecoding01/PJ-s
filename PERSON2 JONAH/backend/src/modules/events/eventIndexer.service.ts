@@ -15,12 +15,23 @@ export class EventIndexerService {
    * Backfills on-chain events and persists them in the ChainEvent model.
    */
   static async indexEventsForAgreement(agreementId: string) {
-    const agreement = await prisma.agreement.findUnique({
-      where: { id: agreementId },
+    if (!agreementId || agreementId === 'undefined' || agreementId === 'null') {
+      const err: any = new Error('Agreement ID is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const agreement = await prisma.agreement.findFirst({
+      where: {
+        OR: [{ id: agreementId }, { onChainAgreementId: agreementId }],
+      },
     });
 
     if (!agreement) {
-      throw new Error('Agreement not found');
+      const err: any = new Error('Agreement not found');
+      err.statusCode = 404;
+      err.code = 'NOT_FOUND';
+      throw err;
     }
 
     const events = await ChainAdapter.backfillEvents(
@@ -61,8 +72,16 @@ export class EventIndexerService {
    * Builds a complete, chronological timeline for an agreement.
    */
   static async buildTimeline(agreementId: string): Promise<TimelineItem[]> {
-    const agreement = await prisma.agreement.findUnique({
-      where: { id: agreementId },
+    if (!agreementId || agreementId === 'undefined' || agreementId === 'null') {
+      const err: any = new Error('Agreement ID is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const agreement = await prisma.agreement.findFirst({
+      where: {
+        OR: [{ id: agreementId }, { onChainAgreementId: agreementId }],
+      },
       include: {
         milestones: {
           include: { progressReports: true },
@@ -75,7 +94,10 @@ export class EventIndexerService {
     });
 
     if (!agreement) {
-      throw new Error('Agreement not found');
+      const err: any = new Error('Agreement not found');
+      err.statusCode = 404;
+      err.code = 'NOT_FOUND';
+      throw err;
     }
 
     const timeline: TimelineItem[] = [];

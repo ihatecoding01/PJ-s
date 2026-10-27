@@ -555,15 +555,25 @@ async function handleMockRequest(endpoint, options = {}) {
     return ag;
   }
 
-  if (path.match(/^\/agreements\/[^/]+\/timeline$/) && method === 'GET') {
-    const id = path.split('/')[2];
+  if ((path.match(/^\/agreements\/[^/]+\/timeline$/) || path.match(/^\/events\/agreement\/[^/]+$/)) && method === 'GET') {
+    const id = path.includes('/events/agreement/') ? path.split('/')[3] : path.split('/')[2];
     return mockStore.data.timeline[id] || [];
   }
 
-  if (path.match(/^\/agreements\/[^/]+\/payments$/) && method === 'GET') {
-    const id = path.split('/')[2];
-    const ag = mockStore.data.agreements.find(a => a.id === id);
-    if (!ag) throw new ApiError(404, 'NOT_FOUND', 'Agreement not found');
+  if ((path.match(/^\/agreements\/[^/]+\/payments$/) || path.match(/^\/payments\/agreement\/[^/]+$/)) && method === 'GET') {
+    const id = path.includes('/payments/agreement/') ? path.split('/')[3] : path.split('/')[2];
+    const ag = mockStore.data.agreements.find(a => a.id === id || a.agreementId === id || String(a.onchainId) === id);
+    if (!ag) {
+      return {
+        locked: '0.0000',
+        released: '0.0000',
+        disputed: '0.0000',
+        refunded: '0.0000',
+        feesPaid: '0.0000',
+        milestones: [],
+        paymentEvents: []
+      };
+    }
 
     let locked = 0;
     let released = 0;
@@ -571,7 +581,7 @@ async function handleMockRequest(endpoint, options = {}) {
     let refunded = 0;
     let feesPaid = 0;
 
-    for (const m of ag.milestones) {
+    for (const m of (ag.milestones || [])) {
       const amt = parseFloat(m.amount) || 0;
       if (m.status === 'Paid') {
         released += parseFloat(m.paid) || amt;
@@ -591,7 +601,8 @@ async function handleMockRequest(endpoint, options = {}) {
       disputed: disputed.toFixed(4),
       refunded: refunded.toFixed(4),
       feesPaid: feesPaid.toFixed(4),
-      milestones: ag.milestones
+      milestones: ag.milestones || [],
+      paymentEvents: (mockStore.data.timeline[id] || []).filter(e => e.type?.includes('PAYMENT') || e.type?.includes('RELEASE'))
     };
   }
 

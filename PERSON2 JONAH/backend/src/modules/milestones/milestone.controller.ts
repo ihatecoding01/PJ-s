@@ -30,7 +30,8 @@ export class MilestoneController {
 
   static async getById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const milestone = await MilestoneService.getById(req.params.id);
+      const milestoneIdx = req.params.idx !== undefined ? Number(req.params.idx) : undefined;
+      const milestone = await MilestoneService.getById(req.params.id, milestoneIdx);
       return sendSuccess(res, milestone);
     } catch (error) {
       next(error);

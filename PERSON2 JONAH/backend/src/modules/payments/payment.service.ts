@@ -6,15 +6,26 @@ export class PaymentService {
    * Combines indexed contract events with the contract's payment summary view.
    */
   static async getPaymentSummary(agreementId: string) {
-    const agreement = await prisma.agreement.findUnique({
-      where: { id: agreementId },
+    if (!agreementId || agreementId === 'undefined' || agreementId === 'null') {
+      const err: any = new Error('Agreement ID is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const agreement = await prisma.agreement.findFirst({
+      where: {
+        OR: [{ id: agreementId }, { onChainAgreementId: agreementId }],
+      },
       include: {
         milestones: true,
       },
     });
 
     if (!agreement) {
-      throw new Error('Agreement not found');
+      const err: any = new Error('Agreement not found');
+      err.statusCode = 404;
+      err.code = 'NOT_FOUND';
+      throw err;
     }
 
     const onChainId = agreement.onChainAgreementId || agreement.id;

@@ -8,8 +8,6 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): any {
-  console.error('[Unhandled Error]', err);
-
   if (err instanceof ZodError) {
     return sendError(
       res,
@@ -31,5 +29,16 @@ export function errorHandler(
   // Generic errors
   const message = err.message || 'Internal server error occurred';
   const statusCode = err.statusCode || 500;
-  return sendError(res, message, statusCode, null, err.code || 'INTERNAL_ERROR');
+  if (statusCode >= 500) {
+    console.error('[Unhandled Error]', err);
+  } else {
+    console.warn(`[API ${statusCode}]`, message);
+  }
+  return sendError(
+    res,
+    message,
+    statusCode,
+    null,
+    err.code || (statusCode === 404 ? 'NOT_FOUND' : statusCode === 400 ? 'BAD_REQUEST' : 'INTERNAL_ERROR')
+  );
 }

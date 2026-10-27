@@ -27,8 +27,11 @@ export class MilestoneService {
     if (!milestone && milestoneIndex !== undefined) {
       milestone = await prisma.milestone.findFirst({
         where: {
-          agreementId: milestoneIdOrAgreementId,
           milestoneIndex: Number(milestoneIndex),
+          OR: [
+            { agreementId: milestoneIdOrAgreementId },
+            { agreement: { onChainAgreementId: milestoneIdOrAgreementId } },
+          ],
         },
         include: { agreement: true },
       });
@@ -203,8 +206,14 @@ export class MilestoneService {
     });
   }
 
-  static async getById(id: string) {
-    const milestone = await prisma.milestone.findUnique({
+  static async getById(id: string, milestoneIndex?: number) {
+    if (!id || id === 'undefined' || id === 'null') {
+      const err: any = new Error('Milestone ID is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    let milestone = await prisma.milestone.findUnique({
       where: { id },
       include: {
         progressReports: { orderBy: { createdAt: 'desc' } },
@@ -221,8 +230,36 @@ export class MilestoneService {
       },
     });
 
+    if (!milestone && milestoneIndex !== undefined) {
+      milestone = await prisma.milestone.findFirst({
+        where: {
+          milestoneIndex: Number(milestoneIndex),
+          OR: [
+            { agreementId: id },
+            { agreement: { onChainAgreementId: id } },
+          ],
+        },
+        include: {
+          progressReports: { orderBy: { createdAt: 'desc' } },
+          agreement: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              clientId: true,
+              freelancerId: true,
+              onChainAgreementId: true,
+            },
+          },
+        },
+      });
+    }
+
     if (!milestone) {
-      throw new Error('Milestone not found');
+      const err: any = new Error('Milestone not found');
+      err.statusCode = 404;
+      err.code = 'NOT_FOUND';
+      throw err;
     }
 
     return milestone;

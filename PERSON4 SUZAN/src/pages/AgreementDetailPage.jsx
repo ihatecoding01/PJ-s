@@ -57,6 +57,10 @@ export default function AgreementDetailPage({ agreementId, onBack }) {
   const loadAllAgreementData = async () => {
     try {
       setIsLoading(true);
+      if (!agreementId || agreementId === 'undefined' || agreementId === 'null') {
+        setIsLoading(false);
+        return;
+      }
       const [agData, tlData, payData, alData] = await Promise.all([
         getAgreement(agreementId),
         getTimeline(agreementId).catch(() => []),
@@ -73,7 +77,7 @@ export default function AgreementDetailPage({ agreementId, onBack }) {
       let foundDisputeIdx = null;
       let foundDisputeData = null;
 
-      if (agData.disputes) {
+      if (agData?.disputes) {
         if (Array.isArray(agData.disputes) && agData.disputes.length > 0) {
           const firstDispute = agData.disputes[0];
           foundDisputeIdx = firstDispute.idx ?? firstDispute.milestoneIndex ?? 0;
@@ -85,14 +89,14 @@ export default function AgreementDetailPage({ agreementId, onBack }) {
         }
       }
 
-      if (foundDisputeIdx === null) {
+      if (foundDisputeIdx === null && agData?.milestones) {
         const disputedM = agData.milestones?.find(m => String(m.status || '').toUpperCase() === 'DISPUTED');
         if (disputedM) {
           foundDisputeIdx = disputedM.idx ?? disputedM.milestoneIndex ?? 0;
         }
       }
 
-      if (foundDisputeIdx === null && String(agData.status || '').toUpperCase() === 'DISPUTED') {
+      if (foundDisputeIdx === null && String(agData?.status || '').toUpperCase() === 'DISPUTED') {
         foundDisputeIdx = 0;
       }
 

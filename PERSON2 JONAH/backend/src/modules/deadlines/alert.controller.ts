@@ -7,14 +7,17 @@ export class AlertController {
   static async listAlerts(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const resolvedParam = req.query.resolved as string | undefined;
-      const agreementId = req.query.agreementId as string | undefined;
+      const rawAgreementId = (req.params.id || req.query.agreementId) as string | undefined;
 
       const where: any = {};
       if (resolvedParam !== undefined) {
         where.resolved = resolvedParam === 'true';
       }
-      if (agreementId) {
-        where.agreementId = agreementId;
+      if (rawAgreementId && rawAgreementId !== 'undefined' && rawAgreementId !== 'null') {
+        where.OR = [
+          { agreementId: rawAgreementId },
+          { agreement: { onChainAgreementId: rawAgreementId } },
+        ];
       }
 
       const alerts = await prisma.alert.findMany({

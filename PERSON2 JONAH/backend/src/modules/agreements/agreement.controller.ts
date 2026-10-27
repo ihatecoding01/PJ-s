@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AgreementService } from './agreement.service';
 import { draftAgreementRequestSchema, editAgreementSchema, planFromBriefRequestSchema } from './agreement.schema';
-import { sendSuccess } from '../../utils/response';
+import { sendSuccess, sendError } from '../../utils/response';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { z } from 'zod';
 
@@ -42,7 +42,11 @@ export class AgreementController {
 
   static async getById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const agreement = await AgreementService.getById(req.params.id);
+      const id = req.params.id;
+      if (!id || id === 'undefined' || id === 'null') {
+        return sendError(res, 'Agreement ID is required', 400);
+      }
+      const agreement = await AgreementService.getById(id);
       return sendSuccess(res, agreement);
     } catch (error) {
       next(error);

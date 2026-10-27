@@ -279,8 +279,16 @@ export class AgreementService {
   }
 
   static async getById(id: string) {
-    const agreement = await prisma.agreement.findUnique({
-      where: { id },
+    if (!id || id === 'undefined' || id === 'null') {
+      const err: any = new Error('Agreement ID is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const agreement = await prisma.agreement.findFirst({
+      where: {
+        OR: [{ id }, { onChainAgreementId: id }],
+      },
       include: {
         milestones: {
           include: {
@@ -300,7 +308,10 @@ export class AgreementService {
     });
 
     if (!agreement) {
-      throw new Error('Agreement not found');
+      const err: any = new Error('Agreement not found');
+      err.statusCode = 404;
+      err.code = 'NOT_FOUND';
+      throw err;
     }
 
     let parsedTerms = null;
@@ -340,13 +351,24 @@ export class AgreementService {
     userId: string,
     data: z.infer<typeof editAgreementSchema>
   ) {
-    const agreement = await prisma.agreement.findUnique({
-      where: { id: agreementId },
+    if (!agreementId || agreementId === 'undefined' || agreementId === 'null') {
+      const err: any = new Error('Agreement ID is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const agreement = await prisma.agreement.findFirst({
+      where: {
+        OR: [{ id: agreementId }, { onChainAgreementId: agreementId }],
+      },
       include: { milestones: true },
     });
 
     if (!agreement) {
-      throw new Error('Agreement not found');
+      const err: any = new Error('Agreement not found');
+      err.statusCode = 404;
+      err.code = 'NOT_FOUND';
+      throw err;
     }
 
     if (agreement.clientId !== userId && agreement.freelancerId !== userId) {
@@ -366,11 +388,11 @@ export class AgreementService {
     const validatedTerms = agreementTermsSchema.parse(data.terms);
 
     // Delete existing milestones and recreate according to new terms
-    await prisma.milestone.deleteMany({ where: { agreementId } });
+    await prisma.milestone.deleteMany({ where: { agreementId: agreement.id } });
 
     // Reset approvals and status back to DRAFT
     const updated = await prisma.agreement.update({
-      where: { id: agreementId },
+      where: { id: agreement.id },
       data: {
         title: data.title || validatedTerms.title,
         termsJson: JSON.stringify(validatedTerms),
@@ -409,8 +431,16 @@ export class AgreementService {
    * Once both client and freelancer approve, calculates deterministic canonical terms hash and locks terms.
    */
   static async approveAgreement(agreementId: string, userId: string, mutualLock: boolean = false) {
-    const agreement = await prisma.agreement.findUnique({
-      where: { id: agreementId },
+    if (!agreementId || agreementId === 'undefined' || agreementId === 'null') {
+      const err: any = new Error('Agreement ID is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const agreement = await prisma.agreement.findFirst({
+      where: {
+        OR: [{ id: agreementId }, { onChainAgreementId: agreementId }],
+      },
     });
 
     if (!agreement) {
@@ -457,7 +487,7 @@ export class AgreementService {
     }
 
     return prisma.agreement.update({
-      where: { id: agreementId },
+      where: { id: agreement.id },
       data: {
         clientApprovedAt,
         freelancerApprovedAt,
@@ -482,8 +512,16 @@ export class AgreementService {
     userId: string,
     params: { onChainAgreementId: string; transactionHash?: string }
   ) {
-    const agreement = await prisma.agreement.findUnique({
-      where: { id: agreementId },
+    if (!agreementId || agreementId === 'undefined' || agreementId === 'null') {
+      const err: any = new Error('Agreement ID is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const agreement = await prisma.agreement.findFirst({
+      where: {
+        OR: [{ id: agreementId }, { onChainAgreementId: agreementId }],
+      },
     });
 
     if (!agreement) {
@@ -503,7 +541,7 @@ export class AgreementService {
       const parsedTerms = JSON.parse(agreement.termsJson);
       canonicalHash = computeCanonicalHash(parsedTerms);
       await prisma.agreement.update({
-        where: { id: agreementId },
+        where: { id: agreement.id },
         data: {
           clientApprovedAt: agreement.clientApprovedAt || new Date(),
           freelancerApprovedAt: agreement.freelancerApprovedAt || new Date(),
@@ -575,7 +613,7 @@ export class AgreementService {
 
     // Update agreement with on-chain link
     return prisma.agreement.update({
-      where: { id: agreementId },
+      where: { id: agreement.id },
       data: {
         onChainAgreementId: params.onChainAgreementId,
         onChainTxHash: txHash,
@@ -596,8 +634,16 @@ export class AgreementService {
     let termsToAudit: any = termsOverride;
 
     if (!termsToAudit && agreementId) {
-      const agreement = await prisma.agreement.findUnique({
-        where: { id: agreementId },
+      if (agreementId === 'undefined' || agreementId === 'null') {
+        const err: any = new Error('Agreement ID is required');
+        err.statusCode = 400;
+        throw err;
+      }
+
+      const agreement = await prisma.agreement.findFirst({
+        where: {
+          OR: [{ id: agreementId }, { onChainAgreementId: agreementId }],
+        },
         include: { milestones: true },
       });
 

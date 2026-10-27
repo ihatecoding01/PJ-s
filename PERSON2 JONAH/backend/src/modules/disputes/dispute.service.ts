@@ -77,7 +77,13 @@ export class DisputeService {
   }
 
   static async generateAiSummaryAndRecommendation(disputeId: string) {
-    const dispute = await prisma.dispute.findUnique({
+    if (!disputeId || disputeId === 'undefined' || disputeId === 'null') {
+      const err: any = new Error('Dispute ID is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    let dispute = await prisma.dispute.findUnique({
       where: { id: disputeId },
       include: {
         agreement: true,
@@ -86,7 +92,25 @@ export class DisputeService {
     });
 
     if (!dispute) {
-      throw new Error('Dispute not found');
+      dispute = await prisma.dispute.findFirst({
+        where: {
+          OR: [
+            { agreementId: disputeId },
+            { agreement: { onChainAgreementId: disputeId } },
+          ],
+        },
+        include: {
+          agreement: true,
+          evidences: true,
+        },
+      });
+    }
+
+    if (!dispute) {
+      const err: any = new Error('Dispute not found');
+      err.statusCode = 404;
+      err.code = 'NOT_FOUND';
+      throw err;
     }
 
     const aiResult = await AiAdapter.summarizeDispute({
@@ -145,7 +169,13 @@ export class DisputeService {
   }
 
   static async getById(id: string) {
-    const dispute = await prisma.dispute.findUnique({
+    if (!id || id === 'undefined' || id === 'null') {
+      const err: any = new Error('Dispute ID is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    let dispute = await prisma.dispute.findUnique({
       where: { id },
       include: {
         agreement: {
@@ -163,13 +193,46 @@ export class DisputeService {
     });
 
     if (!dispute) {
-      throw new Error('Dispute not found');
+      dispute = await prisma.dispute.findFirst({
+        where: {
+          OR: [
+            { agreementId: id },
+            { agreement: { onChainAgreementId: id } },
+          ],
+        },
+        include: {
+          agreement: {
+            include: {
+              client: { select: { id: true, walletAddress: true, name: true } },
+              freelancer: { select: { id: true, walletAddress: true, name: true } },
+            },
+          },
+          evidences: {
+            include: {
+              uploadedBy: { select: { id: true, walletAddress: true, name: true } },
+            },
+          },
+        },
+      });
+    }
+
+    if (!dispute) {
+      const err: any = new Error('Dispute not found');
+      err.statusCode = 404;
+      err.code = 'NOT_FOUND';
+      throw err;
     }
     return dispute;
   }
 
   static async getArbitratorDossier(disputeId: string) {
-    const dispute = await prisma.dispute.findUnique({
+    if (!disputeId || disputeId === 'undefined' || disputeId === 'null') {
+      const err: any = new Error('Dispute ID is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    let dispute = await prisma.dispute.findUnique({
       where: { id: disputeId },
       include: {
         agreement: {
@@ -192,7 +255,39 @@ export class DisputeService {
     });
 
     if (!dispute) {
-      throw new Error('Dispute not found');
+      dispute = await prisma.dispute.findFirst({
+        where: {
+          OR: [
+            { agreementId: disputeId },
+            { agreement: { onChainAgreementId: disputeId } },
+          ],
+        },
+        include: {
+          agreement: {
+            include: {
+              milestones: {
+                include: {
+                  progressReports: { orderBy: { createdAt: 'desc' }, take: 1 },
+                },
+              },
+              client: { select: { id: true, walletAddress: true, name: true } },
+              freelancer: { select: { id: true, walletAddress: true, name: true } },
+            },
+          },
+          evidences: {
+            include: {
+              uploadedBy: { select: { id: true, walletAddress: true, name: true } },
+            },
+          },
+        },
+      });
+    }
+
+    if (!dispute) {
+      const err: any = new Error('Dispute not found');
+      err.statusCode = 404;
+      err.code = 'NOT_FOUND';
+      throw err;
     }
 
     let parsedTerms: any = {};
@@ -229,7 +324,13 @@ export class DisputeService {
   }
 
   static async queryArbitratorDossier(disputeId: string, question: string) {
-    const dispute = await prisma.dispute.findUnique({
+    if (!disputeId || disputeId === 'undefined' || disputeId === 'null') {
+      const err: any = new Error('Dispute ID is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    let dispute = await prisma.dispute.findUnique({
       where: { id: disputeId },
       include: {
         agreement: {
@@ -242,7 +343,29 @@ export class DisputeService {
     });
 
     if (!dispute) {
-      throw new Error('Dispute not found');
+      dispute = await prisma.dispute.findFirst({
+        where: {
+          OR: [
+            { agreementId: disputeId },
+            { agreement: { onChainAgreementId: disputeId } },
+          ],
+        },
+        include: {
+          agreement: {
+            include: {
+              milestones: true,
+            },
+          },
+          evidences: true,
+        },
+      });
+    }
+
+    if (!dispute) {
+      const err: any = new Error('Dispute not found');
+      err.statusCode = 404;
+      err.code = 'NOT_FOUND';
+      throw err;
     }
 
     let parsedTerms: any = {};

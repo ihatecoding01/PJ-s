@@ -25,14 +25,16 @@ export default function PaymentsPage({ onOpenAgreement }) {
 
         // Fetch payments/timeline events for primary agreement
         if (list.length > 0) {
-          const primaryId = list[0].id;
-          try {
-            const payRes = await apiFetch(`/payments/agreement/${primaryId}`);
-            if (isMounted && payRes) {
-              setPaymentEvents(payRes.events || payRes.timeline || []);
+          const primaryId = list[0]?.id || list[0]?.agreementId || list[0]?.onChainAgreementId;
+          if (primaryId && primaryId !== 'undefined') {
+            try {
+              const payRes = await apiFetch(`/payments/agreement/${primaryId}`);
+              if (isMounted && payRes) {
+                setPaymentEvents(payRes.paymentEvents || payRes.events || payRes.timeline || []);
+              }
+            } catch {
+              // fallback if payment events endpoint returns mock/null
             }
-          } catch {
-            // fallback if payment events endpoint returns mock/null
           }
         }
       } catch (err) {

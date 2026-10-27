@@ -80,7 +80,7 @@ export async function getAgreements() {
  * GET /agreements/:id
  */
 export async function getAgreement(id) {
-  if (!id) return null;
+  if (!id || id === 'undefined' || id === 'null') return null;
 
   try {
     const data = await apiFetch(`/agreements/${id}`);
@@ -111,7 +111,7 @@ export async function getAgreement(id) {
 
   // Fallback 2: check mockStore directly
   if (typeof window !== 'undefined' && mockStore?.data?.agreements) {
-    const match = mockStore.data.agreements.find(a => a.id === id || a.agreementId === id);
+    const match = mockStore.data.agreements.find(a => a.id === id || a.agreementId === id || String(a.onchainId) === id);
     if (match) return normalizeAgreement(match);
     const mockDraft = mockStore.data.agreements.find(a => String(a.status || '').toUpperCase() === 'DRAFT');
     if (mockDraft) return normalizeAgreement(mockDraft);
@@ -125,6 +125,7 @@ export async function getAgreement(id) {
  * PUT /agreements/:id/terms { terms }
  */
 export async function updateAgreementTerms(id, terms) {
+  if (!id || id === 'undefined' || id === 'null') return null;
   return apiFetch(`/agreements/${id}/terms`, {
     method: 'PUT',
     body: JSON.stringify({ terms })
@@ -136,6 +137,7 @@ export async function updateAgreementTerms(id, terms) {
  * POST /agreements/:id/approve-draft
  */
 export async function approveDraft(id, options = {}) {
+  if (!id || id === 'undefined' || id === 'null') return null;
   const mutualLock = options?.mutualLock ?? false;
   return apiFetch(`/agreements/${id}/approve-draft`, {
     method: 'POST',
@@ -148,6 +150,7 @@ export async function approveDraft(id, options = {}) {
  * POST /agreements/:id/link-chain { onchainId, txHash, status }
  */
 export async function linkChain(id, { onchainId, txHash, status }) {
+  if (!id || id === 'undefined' || id === 'null') return null;
   const data = await apiFetch(`/agreements/${id}/link-chain`, {
     method: 'POST',
     body: JSON.stringify({ onchainId, txHash, status })
@@ -160,6 +163,7 @@ export async function linkChain(id, { onchainId, txHash, status }) {
  * GET /agreements/:id/timeline
  */
 export async function getTimeline(id) {
+  if (!id || id === 'undefined' || id === 'null') return [];
   return apiFetch(`/agreements/${id}/timeline`);
 }
 
@@ -168,6 +172,7 @@ export async function getTimeline(id) {
  * GET /agreements/:id/payments
  */
 export async function getPayments(id) {
+  if (!id || id === 'undefined' || id === 'null') return null;
   return apiFetch(`/agreements/${id}/payments`);
 }
 
@@ -176,6 +181,7 @@ export async function getPayments(id) {
  * GET /agreements/:id/alerts
  */
 export async function getAlerts(id) {
+  if (!id || id === 'undefined' || id === 'null') return [];
   return apiFetch(`/agreements/${id}/alerts`);
 }
 
