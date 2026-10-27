@@ -20,8 +20,8 @@ const rootDir = path.resolve(__dirname, '..');
 const isWin = process.platform === 'win32';
 
 // Ports
-const EVM_GATEWAY_PORT = 8545;
-const HARDHAT_INTERNAL_PORT = 8546;
+const HARDHAT_PORT = 8545;
+const EVM_EXPLORER_PORT = 8547;
 
 // ANSI color formatting
 const c = {
@@ -217,10 +217,10 @@ function renderTxHtml(txHash, tx, receipt) {
 }
 
 /**
- * Creates the Smart EVM Gateway on proxyPort (8545) that proxies to Hardhat on targetPort (8546)
- * and answers HTTP GET requests with an HTML Dashboard instead of a raw JSON Parse Error.
+ * Creates the EVM Explorer & Dashboard on explorerPort (8547) that connects directly to Hardhat on rpcPort (8545).
+ * Answers browser requests with an HTML Dashboard & Block Explorer without interfering with raw JSON-RPC on 8545.
  */
-function startEvmGateway(proxyPort = EVM_GATEWAY_PORT, targetPort = HARDHAT_INTERNAL_PORT) {
+function startEvmExplorer(explorerPort = EVM_EXPLORER_PORT, rpcPort = HARDHAT_PORT) {
   return new Promise((resolve, reject) => {
     const server = http.createServer(async (req, res) => {
       res.setHeader('Access-Control-Allow-Origin', '*');
@@ -232,94 +232,60 @@ function startEvmGateway(proxyPort = EVM_GATEWAY_PORT, targetPort = HARDHAT_INTE
         return res.end();
       }
 
-      // Handle GET / HEAD browser requests
-      if (req.method === 'GET' || req.method === 'HEAD') {
-        const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
-        const isJson = req.headers.accept?.includes('application/json');
+      const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
+      const isJson = req.headers.accept?.includes('application/json');
 
-        // Block Explorer path: /tx/:hash
-        if (url.pathname.startsWith('/tx/')) {
-          const txHash = url.pathname.replace('/tx/', '').split('/')[0].trim();
-          let tx = null;
-          let receipt = null;
-          try {
-            const txRes = await fetch(`http://127.0.0.1:${targetPort}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getTransactionByHash', params: [txHash], id: 1 })
-            });
-            const txJson = await txRes.json();
-            tx = txJson.result;
+      // Block Explorer path: /tx/:hash
+      if (url.pathname.startsWith('/tx/')) {
+        const txHash = url.pathname.replace('/tx/', '').split('/')[0].trim();
+        let tx = null;
+        let receipt = null;
+        try {
+          const txRes = await fetch(`http://127.0.0.1:${rpcPort}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getTransactionByHash', params: [txHash], id: 1 })
+          });
+          const txJson = await txRes.json();
+          tx = txJson.result;
 
-            const recRes = await fetch(`http://127.0.0.1:${targetPort}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getTransactionReceipt', params: [txHash], id: 2 })
-            });
-            const recJson = await recRes.json();
-            receipt = recJson.result;
-          } catch {}
+          const recRes = await fetch(`http://127.0.0.1:${rpcPort}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getTransactionReceipt', params: [txHash], id: 2 })
+          });
+          const recJson = await recRes.json();
+          receipt = recJson.result;
+        } catch {}
 
-          if (isJson) {
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({ tx, receipt }));
-          }
-
-          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-          return res.end(renderTxHtml(txHash, tx, receipt));
-        }
-
-        // Standard Status / Health
         if (isJson) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify({
-            status: 'ok',
-            service: 'FairWork Local EVM Node (Gateway)',
-            chainId: 31337,
-            network: 'Hardhat Localhost',
-            rpcUrl: `http://127.0.0.1:${proxyPort}`,
-            contractAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3'
-          }));
+          return res.end(JSON.stringify({ tx, receipt }));
         }
 
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        return res.end(renderDashboardHtml(proxyPort));
+        return res.end(renderTxHtml(txHash, tx, receipt));
       }
 
-      // Forward JSON-RPC POST request to Hardhat target port
-      const proxyReq = http.request({
-        hostname: '127.0.0.1',
-        port: targetPort,
-        path: req.url,
-        method: req.method,
-        headers: req.headers
-      }, (proxyRes) => {
-        res.writeHead(proxyRes.statusCode, proxyRes.headers);
-        proxyRes.pipe(res, { end: true });
-      });
-
-      proxyReq.on('error', (err) => {
-        res.writeHead(502, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          jsonrpc: '2.0',
-          id: null,
-          error: { code: -32603, message: `Hardhat node unreachable on :${targetPort}: ${err.message}` }
+      // Standard Status / Health
+      if (isJson || url.pathname === '/status' || url.pathname === '/health') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+          status: 'ok',
+          service: 'FairWork Local EVM Explorer',
+          chainId: 31337,
+          network: 'Hardhat Localhost',
+          rpcUrl: `http://127.0.0.1:${rpcPort}`,
+          explorerUrl: `http://localhost:${explorerPort}`,
+          contractAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3'
         }));
-      });
+      }
 
-      req.pipe(proxyReq, { end: true });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      return res.end(renderDashboardHtml(explorerPort));
     });
 
-    server.on('upgrade', (req, socket, head) => {
-      const proxySocket = net.connect(targetPort, '127.0.0.1', () => {
-        proxySocket.pipe(socket);
-        socket.pipe(proxySocket);
-      });
-      proxySocket.on('error', () => socket.destroy());
-      socket.on('error', () => proxySocket.destroy());
-    });
-
-    server.listen(proxyPort, '0.0.0.0', () => resolve(server));
+    server.listen(explorerPort, '0.0.0.0', () => resolve(server));
     server.on('error', reject);
   });
 }
@@ -347,18 +313,18 @@ async function main() {
     }
   }
 
-  // --- Step 1: EVM Hardhat Node (:8545 Gateway -> :8546 Hardhat) ---
-  log('CHAIN', `Checking Hardhat node on http://127.0.0.1:${EVM_GATEWAY_PORT}...`, c.yellow);
-  const chainAlreadyActive = await checkUrl(`http://127.0.0.1:${EVM_GATEWAY_PORT}`, {
+  // --- Step 1: EVM Hardhat Node (:8545) & Local Explorer (:8547) ---
+  log('CHAIN', `Checking Hardhat node on http://127.0.0.1:${HARDHAT_PORT}...`, c.yellow);
+  const chainAlreadyActive = await checkUrl(`http://127.0.0.1:${HARDHAT_PORT}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ jsonrpc: '2.0', method: 'net_version', params: [], id: 1 })
   });
 
   if (!chainAlreadyActive) {
-    log('CHAIN', `Spawning Hardhat Node on internal port :${HARDHAT_INTERNAL_PORT}...`, c.yellow);
+    log('CHAIN', `Spawning Hardhat Node directly on port :${HARDHAT_PORT}...`, c.yellow);
     const contractsDir = path.join(rootDir, 'PERSON1 SCARLET', 'contracts');
-    const chainProc = spawn('npx', ['hardhat', 'node', '--port', String(HARDHAT_INTERNAL_PORT)], {
+    const chainProc = spawn('npx', ['hardhat', 'node', '--port', String(HARDHAT_PORT)], {
       cwd: contractsDir,
       shell: true,
       stdio: ['ignore', 'pipe', 'pipe']
@@ -366,24 +332,27 @@ async function main() {
     registerProcess(chainProc, 'CHAIN');
     pipeOutput(chainProc, 'CHAIN', c.yellow);
 
-    const internalReady = await waitForUrl(`http://127.0.0.1:${HARDHAT_INTERNAL_PORT}`, 'CHAIN', 30, {
+    const internalReady = await waitForUrl(`http://127.0.0.1:${HARDHAT_PORT}`, 'CHAIN', 30, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', method: 'net_version', params: [], id: 1 })
     });
 
     if (!internalReady) {
-      log('CHAIN', `Hardhat node failed to respond on internal port :${HARDHAT_INTERNAL_PORT} within 30s.`, c.red);
+      log('CHAIN', `Hardhat node failed to respond on port :${HARDHAT_PORT} within 30s.`, c.red);
       cleanup();
     }
-
-    log('CHAIN', `Starting Smart EVM Gateway on http://127.0.0.1:${EVM_GATEWAY_PORT}...`, c.cyan);
-    gatewayServer = await startEvmGateway(EVM_GATEWAY_PORT, HARDHAT_INTERNAL_PORT);
   } else {
-    log('CHAIN', `Hardhat node is already active on :${EVM_GATEWAY_PORT}. Utilizing existing node.`, c.green);
+    log('CHAIN', `Hardhat node is already active on :${HARDHAT_PORT}. Utilizing existing node.`, c.green);
   }
 
-  log('CHAIN', `✓ Hardhat EVM node is healthy on :${EVM_GATEWAY_PORT} (Chain ID: 31337)`, c.green);
+  log('CHAIN', `✓ Hardhat EVM node is healthy on :${HARDHAT_PORT} (Chain ID: 31337)`, c.green);
+
+  // Start lightweight local EVM Explorer on :8547
+  try {
+    gatewayServer = await startEvmExplorer(EVM_EXPLORER_PORT, HARDHAT_PORT);
+    log('CHAIN', `✓ Local EVM Explorer active on http://localhost:${EVM_EXPLORER_PORT}`, c.cyan);
+  } catch {}
 
   // Deploy contracts & run platform setup
   log('CONTRACTS', 'Deploying FairWork.sol to local EVM node...', c.cyan);
@@ -475,10 +444,11 @@ async function main() {
   console.log(`\n${c.cyan}${c.bold}====================================================`);
   console.log(`      ALL FAIRWORK SERVICES RUNNING IN HARMONY      `);
   console.log(`====================================================${c.reset}`);
-  console.log(` ${c.bold}1. Web Client:${c.reset}  ${c.green}${c.bold}http://localhost:5173${c.reset}  👈 ${c.bold}(OPEN IN BROWSER)${c.reset}`);
-  console.log(` ${c.bold}2. Backend API:${c.reset} http://localhost:4000/api/health`);
-  console.log(` ${c.bold}3. AI Engine:${c.reset}   http://localhost:8000/docs`);
-  console.log(` ${c.bold}4. EVM Node:${c.reset}    http://127.0.0.1:${EVM_GATEWAY_PORT} (Chain ID: 31337 — JSON-RPC / Mini Explorer)`);
+  console.log(` ${c.bold}1. Web Client:${c.reset}   ${c.green}${c.bold}http://localhost:5173${c.reset}  👈 ${c.bold}(OPEN IN BROWSER)${c.reset}`);
+  console.log(` ${c.bold}2. Backend API:${c.reset}  http://localhost:4000/api/health`);
+  console.log(` ${c.bold}3. AI Engine:${c.reset}    http://localhost:8000/docs`);
+  console.log(` ${c.bold}4. EVM Node:${c.reset}     http://127.0.0.1:${HARDHAT_PORT} (Chain ID: 31337 — JSON-RPC for MetaMask)`);
+  console.log(` ${c.bold}5. EVM Explorer:${c.reset} http://localhost:${EVM_EXPLORER_PORT} (Block & Transaction Explorer)`);
   console.log(`${c.dim}Press Ctrl+C at any time to gracefully terminate all services.${c.reset}\n`);
 
   // Keep event loop alive

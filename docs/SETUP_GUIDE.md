@@ -26,13 +26,14 @@ This document is the definitive step-by-step guide to installing, configuring, a
 
 | Service | Directory | Tech Stack | Port | Health Check / Endpoint |
 | :--- | :--- | :--- | :---: | :--- |
-| **Local EVM Node** | `PERSON1 SCARLET/contracts` | Hardhat / Solidity | `8545` | `http://127.0.0.1:8545` *(JSON-RPC / Web Dashboard)* |
+| **Local EVM Node** | `PERSON1 SCARLET/contracts` | Hardhat / Solidity | `8545` | `http://127.0.0.1:8545` *(EVM JSON-RPC for MetaMask)* |
+| **Local EVM Explorer** | `scripts/dev.js` | Node.js / HTML5 | `8547` | `http://localhost:8547` *(Transaction & Block Explorer)* |
 | **AI Engine** | `PERSON3 PERCY` | Python / FastAPI / Uvicorn | `8000` | `http://localhost:8000/health` |
 | **Backend API & Oracle** | `PERSON2 JONAH/backend` | Node.js / Express / Prisma | `4000` | `http://localhost:4000/api/health` |
 | **Frontend UI (Open in Browser)** | `PERSON4 SUZAN` | React / Vite / Tailwind | `5173` | `http://localhost:5173` |
 
 > [!NOTE]
-> **EVM Node vs. Web App**: Port `8545` is the Ethereum JSON-RPC 2.0 protocol endpoint for MetaMask and smart contract calls (using `POST` requests). To use the FairWork application, open the **Web Client at `http://localhost:5173`**. When running via `.\scripts\dev-up.ps1` or `npm run dev`, port `8545` includes a built-in Smart Gateway that displays an interactive node status dashboard and local transaction explorer when opened in a browser.
+> **EVM Node vs. Web App**: Port `8545` is the raw Ethereum JSON-RPC 2.0 protocol endpoint for MetaMask and smart contract calls (which uses `POST` requests). If opened in a web browser with a `GET` request, seeing a JSON-RPC parse status is normal. To view transactions in a browser, use the **Local EVM Explorer at `http://localhost:8547`** and use the **Web Client at `http://localhost:5173`**.
 
 ---
 
