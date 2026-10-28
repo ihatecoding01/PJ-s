@@ -434,7 +434,7 @@ export default function DashboardPage({
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray">
               <h3 className="font-heading font-bold text-base text-ink">Commissioned Projects</h3>
               <button
-                onClick={() => onOpenAgreement ? onOpenAgreement(agreements[0]?.id) : null}
+                onClick={() => onNavigateToAgreements ? onNavigateToAgreements() : (onOpenAgreement && agreements[0]?.id ? onOpenAgreement(agreements[0].id) : null)}
                 className="text-xs font-heading font-semibold text-forest hover:underline"
               >
                 View All
@@ -724,7 +724,7 @@ export default function DashboardPage({
           <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray">
             <h3 className="font-heading font-bold text-base text-ink">Active Gigs</h3>
             <button
-              onClick={() => onOpenAgreement ? onOpenAgreement(agreements[0]?.id) : null}
+              onClick={() => onNavigateToAgreements ? onNavigateToAgreements() : (onOpenAgreement && agreements[0]?.id ? onOpenAgreement(agreements[0].id) : null)}
               className="text-xs font-heading font-semibold text-forest hover:underline"
             >
               View All

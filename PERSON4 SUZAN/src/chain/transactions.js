@@ -251,7 +251,8 @@ export async function txProposeAmendment(id, idx, newDeadlineSec, newTerms, newT
 export async function txAcceptAmendment(id, amendmentId, callbacks = {}) {
   const contract = await getContractWithSigner();
   const safeId = toBigIntId(id);
-  return executeTx('acceptAmendment', () => contract.acceptAmendment(safeId, BigInt(amendmentId || 1)), callbacks);
+  const safeAid = BigInt(amendmentId !== undefined && amendmentId !== null ? amendmentId : 0);
+  return executeTx('acceptAmendment', () => contract.acceptAmendment(safeId, safeAid), callbacks);
 }
 
 /**

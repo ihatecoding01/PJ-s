@@ -99,6 +99,7 @@ function AppLayout() {
                   onOpenAgreement={handleOpenAgreement}
                   onOpenDraft={handleOpenDraft}
                   onNavigateToProjects={() => setActivePage('projects')}
+                  onNavigateToAgreements={() => setActivePage('agreements')}
                   onOpenCreateProject={handleOpenCreateProject}
                 />
               )}

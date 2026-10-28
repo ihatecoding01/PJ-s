@@ -2,7 +2,8 @@ import {
   BrowserProvider,
   JsonRpcProvider,
   Wallet,
-  Contract
+  Contract,
+  Interface
 } from 'ethers';
 
 import abiJson from './abi.json';
@@ -35,7 +36,7 @@ export const SUPPORTED_NETWORKS = {
       symbol: 'ETH',
       decimals: 18
     },
-    blockExplorerUrls: ['http://127.0.0.1:8545']
+    blockExplorerUrls: ['http://localhost:8547']
   },
 
   11155111: {
@@ -82,12 +83,12 @@ export async function fetchContractConfig(targetChainId) {
     currentChainId = Number(import.meta.env.VITE_CHAIN_ID || 11155111);
   }
 
-  // Attempt dynamic fetch from backend
+  // Attempt dynamic fetch from backend only if chainId matches
   try {
     const remote = await getConfig();
-    if (remote && remote.contractAddress) {
+    if (remote && remote.contractAddress && remote.chainId && Number(remote.chainId) === Number(currentChainId)) {
       return {
-        chainId: remote.chainId || currentChainId,
+        chainId: currentChainId,
         contractAddress: remote.contractAddress,
         abi: remote.abi || FAIRWORK_ABI
       };
@@ -292,7 +293,59 @@ export function decodeRevertReason(error) {
     return error.reason;
   }
 
-  if (error.shortMessage) {
+  // Try decoding custom errors with contract interface
+  try {
+    let data = error.data || error.info?.error?.data || error.error?.data || error.error?.data?.data || error.receipt?.data;
+    if (!data && typeof error.message === 'string') {
+      const match = error.message.match(/data="?(0x[a-fA-F0-9]+)"?/) || error.message.match(/(0x[a-fA-F0-9]{8,})/);
+      if (match) data = match[1];
+    }
+
+    if (data && typeof data === 'string' && data.startsWith('0x')) {
+      const iface = new Interface(FAIRWORK_ABI);
+      const parsed = iface.parseError(data);
+      if (parsed) {
+        const descriptions = {
+          ErrOnlyClient: 'Only the client can perform this action.',
+          ErrOnlyFreelancer: 'Only the freelancer can perform this action.',
+          ErrOnlyParties: 'Only the agreement client or freelancer can perform this action.',
+          ErrOnlyCounterparty: 'Only the counterparty can accept this amendment.',
+          ErrOnlyOracle: 'Only the designated AI oracle can record progress.',
+          ErrNotDraft: 'Agreement is not in draft status.',
+          ErrNotAwaitingFund: 'Agreement is not awaiting funding.',
+          ErrWrongFundAmount: 'Deposit amount does not match the agreement total budget.',
+          ErrNotCancellable: 'Agreement cannot be cancelled in its current status.',
+          ErrNotActive: 'Agreement is not active on-chain (it must be funded first).',
+          ErrBadIndex: 'Invalid milestone index.',
+          ErrNotSubmittable: 'Milestone cannot be submitted in its current status.',
+          ErrMaxRevisions: 'Maximum deliverable revision attempts reached.',
+          ErrNotSubmitted: 'This milestone has not been submitted yet by the freelancer.',
+          ErrReviewPending: 'Review window is still active. Auto-claim is not yet unlocked.',
+          ErrGracePending: 'Grace period has not expired yet. Reclaim is not yet unlocked.',
+          ErrDisputeWindowPending: 'Dispute window is currently active.',
+          ErrNotReclaimable: 'Milestone funds cannot be reclaimed at this time.',
+          ErrTransferFailed: 'ETH payout transfer failed.',
+          ErrAlreadyClosed: 'Milestone is already closed and paid.',
+          ErrBadAmendment: 'Invalid amendment index or proposal.',
+          ErrAlreadyAccepted: 'This amendment has already been accepted.',
+          ErrNotDisputable: 'Dispute cannot be raised on this milestone.',
+          ErrNotDisputed: 'Milestone is not currently under dispute.',
+          ErrShareExceeded: 'Freelancer share basis points exceed maximum allowed (10,000).',
+          ErrVotingEnded: 'Dispute voting window has already ended.',
+          ErrNotArbitrator: 'You are not one of the designated arbitrators for this dispute.',
+          ErrAlreadyVoted: 'You have already cast your arbitrator vote.',
+          ErrVotingPending: 'Voting window is still open. Dispute cannot be finalized yet.',
+          ErrAlreadyResolved: 'Dispute has already been resolved.',
+          ErrFeeExceeded: 'Platform fee basis points cannot exceed 500 (5%).',
+          ErrDuplicateArbitrator: 'Arbitrator address is already registered in pool.',
+          ErrBadAddress: 'Invalid zero address provided.'
+        };
+        return descriptions[parsed.name] || `Contract reverted with: ${parsed.name}`;
+      }
+    }
+  } catch {}
+
+  if (error.shortMessage && !error.shortMessage.includes('unknown custom error')) {
     return error.shortMessage;
   }
 
@@ -311,9 +364,6 @@ export function decodeRevertReason(error) {
   return String(error);
 }
 
-/**
- * Cast arbitrator dispute vote.
- */
 export async function castVote(
   agreementId,
   milestoneIndex,

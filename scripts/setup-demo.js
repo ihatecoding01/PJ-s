@@ -108,6 +108,101 @@ async function main() {
   }
   console.log(`Total Active Arbitrators Verified in Contract: ${activeArbs}`);
 
+  // 5. Seed Demo Agreement #1 (Matching Frontend Dashboard & Walkthrough)
+  console.log('\n--- Checking Demo Agreement #1 on Hardhat Node ---');
+  let ag1Exists = false;
+  try {
+    const ag1 = await fairWork.getAgreement(1);
+    if (ag1 && ag1.client !== ethers.ZeroAddress) {
+      ag1Exists = true;
+      console.log(`✓ Demo Agreement #1 already active on-chain (client: ${ag1.client})`);
+    }
+  } catch {}
+
+  if (!ag1Exists) {
+    console.log('Seeding Demo Agreement #1 on-chain with Milestone 2 submitted...');
+    const clientWallet = signers[1];
+    const freelancerWallet = signers[2];
+    const latestBlock = await provider.getBlock('latest');
+    const now = latestBlock ? latestBlock.timestamp : Math.floor(Date.now() / 1000);
+
+    const termsHash = ethers.keccak256(
+      ethers.toUtf8Bytes(
+        JSON.stringify({
+          schemaVersion: '1.0',
+          title: 'FairWork Frontend & Escrow Integration',
+          client: clientWallet.address.toLowerCase(),
+          freelancer: freelancerWallet.address.toLowerCase(),
+          currency: 'ETH',
+          totalAmount: '2.5',
+          paymentMode: 'MILESTONE'
+        })
+      )
+    );
+    const termsURI = 'ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi';
+    const amounts = [
+      ethers.parseEther('0.8'),
+      ethers.parseEther('1.0'),
+      ethers.parseEther('0.7')
+    ];
+    const deadlines = [
+      now + 7 * 86400,
+      now + 14 * 86400,
+      now + 21 * 86400
+    ];
+    const requiredProgressBps = [8000, 8500, 9000];
+    const criteriaHashes = [
+      ethers.keccak256(ethers.toUtf8Bytes('Milestone 1: Web3 Wallet & Auth Architecture')),
+      ethers.keccak256(ethers.toUtf8Bytes('Milestone 2: Agreement Dashboard & Milestone Flow')),
+      ethers.keccak256(ethers.toUtf8Bytes('Milestone 3: Dispute Panel & Arbitrator Voting'))
+    ];
+
+    // 1. Client creates agreement
+    const createTx = await fairWork.connect(clientWallet).createAgreement(
+      freelancerWallet.address,
+      termsHash,
+      termsURI,
+      0, // PaymentMode.MILESTONE
+      100, // 1% per day
+      3000, // 30% max
+      5 * 86400, // 5 days review
+      3 * 86400, // 3 days grace
+      2, // max 2 revisions
+      amounts,
+      deadlines,
+      requiredProgressBps,
+      criteriaHashes
+    );
+    await createTx.wait();
+    console.log('  1. Created Agreement #1 on-chain');
+
+    // 2. Freelancer accepts agreement
+    const acceptTx = await fairWork.connect(freelancerWallet).acceptAgreement(1);
+    await acceptTx.wait();
+    console.log('  2. Freelancer accepted Agreement #1');
+
+    // 3. Client funds agreement with 2.5 ETH
+    const fundTx = await fairWork.connect(clientWallet).fundAgreement(1, { value: ethers.parseEther('2.5') });
+    await fundTx.wait();
+    console.log('  3. Client funded Agreement #1 with 2.5 ETH (Status: Active)');
+
+    // 4. Milestone 0: Freelancer submits, Oracle records progress, Client approves -> Paid
+    const sub0Tx = await fairWork.connect(freelancerWallet).submitMilestone(1, 0, criteriaHashes[0], 'commit_m1_init');
+    await sub0Tx.wait();
+    const rec0Tx = await fairWork.connect(oracleWallet).recordProgress(1, 0, 8500, ethers.keccak256(ethers.toUtf8Bytes('ai_report_m1')));
+    await rec0Tx.wait();
+    const app0Tx = await fairWork.connect(clientWallet).approveMilestone(1, 0);
+    await app0Tx.wait();
+    console.log('  4. Milestone 1 (index 0) approved & paid out on-chain (0.8 ETH)');
+
+    // 5. Milestone 1: Freelancer submits, Oracle records progress -> Submitted (Ready for Client to Approve!)
+    const sub1Tx = await fairWork.connect(freelancerWallet).submitMilestone(1, 1, criteriaHashes[1], '4c7e0f3b');
+    await sub1Tx.wait();
+    const rec1Tx = await fairWork.connect(oracleWallet).recordProgress(1, 1, 8900, ethers.keccak256(ethers.toUtf8Bytes('ai_report_m2')));
+    await rec1Tx.wait();
+    console.log('  5. Milestone 2 (index 1) submitted on-chain -> Submitted (Ready for Client to Approve & Release Funds!)');
+  }
+
   // Print Demo Table
   console.log('\n========================================================================================');
   console.log('                                 DEMO ACCOUNTS TABLE                                    ');

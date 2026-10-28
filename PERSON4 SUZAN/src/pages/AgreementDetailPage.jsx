@@ -6,6 +6,7 @@ import {
   getAlerts
 } from '../api/agreements.js';
 import { getDispute } from '../api/disputes.js';
+import { getReadOnlyContract, toBigIntId } from '../chain/contract.js';
 import { useWallet } from '../context/WalletContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { Card, Badge, Button, AmountDisplay, ProgressBar, AddressChip, Tabs } from '../components/ui/index.js';
@@ -67,6 +68,36 @@ export default function AgreementDetailPage({ agreementId, onBack }) {
         getPayments(agreementId).catch(() => null),
         getAlerts(agreementId).catch(() => [])
       ]);
+
+            if (agData) {
+        const isMockMode = typeof window !== 'undefined' &&
+          (localStorage.getItem('fairwork_app_mode') === 'demo' || import.meta.env.VITE_USE_MOCK === 'true');
+        const targetOnchainId = agData.onchainId || agData.onChainAgreementId;
+        if (!isMockMode && targetOnchainId) {
+          try {
+            const contract = await getReadOnlyContract();
+            const STATUS_NAMES = ['Pending', 'Submitted', 'Rejected', 'Disputed', 'Approved', 'Paid', 'Refunded'];
+            const updatedMilestones = await Promise.all((agData.milestones || []).map(async (m, i) => {
+              try {
+                const chainM = await contract.getMilestone(toBigIntId(targetOnchainId), i);
+                const chainStatus = STATUS_NAMES[Number(chainM.status)];
+                return {
+                  ...m,
+                  status: chainStatus || m.status,
+                  commitSha: chainM.commitSha || m.commitSha,
+                  submissionHash: chainM.submissionHash || m.submissionHash,
+                  paid: Number(chainM.status) === 5 ? (m.amount || m.paid) : m.paid
+                };
+              } catch {
+                return m;
+              }
+            }));
+            agData.milestones = updatedMilestones;
+          } catch (syncErr) {
+            console.warn('Live on-chain sync notice:', syncErr);
+          }
+        }
+      }
 
       setAgreement(agData);
       setTimeline(tlData || []);

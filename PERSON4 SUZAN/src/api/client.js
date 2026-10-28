@@ -196,7 +196,7 @@ async function handleMockRequest(endpoint, options = {}) {
     return newProp;
   }
 
-  if (path.match(/^\/posts\/[^/]+\/proposals\/[^/]+\/accept$/) && method === 'POST') {
+  if ((path.match(/^\/posts\/[^/]+\/proposals\/[^/]+\/accept$/) || path.match(/^\/proposals\/[^/]+\/accept$/)) && method === 'POST') {
     const parts = path.split('/');
     const proposalId = parts[parts.length - 2];
 

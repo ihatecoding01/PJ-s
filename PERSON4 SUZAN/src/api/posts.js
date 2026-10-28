@@ -167,10 +167,22 @@ export async function createProposal(postId, proposalData) {
  * POST /posts/:postId/proposals/:proposalId/accept
  */
 export async function acceptProposal(proposalId, postId) {
-  const data = await apiFetch(`/posts/${postId}/proposals/${proposalId}/accept`, {
-    method: 'POST'
-  });
-  return data;
+  try {
+    const url = postId
+      ? `/posts/${postId}/proposals/${proposalId}/accept`
+      : `/proposals/${proposalId}/accept`;
+    const data = await apiFetch(url, {
+      method: 'POST'
+    });
+    return data;
+  } catch (err) {
+    if ((err?.status === 404 || err?.code === 'ROUTE_NOT_FOUND') && postId) {
+      return await apiFetch(`/proposals/${proposalId}/accept`, {
+        method: 'POST'
+      });
+    }
+    throw err;
+  }
 }
 
 /**

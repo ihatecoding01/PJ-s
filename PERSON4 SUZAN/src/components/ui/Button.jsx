@@ -6,11 +6,13 @@ export default function Button({
   variant = 'primary',
   size = 'md',
   loading = false,
+  isLoading = false,
   disabled = false,
   icon: Icon,
   className = '',
   ...props
 }) {
+  const isSpinning = loading || isLoading;
   const baseClasses = 'inline-flex items-center justify-center font-heading font-medium transition-all duration-150 rounded-[10px] select-none disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none';
 
   const sizeClasses = {
@@ -31,11 +33,11 @@ export default function Button({
 
   return (
     <button
-      disabled={disabled || loading}
+      disabled={disabled || isSpinning}
       className={`${baseClasses} ${sizeClasses[size] || sizeClasses.md} ${variantClasses[variant] || variantClasses.primary} ${className}`}
       {...props}
     >
-      {loading ? (
+      {isSpinning ? (
         <Loader2 className="w-4 h-4 animate-spin text-current" />
       ) : Icon ? (
         <Icon className="w-4 h-4 flex-shrink-0" />

@@ -89,7 +89,7 @@ export default function AmendmentsList({
             <Button
               variant="primary"
               size="sm"
-              onClick={() => handleAccept(pending.id)}
+              onClick={() => handleAccept(pending.amendmentId !== undefined ? pending.amendmentId : pending.id)}
               isLoading={isAccepting}
               icon={CheckCircle2}
             >

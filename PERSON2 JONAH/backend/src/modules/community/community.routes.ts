@@ -13,6 +13,11 @@ router.get('/posts/:id/proposals', CommunityController.getProposalsForPost);
 router.post('/posts', authenticate, CommunityController.createPost);
 router.get('/posts/:id/recommended-talent', authenticate, CommunityController.getRecommendedTalent);
 router.post('/posts/:id/proposals', authenticate, CommunityController.submitProposal);
+
+// Accept proposal routes (supports both nested and flat REST paths)
+router.post('/posts/:postId/proposals/:proposalId/accept', authenticate, CommunityController.acceptProposal);
+router.post('/posts/:id/proposals/:proposalId/accept', authenticate, CommunityController.acceptProposal);
+router.post('/posts/:postId/proposals/:id/accept', authenticate, CommunityController.acceptProposal);
 router.post('/proposals/:id/accept', authenticate, CommunityController.acceptProposal);
 
 // Threads & Messages (require authentication)

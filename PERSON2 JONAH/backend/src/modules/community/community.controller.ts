@@ -73,7 +73,8 @@ export class CommunityController {
 
   static async acceptProposal(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const result = await CommunityService.acceptProposal(req.params.id, req.user!.id);
+      const proposalId = req.params.proposalId || req.params.id;
+      const result = await CommunityService.acceptProposal(proposalId, req.user!.id);
       return sendSuccess(res, result, 200, 'Proposal accepted and escrow agreement draft generated');
     } catch (error) {
       next(error);

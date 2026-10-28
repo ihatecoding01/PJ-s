@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAgreement, updateAgreementTerms, approveDraft, planFromBrief, auditAgreement } from '../api/agreements.js';
+import { getAgreement, getAgreements, updateAgreementTerms, approveDraft, planFromBrief, auditAgreement } from '../api/agreements.js';
 import { useWallet } from '../context/WalletContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { Card, Button, Badge, AmountDisplay, Modal, Input, Textarea } from '../components/ui/index.js';
