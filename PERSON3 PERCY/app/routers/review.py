@@ -2,7 +2,7 @@ import json
 import logging
 import re
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends
 from app.config import settings
@@ -123,7 +123,7 @@ def perform_deterministic_review(terms_dict: dict) -> List[ReviewFlag]:
 
     return flags
 
-def calculate_score_and_summary(flags: List[ReviewFlag], base_score: int = 98) -> (int, str):
+def calculate_score_and_summary(flags: List[ReviewFlag], base_score: int = 98) -> Tuple[int, str]:
     deductions = 0
     for f in flags:
         if f.severity == "CRITICAL":

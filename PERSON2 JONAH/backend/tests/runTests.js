@@ -245,8 +245,8 @@ async function main() {
         const tempFilePath = path_1.default.join(__dirname, 'test_evidence.txt');
         fs_1.default.writeFileSync(tempFilePath, 'FairWork Evidence Log: Commit history and specification diff.');
         const formData = new FormData();
-        const fileBytes = fs_1.default.readFileSync(tempFilePath);
-        formData.append('file', new Blob([fileBytes], { type: 'text/plain' }), 'test_evidence.txt');
+        const fileContent = fs_1.default.readFileSync(tempFilePath, 'utf-8');
+        formData.append('file', new Blob([fileContent], { type: 'text/plain' }), 'test_evidence.txt');
         formData.append('description', 'Terminal test logs showing agreement terms mismatch');
         const evidenceRes = await fetch(`${baseUrl}/disputes/${disputeId}/evidence`, {
             method: 'POST',
